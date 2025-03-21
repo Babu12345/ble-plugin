@@ -130,9 +130,9 @@ unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>)
         "Opening CDC ACM device {:#04x}:{:#04x}",
         USB_DEVICE_VID, USB_DEVICE_PID
     );
-    loop {
-        let mut cdc_device_handler: cdc_acm_dev_hdl_t = ptr::null_mut();
+    let mut cdc_device_handler: cdc_acm_dev_hdl_t = ptr::null_mut();
 
+    'wait_for_connection: loop {
         let res = cdc_acm_host_open(
             USB_DEVICE_VID,
             USB_DEVICE_PID,
@@ -141,15 +141,19 @@ unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>)
             &mut cdc_device_handler,
         );
 
-        if res != ESP_OK {
-            error!("Error opening the CDC ACM device. Error code: {}", res);
-            continue;
-        }
-
-        // Print the device description to stdout
-        cdc_acm_host_desc_print(cdc_device_handler);
         std::thread::sleep(Duration::from_millis(100));
 
+        if res != ESP_OK {
+            error!("Error opening the CDC ACM device. Error code: {}", res);
+            continue 'wait_for_connection;
+        }
+        break 'wait_for_connection;
+    }
+
+    // Print the device description to stdout
+    cdc_acm_host_desc_print(cdc_device_handler);
+
+    loop {
         let res = cdc_acm_host_data_tx_blocking(
             cdc_device_handler,
             EXAMPLE_STRING_SEND.as_ptr(),
