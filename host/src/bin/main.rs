@@ -2,8 +2,8 @@ use core::str;
 use std::{ffi::c_void, ptr, thread::Scope, time::Duration};
 
 use ble_plugin::utils::{
-    CONNECTION_TIMEOUT_MS, RX_BUFFER_SIZE, TX_BUFFER_SIZE, TX_TIMEOUT_MS, USB_DEVICE_PID,
-    USB_DEVICE_VID, USB_LIB_EVENT_MAX_DELAY,
+    CONNECTION_TIMEOUT_MS, DEFAULT_DW_DTE_RATE, RX_BUFFER_SIZE, TX_BUFFER_SIZE, TX_TIMEOUT_MS,
+    USB_DEVICE_PID, USB_DEVICE_VID, USB_LIB_EVENT_MAX_DELAY,
 };
 use esp_idf_svc::hal::{
     prelude::Peripherals,
@@ -21,9 +21,11 @@ use esp_idf_sys::{
         cdc_acm_host_dev_event_t_CDC_ACM_HOST_ERROR,
         cdc_acm_host_dev_event_t_CDC_ACM_HOST_NETWORK_CONNECTION,
         cdc_acm_host_dev_event_t_CDC_ACM_HOST_SERIAL_STATE, cdc_acm_host_device_config_t,
-        cdc_acm_host_install, cdc_acm_host_open, usb_host_config_t, usb_host_device_free_all,
-        usb_host_install, usb_host_lib_handle_events, ESP_INTR_FLAG_LEVEL1, ESP_OK,
-        USB_HOST_LIB_EVENT_FLAGS_ALL_FREE, USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS,
+        cdc_acm_host_install, cdc_acm_host_line_coding_get, cdc_acm_host_line_coding_set,
+        cdc_acm_host_open, cdc_acm_host_set_control_line_state, cdc_acm_line_coding_t,
+        usb_host_config_t, usb_host_device_free_all, usb_host_install, usb_host_lib_handle_events,
+        ESP_INTR_FLAG_LEVEL1, ESP_OK, USB_HOST_LIB_EVENT_FLAGS_ALL_FREE,
+        USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS,
     },
     TickType_t,
 };
@@ -153,6 +155,38 @@ unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>)
     // Print the device description to stdout
     cdc_acm_host_desc_print(cdc_device_handler);
 
+    'set_configs: loop {
+        let mut line_coding: cdc_acm_line_coding_t = Default::default();
+        line_coding.dwDTERate = DEFAULT_DW_DTE_RATE;
+
+        let res = cdc_acm_host_line_coding_set(cdc_device_handler, &line_coding);
+
+        if res != ESP_OK {
+            error!("Error setting line coding data");
+            continue;
+        }
+
+        let res = cdc_acm_host_line_coding_get(cdc_device_handler, &mut line_coding);
+
+        if res != ESP_OK {
+            error!("Error getting line coding data");
+            continue;
+        }
+
+        if line_coding.dwDTERate != DEFAULT_DW_DTE_RATE {
+            panic!("Line coding set incorrectly")
+        }
+
+        info!("Line coding successfully set: {:?}", line_coding);
+
+        let res = cdc_acm_host_set_control_line_state(cdc_device_handler, true, false);
+        if res != ESP_OK {
+            error!("Error setting control line data");
+            continue;
+        }
+        break 'set_configs;
+    }
+
     loop {
         let res = cdc_acm_host_data_tx_blocking(
             cdc_device_handler,
@@ -167,7 +201,7 @@ unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>)
             continue;
         }
 
-        return;
+        break;
     }
 }
 
