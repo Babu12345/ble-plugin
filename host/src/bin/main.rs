@@ -5,6 +5,14 @@ use ble_plugin::utils::{
     CONNECTION_TIMEOUT_MS, RX_BUFFER_SIZE, TX_BUFFER_SIZE, TX_TIMEOUT_MS, USB_DEVICE_PID,
     USB_DEVICE_VID, USB_LIB_EVENT_MAX_DELAY,
 };
+use esp_idf_svc::hal::{
+    prelude::Peripherals,
+    spi::{
+        config::{Config, DriverConfig},
+        SpiDeviceDriver, SpiDriver,
+    },
+    units::Hertz,
+};
 use esp_idf_sys::{
     host::{
         cdc_acm_dev_hdl_t, cdc_acm_host_close, cdc_acm_host_data_tx_blocking,
@@ -47,7 +55,10 @@ unsafe fn lib_task() {
 }
 
 #[no_mangle]
-unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, _args: *mut c_void) -> bool {
+unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, args: *mut c_void) -> bool {
+    let args = args as *mut u8;
+    let input_args = core::slice::from_raw_parts(args, 10);
+    info!("Input arguments: {:?}", input_args);
     let data = core::slice::from_raw_parts(data, data_len);
     info!("Data received: {:?}", data);
     true
@@ -104,12 +115,14 @@ unsafe fn start_usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>) {
     }
 }
 
-unsafe fn process_usb_cdc_host() {
+unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>) {
+    let mut data = [2u8; 10];
+
     let config = cdc_acm_host_device_config_t {
         connection_timeout_ms: CONNECTION_TIMEOUT_MS,
         out_buffer_size: TX_BUFFER_SIZE,
         in_buffer_size: RX_BUFFER_SIZE,
-        user_arg: ptr::null_mut(),
+        user_arg: data.as_mut_ptr() as *mut c_void,
         event_cb: Some(event_handle),
         data_cb: Some(data_rx_handle),
     };
@@ -158,10 +171,27 @@ fn main() {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
+    let peripherals = Peripherals::take().unwrap();
+    let mosi = peripherals.pins.gpio9;
+    let miso = peripherals.pins.gpio8;
+    let sclk = peripherals.pins.gpio7;
+    let cs = peripherals.pins.gpio1;
+
+    let spi: SpiDeviceDriver<'_, SpiDriver<'_>> = SpiDeviceDriver::new_single(
+        peripherals.spi2,
+        sclk,
+        mosi,
+        Some(miso),
+        Some(cs),
+        &DriverConfig::default(),
+        &Config::default().baudrate(Hertz(80_000_000)),
+    )
+    .unwrap();
+
     unsafe {
         std::thread::scope(|s| {
             start_usb_host(s);
-            s.spawn(|| process_usb_cdc_host());
+            s.spawn(move || process_usb_cdc_host(spi));
         });
     }
 }
