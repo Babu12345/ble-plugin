@@ -3,4 +3,14 @@ name = "plugin"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "plugin"
+path = "src/bin/main.rs"
+harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
+
 [dependencies]
+## Files in shared directory
+lib_utils = {path = "../lib_utils"}
+
+## Crates
+esp32-nimble = "0.11.0"

@@ -7,7 +7,7 @@ resolver = "2"
 rust-version = "1.77"
 
 [[bin]]
-name = "ble-plugin"
+name = "host"
 path = "src/bin/main.rs"
 harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
 
@@ -21,11 +21,24 @@ opt-level = "z"
 [features]
 default = []
 
-experimental = ["esp-idf-svc/experimental"]
-
 [dependencies]
+## Files in shared directory
+lib_utils = {path = "../lib_utils"}
+
+## Crates
 log = "0.4"
-esp-idf-svc = { version = "0.51", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
+esp-idf-sys = { version = "0.36.1", default-features = false }
+esp-println = { version = "0.13.1", features = ["esp32s3", "log"] }
+esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time-driver", "embassy-sync"], default-features = false }
+static_cell = "2"
+heapless = "0.8.0"
+embassy-futures = "0.1.1"
+anyhow = "1.0.97"
+
+[[package.metadata.esp-idf-sys.extra_components]]
+remote_component = { name = "espressif/usb_host_cdc_acm", version = "2.0.6" }
+bindings_header = "usb_host_bindings.h"
+bindings_module = "host"
 
 [build-dependencies]
 embuild = "0.33"
