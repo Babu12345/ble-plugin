@@ -11,7 +11,7 @@ harness = false # do not use the built in cargo test harness -> resolve rust-ana
 [dependencies]
 ## Files in shared directory
 lib_utils = {path = "../lib_utils"}
-
+protocol = {path = "../protocol"}
 ## Crates
 esp32-nimble = "0.11.0"
 log = "0.4"
@@ -21,7 +21,6 @@ esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time
 static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
-anyhow = "1.0.97"
 
 [build-dependencies]
 embuild = "0.33"
