@@ -22,5 +22,11 @@ static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
 
+
+[[package.metadata.esp-idf-sys.extra_components]]
+remote_component = { name = "espressif/esp_tinyusb", version = "1.7.2" }
+bindings_header = "usb_device_bindings.h"
+bindings_module = "device"
+
 [build-dependencies]
 embuild = "0.33"

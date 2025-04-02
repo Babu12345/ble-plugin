@@ -232,4 +232,4 @@ fn main() {
             s.spawn(move || process_usb_cdc_host(spi));
         });
     }
-}
+} // See https://github.com/espressif/esp-idf/blob/v5.4.1/examples/peripherals/usb/host/cdc/cdc_acm_host/main/usb_cdc_example_main.c
