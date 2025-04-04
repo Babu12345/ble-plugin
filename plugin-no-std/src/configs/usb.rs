@@ -81,5 +81,5 @@ pub fn start_usb_device<'class>(
 
     let class = CdcAcmClass::new(&mut builder, cdc_state, BUFFER_SIZE as u16);
     info!("Device initialized!");
-    return (class, builder.build());
+    (class, builder.build())
 }

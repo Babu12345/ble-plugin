@@ -3,4 +3,5 @@
 
 //! Crates to expose for this project
 pub mod configs;
+pub mod tasks;
 pub mod utils;
