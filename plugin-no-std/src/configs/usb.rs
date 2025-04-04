@@ -1,0 +1,85 @@
+//! Configs to initialize the usb device
+
+use embassy_usb::{
+    Builder,
+    class::cdc_acm::{CdcAcmClass, State},
+};
+use esp_hal::otg_fs::{
+    Usb,
+    asynch::{Config, Driver},
+};
+use log::info;
+
+/// Control buffer size
+pub const BUFFER_SIZE: usize = 64;
+const DESCRIPTOR_BUFFER_SIZE: usize = 256;
+
+/// Input struct for starting the usb device
+pub struct StartUsbDeviceInput<'class> {
+    /// TODO
+    pub usb: Usb<'class>,
+    /// TODO
+    pub cdc_state: &'class mut State<'class>,
+    /// TODO
+    pub config_descriptor: &'class mut [u8; DESCRIPTOR_BUFFER_SIZE],
+    /// TODO
+    pub bos_descriptor: &'class mut [u8; DESCRIPTOR_BUFFER_SIZE],
+    /// TODO
+    pub control_buffer: &'class mut [u8; BUFFER_SIZE as usize],
+    /// TODO
+    pub ep_out_buffer: &'class mut [u8; 1024],
+}
+
+/// Function to start the usb device. Returns the CDC class handler and the device
+pub fn start_usb_device<'class>(
+    input: StartUsbDeviceInput<'class>, // ep_out
+) -> (
+    CdcAcmClass<'class, Driver<'class>>,
+    embassy_usb::UsbDevice<'class, Driver<'class>>,
+) {
+    // Create the driver, from the HAL.
+    let config = Config::default();
+
+    let StartUsbDeviceInput {
+        cdc_state,
+        usb,
+        config_descriptor,
+        bos_descriptor,
+        control_buffer,
+        ep_out_buffer,
+    } = input;
+
+    let driver = Driver::new(usb, ep_out_buffer, config);
+
+    // Create embassy-usb Config
+    let mut config = embassy_usb::Config::new(0x303A, 0x3001);
+    config.manufacturer = Some("Espressif");
+    config.product = Some("USB-serial example");
+    config.serial_number = Some("2101");
+
+    // Required for windows compatibility.
+    // https://developer.nordicsemi.com/nRF_Connect_SDK/doc/1.9.1/kconfig/CONFIG_CDC_ACM_IAD.html#help
+    config.device_class = 0xEF;
+    config.device_sub_class = 0x02;
+    config.device_protocol = 0x01;
+    config.composite_with_iads = true;
+
+    config.max_power = 100;
+    config.max_packet_size_0 = BUFFER_SIZE as u8;
+
+    // Create embassy-usb DeviceBuilder using the driver and config.
+    // It needs some buffers for building the descriptors.
+
+    let mut builder: Builder<'class, Driver<'class>> = Builder::new(
+        driver,
+        config,
+        config_descriptor,
+        bos_descriptor,
+        &mut [], // no msos descriptors
+        control_buffer,
+    );
+
+    let class = CdcAcmClass::new(&mut builder, cdc_state, BUFFER_SIZE as u16);
+    info!("Device initialized!");
+    return (class, builder.build());
+}
