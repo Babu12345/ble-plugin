@@ -1,3 +1,19 @@
-fn main() {
-    embuild::espidf::sysenv::output();
-}
+[build]
+runner = "espflash flash --monitor --no-stub --baud 115200 -s 4mb -f 80mhz"
+
+[build]
+
+[target.xtensa-esp32s3-espidf]
+linker = "ldproxy"
+runner = "espflash flash --monitor --no-stub -s 8mb -f 80mhz"
+rustflags = [ "--cfg",  "espidf_time64"]
+
+[unstable]
+build-std = ["std", "panic_abort", "core"]
+
+[env]
+MCU="esp32s3"
+ESP_IDF_VERSION = "v5.2.3"
+
+[alias]
+r = "run --release"
