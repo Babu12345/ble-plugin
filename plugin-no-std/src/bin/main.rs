@@ -21,9 +21,7 @@ use plugin_no_std::{
     tasks::usb_device_runner,
 };
 
-use esp_hal_embassy::main;
-
-#[main]
+#[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     let peripherals = esp_hal::init({
         let mut config = esp_hal::Config::default();
