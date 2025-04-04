@@ -36,11 +36,15 @@ async fn main(spawner: Spawner) {
     let timer0 = SystemTimer::new(peripherals.SYSTIMER);
     esp_hal_embassy::init(timer0.alarm0);
 
-    let rng = Rng::new(peripherals.RNG);
     let timer1 = esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG0);
     let init = &*mk_static!(
         EspWifiController<'static>,
-        esp_wifi::init(timer1.timer0, rng, peripherals.RADIO_CLK,).unwrap()
+        esp_wifi::init(
+            timer1.timer0,
+            Rng::new(peripherals.RNG),
+            peripherals.RADIO_CLK,
+        )
+        .unwrap()
     );
     let _connector = BleConnector::new(&init, peripherals.BT);
 
