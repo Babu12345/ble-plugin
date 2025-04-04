@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "plugin"
+name = "plugin-std"
 path = "src/bin/main.rs"
 harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
 
@@ -15,7 +15,7 @@ protocol = {path = "../protocol"}
 ## Crates
 esp32-nimble = "0.11.0"
 log = "0.4"
-esp-idf-sys = { version = "0.36.1", default-features = false }
+esp-idf-sys = { version = "0.36.1"}
 esp-println = { version = "0.13.1", features = ["esp32s3", "log"] }
 esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time-driver", "embassy-sync"], default-features = false }
 static_cell = "2"
@@ -24,7 +24,7 @@ embassy-futures = "0.1.1"
 
 
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "espressif/esp_tinyusb", version = "1.7.2" }
+remote_component = { name = "espressif/esp_tinyusb", version = "^1.7.2" }
 bindings_header = "usb_device_bindings.h"
 bindings_module = "device"
 
