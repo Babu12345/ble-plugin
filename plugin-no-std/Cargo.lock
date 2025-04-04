@@ -432,19 +432,6 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "esp-alloc"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "408c0d4c7f51efb256af18641047b0d83b58a485be9edf5a559da796abef0b63"
-dependencies = [
- "cfg-if",
- "critical-section",
- "document-features",
- "enumset",
- "linked_list_allocator",
-]
-
-[[package]]
-name = "esp-alloc"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a78132d362cbf62ce22a1466eb9e98424f6b2d1e476e7a3cb46ca9063c5833f7"
@@ -638,7 +625,6 @@ dependencies = [
  "embassy-sync",
  "embedded-io",
  "embedded-io-async",
- "esp-alloc 0.6.0",
  "esp-build",
  "esp-config",
  "esp-hal",
@@ -944,7 +930,7 @@ dependencies = [
  "embassy-usb",
  "embassy-usb-logger",
  "embedded-hal-async",
- "esp-alloc 0.7.0",
+ "esp-alloc",
  "esp-backtrace",
  "esp-hal",
  "esp-hal-embassy",

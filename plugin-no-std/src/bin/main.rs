@@ -46,10 +46,8 @@ async fn main(spawner: Spawner) {
     );
     let _connector = BleConnector::new(&init, peripherals.BT);
 
-    let usb: Usb<'static> = Usb::new(peripherals.USB0, peripherals.GPIO20, peripherals.GPIO19);
-
     let (mut class, device) = start_usb_device(StartUsbDeviceInput {
-        usb,
+        usb: Usb::new(peripherals.USB0, peripherals.GPIO20, peripherals.GPIO19),
         cdc_state: &mut *mk_static!(State<'static>, State::new()),
         config_descriptor: &mut *mk_static!([u8; 256], [0; 256]),
         bos_descriptor: &mut *mk_static!([u8; 256], [0; 256]),
