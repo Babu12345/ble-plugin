@@ -3,21 +3,13 @@
 #![feature(never_type)]
 
 use embassy_executor::Spawner;
-use embassy_usb::{
-    class::cdc_acm::{CdcAcmClass, State},
-    driver::EndpointError,
-};
+use embassy_usb::class::cdc_acm::State;
 use esp_backtrace as _;
-use esp_hal::{
-    clock::CpuClock,
-    otg_fs::{Usb, asynch::Driver},
-    rng::Rng,
-    timer::systimer::SystemTimer,
-};
+use esp_hal::{clock::CpuClock, otg_fs::Usb, rng::Rng, timer::systimer::SystemTimer};
 use esp_wifi::{EspWifiController, ble::controller::BleConnector};
 use log::error;
 use plugin_no_std::{
-    configs::{BUFFER_SIZE, Disconnected, initalize_logger, start_usb_device},
+    configs::{BUFFER_SIZE, initalize_logger, start_usb_device},
     mk_static,
     tasks::{usb_device_processor, usb_device_runner},
     utils::await_indefinitely,

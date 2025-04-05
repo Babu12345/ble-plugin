@@ -48,3 +48,6 @@ where
 
     setup_svc(&mut table);
 }
+
+/// Run the Bluetooth peripheral
+pub async fn processor() {}
