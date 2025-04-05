@@ -1,5 +1,7 @@
 //! Common util functions for the plugin-no-std module
 
+use core::future;
+
 #[macro_export]
 /// Makes an object static even after the start of the program.
 /// When you are okay with using a nightly compiler it's better to use https://docs.rs/static_cell/2.1.0/static_cell/macro.make_static.html
@@ -10,4 +12,10 @@ macro_rules! mk_static {
         let x = STATIC_CELL.uninit().write(($val));
         x
     }};
+}
+
+/// Await helper function indefinitely.
+pub async fn await_indefinitely() {
+    let future: future::Pending<u8> = future::pending();
+    future.await;
 }

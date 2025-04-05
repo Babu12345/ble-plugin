@@ -3,6 +3,7 @@
 use embassy_usb::{
     Builder,
     class::cdc_acm::{CdcAcmClass, State},
+    driver::EndpointError,
 };
 use esp_hal::otg_fs::{
     Usb,
@@ -14,40 +15,20 @@ use log::info;
 pub const BUFFER_SIZE: usize = 64;
 const DESCRIPTOR_BUFFER_SIZE: usize = 256;
 
-/// Input struct for starting the usb device
-pub struct StartUsbDeviceInput<'class> {
-    /// TODO
-    pub usb: Usb<'class>,
-    /// TODO
-    pub cdc_state: &'class mut State<'class>,
-    /// TODO
-    pub config_descriptor: &'class mut [u8; DESCRIPTOR_BUFFER_SIZE],
-    /// TODO
-    pub bos_descriptor: &'class mut [u8; DESCRIPTOR_BUFFER_SIZE],
-    /// TODO
-    pub control_buffer: &'class mut [u8; BUFFER_SIZE as usize],
-    /// TODO
-    pub ep_out_buffer: &'class mut [u8; 1024],
-}
-
 /// Function to start the usb device. Returns the CDC class handler and the device
 pub fn start_usb_device<'class>(
-    input: StartUsbDeviceInput<'class>, // ep_out
+    usb: Usb<'class>,
+    cdc_state: &'class mut State<'class>,
+    config_descriptor: &'class mut [u8; DESCRIPTOR_BUFFER_SIZE],
+    bos_descriptor: &'class mut [u8; DESCRIPTOR_BUFFER_SIZE],
+    control_buffer: &'class mut [u8; BUFFER_SIZE as usize],
+    ep_out_buffer: &'class mut [u8; 1024],
 ) -> (
     CdcAcmClass<'class, Driver<'class>>,
     embassy_usb::UsbDevice<'class, Driver<'class>>,
 ) {
     // Create the driver, from the HAL.
     let config = Config::default();
-
-    let StartUsbDeviceInput {
-        cdc_state,
-        usb,
-        config_descriptor,
-        bos_descriptor,
-        control_buffer,
-        ep_out_buffer,
-    } = input;
 
     let driver = Driver::new(usb, ep_out_buffer, config);
 
@@ -82,4 +63,16 @@ pub fn start_usb_device<'class>(
     let class = CdcAcmClass::new(&mut builder, cdc_state, BUFFER_SIZE as u16);
     info!("Device initialized!");
     (class, builder.build())
+}
+
+/// Type to map errors to the USB disconnect type if applicable
+pub struct Disconnected {}
+
+impl From<EndpointError> for Disconnected {
+    fn from(val: EndpointError) -> Self {
+        match val {
+            EndpointError::BufferOverflow => panic!("Buffer overflow"),
+            EndpointError::Disabled => Disconnected {},
+        }
+    }
 }

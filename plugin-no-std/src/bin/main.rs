@@ -15,10 +15,12 @@ use esp_hal::{
     timer::systimer::SystemTimer,
 };
 use esp_wifi::{EspWifiController, ble::controller::BleConnector};
+use log::error;
 use plugin_no_std::{
-    configs::{BUFFER_SIZE, StartUsbDeviceInput, initalize_logger, start_usb_device},
+    configs::{BUFFER_SIZE, Disconnected, initalize_logger, start_usb_device},
     mk_static,
-    tasks::usb_device_runner,
+    tasks::{usb_device_processor, usb_device_runner},
+    utils::await_indefinitely,
 };
 
 #[esp_hal_embassy::main]
@@ -48,48 +50,20 @@ async fn main(spawner: Spawner) {
     );
     let _connector = BleConnector::new(&init, peripherals.BT);
 
-    let (mut class, device) = start_usb_device(StartUsbDeviceInput {
-        usb: Usb::new(peripherals.USB0, peripherals.GPIO20, peripherals.GPIO19),
-        cdc_state: &mut *mk_static!(State<'static>, State::new()),
-        config_descriptor: &mut *mk_static!([u8; 256], [0; 256]),
-        bos_descriptor: &mut *mk_static!([u8; 256], [0; 256]),
-        control_buffer: &mut *mk_static!([u8; BUFFER_SIZE], [0; BUFFER_SIZE]),
-        ep_out_buffer: &mut *mk_static!([u8; 1024], [0; 1024]),
-    });
+    let (class, device) = start_usb_device(
+        Usb::new(peripherals.USB0, peripherals.GPIO20, peripherals.GPIO19),
+        &mut *mk_static!(State<'static>, State::new()),
+        &mut *mk_static!([u8; 256], [0; 256]),
+        &mut *mk_static!([u8; 256], [0; 256]),
+        &mut *mk_static!([u8; BUFFER_SIZE], [0; BUFFER_SIZE]),
+        &mut *mk_static!([u8; 1024], [0; 1024]),
+    );
 
     spawner.must_spawn(usb_device_runner(device));
+    spawner
+        .spawn(usb_device_processor(class))
+        .inspect_err(|_| error!("Failed to spawn the usb device processor"))
+        .ok();
 
-    // Echo function
-    loop {
-        class.wait_connection().await;
-        esp_println::println!("Connected");
-        echo(&mut class).await.ok();
-        esp_println::println!("Disconnected");
-    }
-}
-
-async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconnected> {
-    let mut buf = [0; BUFFER_SIZE as usize];
-    loop {
-        let n = class.read_packet(&mut buf).await?;
-        // Echo back in upper case
-        for c in buf[0..n].iter_mut() {
-            if 0x61 <= *c && *c <= 0x7a {
-                *c &= !0x20;
-            }
-        }
-        let data = &buf[..n];
-        class.write_packet(data).await?;
-    }
-}
-
-struct Disconnected {}
-
-impl From<EndpointError> for Disconnected {
-    fn from(val: EndpointError) -> Self {
-        match val {
-            EndpointError::BufferOverflow => panic!("Buffer overflow"),
-            EndpointError::Disabled => Disconnected {},
-        }
-    }
+    await_indefinitely().await
 }

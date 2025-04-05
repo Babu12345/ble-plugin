@@ -41,6 +41,13 @@ esp-wifi = { version = "0.12.0", default-features = false, features = [
   "log",
 ] }
 
+trouble-host = { git = "https://github.com/embassy-rs/trouble", package = "trouble-host", rev = "d17132618413f0fa840fee32af4ab23ca125bec2", features = [
+  "log",
+  "gatt",
+] }
+bt-hci = "0.2.1"
+embassy-sync = "0.6.1"
+
 [profile.dev]
 # Rust debug is too slow.
 # For debug builds always builds with some optimization
