@@ -17,6 +17,8 @@ use plugin_no_std::{
 };
 use trouble_host::{Host, Stack};
 
+// BLE no-std example: https://github.com/embassy-rs/trouble/blob/main/examples/apps/src/ble_bas_peripheral_sec.rs
+// USB device example: https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/embassy_usb_serial.rs
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     let peripherals = esp_hal::init({
