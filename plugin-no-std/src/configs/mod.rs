@@ -1,6 +1,8 @@
 //! Initialize hardware configurations
 
+mod ble;
 mod usb;
+pub use ble::*;
 pub use usb::*;
 
 use anyhow::Result;

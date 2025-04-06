@@ -16,7 +16,7 @@ pub const BUFFER_SIZE: usize = 64;
 const DESCRIPTOR_BUFFER_SIZE: usize = 256;
 
 /// Function to start the usb device. Returns the CDC class handler and the device
-pub fn start_usb_device<'class>(
+pub fn usb_device_config<'class>(
     usb: Usb<'class>,
     cdc_state: &'class mut State<'class>,
     config_descriptor: &'class mut [u8; DESCRIPTOR_BUFFER_SIZE],

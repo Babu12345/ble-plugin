@@ -998,6 +998,7 @@ dependencies = [
  "esp-wifi",
  "heapless",
  "log",
+ "rand_core",
  "static_cell",
  "thiserror-no-std",
  "trouble-host",
