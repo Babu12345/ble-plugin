@@ -14,7 +14,13 @@ const CONNECTIONS_MAX: usize = 1;
 const L2CAP_CHANNELS_MAX: usize = 8;
 
 /// Number of slots for the BLE connector
-pub const NUM_SLOTS: usize = 40;
+const NUM_SLOTS: usize = 40;
+
+/// Simplified reusable controller type
+pub type TController<T> = ExternalController<T, NUM_SLOTS>;
+
+/// GATT service name
+const GATT_SERVICE_NAME: &str = "Plugin service";
 
 #[gatt_server]
 /// GATT Server definition
@@ -33,10 +39,7 @@ struct DefaultService {
 pub fn ble_config<T, RNG>(
     connector: T,
     random_generator: &'static mut RNG,
-) -> (
-    Stack<'static, ExternalController<T, NUM_SLOTS>>,
-    Server<'static>,
-)
+) -> (Stack<'static, TController<T>>, Server<'static>)
 where
     T: Transport,
     RNG: RngCore + CryptoRng,
@@ -46,7 +49,7 @@ where
     let address: Address = Address::random([0xff, 0x8f, 0x1a, 0x05, 0xe4, 0xff]);
     info!("Our address = {}", address);
 
-    let controller: ExternalController<_, NUM_SLOTS> = ExternalController::new(connector);
+    let controller: TController<_> = ExternalController::new(connector);
 
     let resources = &mut *mk_static!(HostResources<CONNECTIONS_MAX, L2CAP_CHANNELS_MAX, L2CAP_MTU>, HostResources::new());
 
@@ -54,9 +57,9 @@ where
         .set_random_address(address)
         .set_random_generator_seed(random_generator);
 
-    info!("Starting advertising and GATT service");
+    info!("Start GATT service");
     let server = Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
-        name: "TrouBLE",
+        name: GATT_SERVICE_NAME,
         appearance: &appearance::power_device::GENERIC_POWER_DEVICE,
     }))
     .unwrap();

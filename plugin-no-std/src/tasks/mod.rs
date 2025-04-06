@@ -1,12 +1,11 @@
 //! Async task initializations
 
-use bt_hci::controller::ExternalController;
 use embassy_usb::{UsbDevice, class::cdc_acm::CdcAcmClass};
 use esp_hal::otg_fs::asynch::Driver;
 use esp_wifi::ble::controller::BleConnector;
-use trouble_host::prelude::Runner;
+use trouble_host::prelude::{Peripheral, Runner};
 
-use crate::configs::{NUM_SLOTS, Server};
+use crate::configs::{Server, TController};
 use crate::usb_device::processor;
 
 #[embassy_executor::task]
@@ -23,14 +22,15 @@ pub async fn usb_device_processor(class: CdcAcmClass<'static, Driver<'static>>) 
 
 #[embassy_executor::task]
 /// Runner for the usb device. Must always be running if you want to use the usb peripheral
-pub async fn ble_runner(
-    runner: Runner<'static, ExternalController<BleConnector<'static>, NUM_SLOTS>>,
-) {
+pub async fn ble_runner(runner: Runner<'static, TController<BleConnector<'static>>>) {
     crate::ble::run(runner).await;
 }
 
 #[embassy_executor::task]
 /// Runner for the usb device. Must always be running if you want to use the usb peripheral
-pub async fn ble_processor(server: Server<'static>) {
-    crate::ble::processor(server).await;
+pub async fn ble_processor(
+    server: Server<'static>,
+    peripheral: Peripheral<'static, TController<BleConnector<'static>>>,
+) {
+    crate::ble::processor(server, peripheral).await;
 }
