@@ -9,3 +9,7 @@ https://docs.esp-rs.org/book/writing-your-own-application/generate-project/esp-g
 
 ## Business Docs
 https://docs.google.com/document/d/1Dux7SiKq3yMgd7yeh_1pGXjGcVbrisn82CYdyfDYuJs/edit?tab=t.0
+
+
+## ChatGPT
+Conversation: https://chatgpt.com/share/67f1ce8a-7524-8013-98dc-40d671c7a86d 

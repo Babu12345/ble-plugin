@@ -10,7 +10,8 @@ use esp_hal::{clock::CpuClock, otg_fs::Usb, rng::Trng, timer::systimer::SystemTi
 use esp_wifi::{EspWifiController, ble::controller::BleConnector};
 use log::error;
 use plugin_no_std::{
-    configs::{BUFFER_SIZE, ble_config, initalize_logger, usb_device_config},
+    ble,
+    configs::{self, BUFFER_SIZE, ble_config, initalize_logger, usb_device_config},
     mk_static,
     tasks::{ble_processor, ble_runner, usb_device_processor, usb_device_runner},
     utils::await_indefinitely,
@@ -56,7 +57,7 @@ async fn main(spawner: Spawner) {
         &mut *mk_static!([u8; 1024], [0; 1024]),
     );
 
-    let (stack, server) = ble_config::<_, _>(
+    let (stack, server) = ble_config(
         BleConnector::new(&init, peripherals.BT),
         crypto_random_generator,
     );
