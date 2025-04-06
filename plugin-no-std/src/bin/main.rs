@@ -12,7 +12,7 @@ use log::error;
 use plugin_no_std::{
     configs::{BUFFER_SIZE, ble_config, initalize_logger, usb_device_config},
     mk_static,
-    tasks::{ble_runner, usb_device_processor, usb_device_runner},
+    tasks::{ble_processor, ble_runner, usb_device_processor, usb_device_runner},
     utils::await_indefinitely,
 };
 use trouble_host::{Host, Stack};
@@ -54,7 +54,7 @@ async fn main(spawner: Spawner) {
         &mut *mk_static!([u8; 1024], [0; 1024]),
     );
 
-    let (stack,) = ble_config::<_, _>(
+    let (stack, server) = ble_config::<_, _>(
         BleConnector::new(&init, peripherals.BT),
         crypto_random_generator,
     );
@@ -69,6 +69,10 @@ async fn main(spawner: Spawner) {
     spawner
         .spawn(usb_device_processor(class))
         .inspect_err(|_| error!("Failed to spawn the usb device processor"))
+        .ok();
+    spawner
+        .spawn(ble_processor(server))
+        .inspect_err(|_| error!("Failed to spawn the BLE processor"))
         .ok();
 
     await_indefinitely().await

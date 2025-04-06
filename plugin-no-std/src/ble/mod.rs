@@ -2,6 +2,8 @@
 
 use trouble_host::{Controller, prelude::Runner};
 
+use crate::configs::Server;
+
 /// Run the Bluetooth peripheral
 pub async fn run<'runner, C>(mut runner: Runner<'runner, C>)
 where
@@ -17,4 +19,4 @@ where
 }
 
 /// Run the Bluetooth peripheral
-pub async fn processor() {}
+pub async fn processor(_server: Server<'_>) {}

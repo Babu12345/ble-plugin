@@ -6,7 +6,7 @@ use esp_hal::otg_fs::asynch::Driver;
 use esp_wifi::ble::controller::BleConnector;
 use trouble_host::prelude::Runner;
 
-use crate::configs::NUM_SLOTS;
+use crate::configs::{NUM_SLOTS, Server};
 use crate::usb_device::processor;
 
 #[embassy_executor::task]
@@ -27,4 +27,10 @@ pub async fn ble_runner(
     runner: Runner<'static, ExternalController<BleConnector<'static>, NUM_SLOTS>>,
 ) {
     crate::ble::run(runner).await;
+}
+
+#[embassy_executor::task]
+/// Runner for the usb device. Must always be running if you want to use the usb peripheral
+pub async fn ble_processor(server: Server<'static>) {
+    crate::ble::processor(server).await;
 }

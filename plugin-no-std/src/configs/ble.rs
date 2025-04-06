@@ -1,4 +1,5 @@
 //! BLE configs used for initializations
+#![allow(missing_docs)]
 use bt_hci::{controller::ExternalController, transport::Transport};
 use log::info;
 use rand_core::{CryptoRng, RngCore};
@@ -15,9 +16,9 @@ const L2CAP_CHANNELS_MAX: usize = 8;
 /// Number of slots for the BLE connector
 pub const NUM_SLOTS: usize = 40;
 
-// GATT Server definition
 #[gatt_server]
-struct Server {
+/// GATT Server definition
+pub struct Server {
     battery_service: DefaultService,
 }
 
@@ -32,7 +33,10 @@ struct DefaultService {
 pub fn ble_config<T, RNG>(
     connector: T,
     random_generator: &'static mut RNG,
-) -> (Stack<'static, ExternalController<T, NUM_SLOTS>>,)
+) -> (
+    Stack<'static, ExternalController<T, NUM_SLOTS>>,
+    Server<'static>,
+)
 where
     T: Transport,
     RNG: RngCore + CryptoRng,
@@ -51,11 +55,11 @@ where
         .set_random_generator_seed(random_generator);
 
     info!("Starting advertising and GATT service");
-    let _server = Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
+    let server = Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
         name: "TrouBLE",
         appearance: &appearance::power_device::GENERIC_POWER_DEVICE,
     }))
     .unwrap();
 
-    (stack,)
+    (stack, server)
 }
