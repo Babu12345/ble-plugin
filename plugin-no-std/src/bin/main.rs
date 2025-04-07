@@ -2,7 +2,6 @@
 #![no_main]
 #![feature(never_type)]
 
-use bt_hci::controller::ExternalController;
 use embassy_executor::Spawner;
 use embassy_usb::class::cdc_acm::State;
 use esp_backtrace as _;
@@ -10,7 +9,7 @@ use esp_hal::{clock::CpuClock, otg_fs::Usb, rng::Trng, timer::systimer::SystemTi
 use esp_wifi::{EspWifiController, ble::controller::BleConnector};
 use log::error;
 use plugin_no_std::{
-    configs::{BUFFER_SIZE, ble_config, initalize_logger, usb_device_config},
+    configs::{BUFFER_SIZE, TController, ble_config, initalize_logger, usb_device_config},
     mk_static,
     tasks::{ble_runner, usb_and_ble_processor, usb_device_runner},
     utils::indefinitely,
@@ -49,11 +48,11 @@ async fn main(spawner: Spawner) {
 
     let (class, device) = usb_device_config(
         Usb::new(peripherals.USB0, peripherals.GPIO20, peripherals.GPIO19),
-        &mut *mk_static!(State<'static>, State::new()),
-        &mut *mk_static!([u8; 256], [0; 256]),
-        &mut *mk_static!([u8; 256], [0; 256]),
-        &mut *mk_static!([u8; BUFFER_SIZE], [0; BUFFER_SIZE]),
-        &mut *mk_static!([u8; 1024], [0; 1024]),
+        mk_static!(State<'static>, State::new()),
+        mk_static!([u8; 256], [0; 256]),
+        mk_static!([u8; 256], [0; 256]),
+        mk_static!([u8; BUFFER_SIZE], [0; BUFFER_SIZE]),
+        mk_static!([u8; 1024], [0; 1024]),
     );
 
     let (stack, server) = ble_config(
@@ -62,11 +61,7 @@ async fn main(spawner: Spawner) {
     );
     let Host {
         runner, peripheral, ..
-    } = mk_static!(
-        Stack<'static, ExternalController<BleConnector<'static>, 40>>,
-        stack
-    )
-    .build();
+    } = mk_static!(Stack<'static, TController<BleConnector<'static>>>, stack).build();
 
     spawner.must_spawn(usb_device_runner(device));
     spawner.must_spawn(ble_runner(runner));
