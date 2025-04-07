@@ -12,4 +12,4 @@ https://docs.google.com/document/d/1Dux7SiKq3yMgd7yeh_1pGXjGcVbrisn82CYdyfDYuJs/
 
 
 ## ChatGPT
-Conversation: https://chatgpt.com/share/67f1ce8a-7524-8013-98dc-40d671c7a86d 
+Conversation: https://chatgpt.com/c/67f1ce41-63c0-8013-a951-ef1d0e1dae8b 
