@@ -1,6 +1,7 @@
 //! Contains errors for the crate
 
 /// Crate errors
+#[derive(Debug)]
 pub enum PluginError {}
 
 /// Result type for the configured crate errors
