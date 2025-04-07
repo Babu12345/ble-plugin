@@ -14,8 +14,7 @@ macro_rules! mk_static {
     }};
 }
 
-/// Await helper function indefinitely.
-pub async fn await_indefinitely() {
-    let future: future::Pending<u8> = future::pending();
-    future.await;
+/// Helper function to indefinitely await.
+pub async fn indefinitely() {
+    future::pending::<()>().await;
 }

@@ -13,7 +13,7 @@ use plugin_no_std::{
     configs::{BUFFER_SIZE, ble_config, initalize_logger, usb_device_config},
     mk_static,
     tasks::{ble_runner, usb_and_ble_processor, usb_device_runner},
-    utils::await_indefinitely,
+    utils::indefinitely,
 };
 use trouble_host::{Host, Stack};
 
@@ -75,5 +75,5 @@ async fn main(spawner: Spawner) {
         .inspect_err(|_| error!("Failed to spawn the integrated BLE and USB processor"))
         .ok();
 
-    await_indefinitely().await
+    indefinitely().await
 }
