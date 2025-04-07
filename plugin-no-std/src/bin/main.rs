@@ -27,7 +27,7 @@ async fn main(spawner: Spawner) {
         config
     });
 
-    esp_alloc::heap_allocator!(size: 72 * 1024);
+    esp_alloc::heap_allocator!(72 * 1024);
 
     initalize_logger().ok();
 

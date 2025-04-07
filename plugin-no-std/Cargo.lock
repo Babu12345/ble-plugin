@@ -453,9 +453,9 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "esp-alloc"
-version = "0.7.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a78132d362cbf62ce22a1466eb9e98424f6b2d1e476e7a3cb46ca9063c5833f7"
+checksum = "408c0d4c7f51efb256af18641047b0d83b58a485be9edf5a559da796abef0b63"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -646,6 +646,7 @@ dependencies = [
  "embassy-sync",
  "embedded-io",
  "embedded-io-async",
+ "esp-alloc",
  "esp-build",
  "esp-config",
  "esp-hal",
@@ -1356,7 +1357,7 @@ dependencies = [
 [[package]]
 name = "trouble-host"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/trouble?rev=d17132618413f0fa840fee32af4ab23ca125bec2#d17132618413f0fa840fee32af4ab23ca125bec2"
+source = "git+https://github.com/Babu12345/trouble?rev=d17132618413f0fa840fee32af4ab23ca125bec2#d17132618413f0fa840fee32af4ab23ca125bec2"
 dependencies = [
  "bt-hci",
  "embassy-futures",
@@ -1375,7 +1376,7 @@ dependencies = [
 [[package]]
 name = "trouble-host-macros"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/trouble?rev=d17132618413f0fa840fee32af4ab23ca125bec2#d17132618413f0fa840fee32af4ab23ca125bec2"
+source = "git+https://github.com/Babu12345/trouble?rev=d17132618413f0fa840fee32af4ab23ca125bec2#d17132618413f0fa840fee32af4ab23ca125bec2"
 dependencies = [
  "Inflector",
  "darling",
