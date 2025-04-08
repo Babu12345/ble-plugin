@@ -4,8 +4,10 @@
 //! Modules to expose for this project
 pub mod ble;
 pub mod configs;
-pub mod error;
+mod error;
 pub mod tasks;
 pub mod usb_and_ble;
 pub mod usb_device;
 pub mod utils;
+
+pub use error::*;
