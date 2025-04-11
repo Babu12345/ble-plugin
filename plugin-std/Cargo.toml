@@ -30,4 +30,4 @@ bindings_header = "usb_device_bindings.h"
 bindings_module = "device"
 
 [build-dependencies]
-embuild = "0.33"
+embuild = {git = "https://github.com/Babu12345/embuild", features = ["espidf"]}

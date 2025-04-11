@@ -6,7 +6,7 @@ use esp_wifi::ble::controller::BleConnector;
 use trouble_host::prelude::Peripheral;
 
 #[embassy_executor::task]
-/// Integrated processor
+/// Integrated USB and BLE processor
 pub async fn usb_and_ble_processor(
     class: CdcAcmClass<'static, Driver<'static>>,
     server: Server<'static>,

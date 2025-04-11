@@ -13,8 +13,8 @@ build-std = ["std", "panic_abort", "core"]
 MCU = "esp32s3"
 ESP_IDF_VERSION = "v5.2.3"
 # Make sure you run . $HOME/export-esp.sh if needed
-TARGET_CC="xtensa-esp32s3-elf-cc"
-TARGET_AR="xtensa-esp32s3-elf-ar"
+TARGET_CC = "xtensa-esp32s3-elf-cc"
+TARGET_AR = "xtensa-esp32s3-elf-ar"
 
 [alias]
 r = "run --release"

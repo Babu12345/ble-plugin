@@ -1,3 +1,4 @@
 fn main() {
-    embuild::espidf::sysenv::output();
+    println!("--opaque-type cdc_desc_func_telephone_call_state_reporting_capabilities_t");
+    embuild::espidf::sysenv::output()
 }
