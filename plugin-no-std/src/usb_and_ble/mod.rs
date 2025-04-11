@@ -14,6 +14,7 @@ use trouble_host::{
     },
 };
 const BLE_ADVERTISEMENT_NAME: &str = "Plugin";
+const BLE_SERVICE_UUID: [[u8; 2]; 1] = [[0x0f, 0x18]];
 
 /// Run the integrated processor
 pub async fn processor(
@@ -39,7 +40,7 @@ async fn advertise<'a, 'b, C: Controller>(
     AdStructure::encode_slice(
         &[
             AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-            AdStructure::ServiceUuids16(&[[0x0f, 0x18]]),
+            AdStructure::ServiceUuids16(&BLE_SERVICE_UUID),
             AdStructure::CompleteLocalName(name.as_bytes()),
         ],
         &mut advertiser_data[..],
