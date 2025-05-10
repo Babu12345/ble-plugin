@@ -46,7 +46,7 @@ async fn main(spawner: Spawner) {
         .unwrap()
     );
 
-    let (class, device) = usb_device_config(
+    let (cdc_class, device) = usb_device_config(
         Usb::new(peripherals.USB0, peripherals.GPIO20, peripherals.GPIO19),
         mk_static!(State<'static>, State::new()),
         mk_static!([u8; 256], [0; 256]),
@@ -66,7 +66,7 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(usb_device_runner(device));
     spawner.must_spawn(ble_runner(runner));
     spawner
-        .spawn(usb_and_ble_processor(class, server, peripheral))
+        .spawn(usb_and_ble_processor(cdc_class, server, peripheral))
         .inspect_err(|_| error!("Failed to spawn the integrated BLE and USB processor"))
         .ok();
 
