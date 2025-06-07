@@ -2,7 +2,10 @@ use std::{
     ffi::c_void,
     ptr,
     str::FromStr,
-    sync::mpsc::{self, Receiver, SyncSender},
+    sync::{
+        mpsc::{self, Receiver, SyncSender},
+        OnceLock,
+    },
     thread::Scope,
     time::Duration,
 };
@@ -36,10 +39,12 @@ use esp_idf_sys::{
     },
     TickType_t,
 };
-use heapless::String;
+use heapless::{String, Vec};
 use log::{error, info, warn};
 
 type T = String<256>;
+
+static FROM_USB_SENDER: OnceLock<SyncSender<T>> = OnceLock::new();
 
 unsafe fn lib_task() {
     let mut event_flags = 0;
@@ -65,12 +70,15 @@ unsafe fn lib_task() {
 }
 
 #[no_mangle]
-unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, args: *mut c_void) -> bool {
-    let args = args as *mut u8;
-    let input_args = core::slice::from_raw_parts(args, 10);
-    info!("Input arguments: {:?}", input_args);
+unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, _args: *mut c_void) -> bool {
     let data = core::slice::from_raw_parts(data, data_len);
+    let data = Vec::from_slice(data).unwrap();
     info!("Data received: {:?}", data);
+    FROM_USB_SENDER
+        .get()
+        .unwrap()
+        .try_send(String::from_utf8(data).unwrap())
+        .ok();
     true
 }
 
@@ -126,13 +134,11 @@ unsafe fn start_usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>) {
 }
 
 unsafe fn process_usb_cdc_host<'a>(receiver: Receiver<T>) {
-    let mut data = [2u8; 10];
-
     let config = cdc_acm_host_device_config_t {
         connection_timeout_ms: CONNECTION_TIMEOUT_MS,
         out_buffer_size: TX_BUFFER_SIZE,
         in_buffer_size: RX_BUFFER_SIZE,
-        user_arg: data.as_mut_ptr() as *mut c_void,
+        user_arg: ptr::null_mut(),
         event_cb: Some(event_handle),
         data_cb: Some(data_rx_handle),
     };
@@ -154,7 +160,6 @@ unsafe fn process_usb_cdc_host<'a>(receiver: Receiver<T>) {
         std::thread::sleep(Duration::from_millis(100));
 
         if res != ESP_OK {
-            error!("Error opening the CDC ACM device. Error code: {}", res);
             continue 'wait_for_connection;
         }
         break 'wait_for_connection;
@@ -239,18 +244,24 @@ fn main() {
     )
     .unwrap();
 
-    let (sender, receiver): (SyncSender<T>, Receiver<T>) = mpsc::sync_channel(100);
+    let to_usb = mpsc::sync_channel(100);
+    let _from_usb = {
+        let channel = mpsc::sync_channel(100);
+        FROM_USB_SENDER.set(channel.0).unwrap();
+        channel.1
+    };
 
     unsafe {
         std::thread::scope(|s| {
             start_usb_host(s);
-            s.spawn(move || process_usb_cdc_host(receiver));
+            s.spawn(move || process_usb_cdc_host(to_usb.1));
             // TODO: I might need a task to add as an intermediary layer. This way different communication protocols like
             // i2c or SPI only need to interact with this intermediary to send messages
             s.spawn(move || {
                 let mut i = 0;
                 loop {
-                    sender
+                    to_usb
+                        .0
                         .send(String::from_str(format!("{i}").as_str()).unwrap())
                         .ok();
                     std::thread::sleep(Duration::from_millis(50));
