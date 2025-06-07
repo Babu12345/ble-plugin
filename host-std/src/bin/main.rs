@@ -1,10 +1,17 @@
-use core::str;
-use std::{ffi::c_void, ptr, thread::Scope, time::Duration};
+use std::{
+    ffi::c_void,
+    ptr,
+    str::FromStr,
+    sync::mpsc::{self, Receiver, SyncSender},
+    thread::Scope,
+    time::Duration,
+};
 
 use ble_plugin::utils::{
     CONNECTION_TIMEOUT_MS, DEFAULT_DW_DTE_RATE, RX_BUFFER_SIZE, TX_BUFFER_SIZE, TX_TIMEOUT_MS,
     USB_DEVICE_PID, USB_DEVICE_VID, USB_LIB_EVENT_MAX_DELAY,
 };
+
 use esp_idf_svc::hal::{
     prelude::Peripherals,
     spi::{
@@ -29,9 +36,10 @@ use esp_idf_sys::{
     },
     TickType_t,
 };
+use heapless::String;
 use log::{error, info, warn};
 
-const EXAMPLE_STRING_SEND: &str = "Hello";
+type T = String<256>;
 
 unsafe fn lib_task() {
     let mut event_flags = 0;
@@ -117,7 +125,7 @@ unsafe fn start_usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>) {
     }
 }
 
-unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>) {
+unsafe fn process_usb_cdc_host<'a>(receiver: Receiver<T>) {
     let mut data = [2u8; 10];
 
     let config = cdc_acm_host_device_config_t {
@@ -188,10 +196,18 @@ unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>)
     }
 
     loop {
+        let data = match receiver.recv() {
+            Ok(data) => data,
+            Err(e) => {
+                info!("Error occurred {e}");
+                continue;
+            }
+        };
+
         let res = cdc_acm_host_data_tx_blocking(
             cdc_device_handler,
-            EXAMPLE_STRING_SEND.as_ptr(),
-            EXAMPLE_STRING_SEND.len(),
+            data.as_ptr(),
+            data.len(),
             TX_TIMEOUT_MS,
         );
 
@@ -200,8 +216,6 @@ unsafe fn process_usb_cdc_host<'a>(mut _spi: SpiDeviceDriver<'a, SpiDriver<'a>>)
             error!("Error sending data to the CDC ACM device");
             continue;
         }
-
-        break;
     }
 }
 
@@ -215,7 +229,7 @@ fn main() {
     let sclk = peripherals.pins.gpio7;
     let cs = peripherals.pins.gpio1;
 
-    let spi: SpiDeviceDriver<'_, SpiDriver<'_>> = SpiDeviceDriver::new_single(
+    let _spi: SpiDeviceDriver<'_, SpiDriver<'_>> = SpiDeviceDriver::new_single(
         peripherals.spi2,
         sclk,
         mosi,
@@ -226,10 +240,24 @@ fn main() {
     )
     .unwrap();
 
+    let signal: (SyncSender<T>, Receiver<T>) = mpsc::sync_channel(100);
+    let sender = signal.0;
+
     unsafe {
         std::thread::scope(|s| {
             start_usb_host(s);
-            s.spawn(move || process_usb_cdc_host(spi));
+            s.spawn(move || process_usb_cdc_host(signal.1));
+
+            s.spawn(move || {
+                let mut i = 0;
+                loop {
+                    sender
+                        .send(String::from_str(format!("{i}").as_str()).unwrap())
+                        .ok();
+                    std::thread::sleep(Duration::from_millis(50));
+                    i = i + 1;
+                }
+            });
         });
     }
 } // See https://github.com/espressif/esp-idf/blob/v5.4.1/examples/peripherals/usb/host/cdc/cdc_acm_host/main/usb_cdc_example_main.c
