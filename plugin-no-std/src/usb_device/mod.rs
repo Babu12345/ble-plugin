@@ -2,7 +2,7 @@
 
 use crate::{
     configs::{BUFFER_SIZE, Disconnected},
-    tasks::CHANNEL,
+    tasks::USB_TO_BLE,
 };
 use embassy_usb::{UsbDevice, class::cdc_acm::CdcAcmClass};
 use esp_hal::otg_fs::asynch::Driver;
@@ -28,14 +28,14 @@ async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconn
     let mut buf = [0; BUFFER_SIZE as usize];
     loop {
         let n = class.read_packet(&mut buf).await?;
-        CHANNEL.send(buf).await;
+        USB_TO_BLE.send(buf).await;
         // Echo back in upper case
         for c in buf[0..n].iter_mut() {
             if 0x61 <= *c && *c <= 0x7a {
                 *c &= !0x20;
             }
         }
-        let info = CHANNEL.receive().await;
+        let info = USB_TO_BLE.receive().await;
         let data = &info[..n];
         class.write_packet(data).await?;
     }
