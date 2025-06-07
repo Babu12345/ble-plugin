@@ -3,11 +3,13 @@ use esp32_nimble::{
     BLEDevice,
 };
 
+// Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
     let device = BLEDevice::take();
+    let device2 = BLEDevice::take();
     let _ble_advertising = device.get_advertising();
 
     device
