@@ -859,6 +859,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
+name = "lib_utils"
+version = "0.1.0"
+
+[[package]]
 name = "libm"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -998,6 +1002,7 @@ dependencies = [
  "esp-println",
  "esp-wifi",
  "heapless",
+ "lib_utils",
  "log",
  "rand_core",
  "static_cell",

@@ -6,7 +6,6 @@ pub mod ble;
 pub mod configs;
 mod error;
 pub mod tasks;
-pub mod usb_and_ble;
 pub mod usb_device;
 pub mod utils;
 

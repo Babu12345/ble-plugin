@@ -1,19 +1,22 @@
-//! Shared utils for the plugin and host
-
+#![no_std]
 #![deny(missing_docs)]
+//! Common utilities for the workspace
 
-#[allow(dead_code)]
-fn add(left: u64, right: u64) -> u64 {
-    left + right
+/// Custom slice trait for trimming or extending slices
+pub trait MatchSliceLengths<const N: usize> {
+    /// Match size of the output
+    fn match_size(self, padding: u8) -> [u8; N];
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+impl<const N: usize> MatchSliceLengths<N> for &[u8] {
+    fn match_size(self, padding: u8) -> [u8; N] {
+        let mut buffer = [padding; N];
+        let array_size = self.len();
+        if N >= array_size {
+            buffer[..array_size].copy_from_slice(self);
+            return buffer;
+        }
+        buffer.copy_from_slice(&self[..N]);
+        buffer
     }
 }

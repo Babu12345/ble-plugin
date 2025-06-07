@@ -211,7 +211,6 @@ unsafe fn process_usb_cdc_host<'a>(receiver: Receiver<T>) {
             TX_TIMEOUT_MS,
         );
 
-        // Test sending data
         if res != ESP_OK {
             error!("Error sending data to the CDC ACM device");
             continue;
@@ -240,14 +239,14 @@ fn main() {
     )
     .unwrap();
 
-    let signal: (SyncSender<T>, Receiver<T>) = mpsc::sync_channel(100);
-    let sender = signal.0;
+    let (sender, receiver): (SyncSender<T>, Receiver<T>) = mpsc::sync_channel(100);
 
     unsafe {
         std::thread::scope(|s| {
             start_usb_host(s);
-            s.spawn(move || process_usb_cdc_host(signal.1));
-
+            s.spawn(move || process_usb_cdc_host(receiver));
+            // TODO: I might need a task to add as an intermediary layer. This way different communication protocols like
+            // i2c or SPI only need to interact with this intermediary to send messages
             s.spawn(move || {
                 let mut i = 0;
                 loop {

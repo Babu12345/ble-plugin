@@ -7,11 +7,11 @@ use embassy_usb::class::cdc_acm::State;
 use esp_backtrace as _;
 use esp_hal::{clock::CpuClock, otg_fs::Usb, rng::Trng, timer::systimer::SystemTimer};
 use esp_wifi::{EspWifiController, ble::controller::BleConnector};
-use log::error;
+
 use plugin_no_std::{
     configs::{BUFFER_SIZE, TController, ble_config, initalize_logger, usb_device_config},
     mk_static,
-    tasks::{ble_runner, usb_and_ble_processor, usb_device_runner},
+    tasks::{ble_processor, ble_runner, usb_device_runner, usb_processor},
 };
 use trouble_host::{Host, Stack};
 
@@ -64,8 +64,6 @@ async fn main(spawner: Spawner) {
 
     spawner.must_spawn(usb_device_runner(device));
     spawner.must_spawn(ble_runner(runner));
-    spawner
-        .spawn(usb_and_ble_processor(cdc_class, server, peripheral))
-        .inspect_err(|_| error!("Failed to spawn the integrated BLE and USB processor"))
-        .ok();
+    spawner.must_spawn(usb_processor(cdc_class));
+    spawner.must_spawn(ble_processor(server, peripheral));
 }
