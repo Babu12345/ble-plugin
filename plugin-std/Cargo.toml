@@ -21,12 +21,11 @@ esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time
 static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
-embassy-usb         = { version = "0.2.0", default-features = false }
-esp-synopsys-usb-otg     = { version = "0.4.2", optional = true, features = ["fs", "esp32sx"] }
-embassy-usb-driver       = { version = "0.1.0", optional = true }
-embassy-usb-synopsys-otg = { version = "0.2.0", optional = true }
-usb-device          = "0.3.2"
-usbd-serial         = "0.2.2"
+
+[[package.metadata.esp-idf-sys.extra_components]]
+remote_component = { name = "cherry-embedded/cherryusb", version = "1.4.100" }
+bindings_header = "cherry_usb_device_bindings.h"
+bindings_module = "cherry_device"
 
 [build-dependencies]
 embuild = "0.33"
