@@ -32,11 +32,11 @@ fn main() {
     .unwrap();
 
     std::thread::scope(|scope| unsafe {
-        let out = usb_host(scope, 100);
+        let io = usb_host(scope, 100);
         scope.spawn(move || {
             let mut i = 0;
             loop {
-                out.sender
+                io.sender
                     .send(String::from_str(format!("{i}").as_str()).unwrap())
                     .ok();
                 std::thread::sleep(Duration::from_millis(50));
