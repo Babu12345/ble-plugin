@@ -8,4 +8,14 @@ log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
 
-# In the imported file
+
+### WARNING. Please read for proper usage ###
+# In the Cargo.toml file where this is being imported make sure you also do. See the examples attached
+
+# [[package.metadata.esp-idf-sys.extra_components]]
+# remote_component = { name = "espressif/usb_host_cdc_acm", version = "2.0.6" }
+# bindings_header = "usb_host_bindings.h"
+# bindings_module = "host"
+
+# Then also define a bindings header file - "usb_host_bindings.h" - to import the specific driver class 
+#include "usb/cdc_acm_host.h"

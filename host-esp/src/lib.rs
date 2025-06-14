@@ -1,3 +1,5 @@
+//! Library to compartimentalize the host controls and only return the channels.
+#[deny(missing_docs)]
 mod consts;
 mod processors;
 use processors::{FROM_USB_SENDER, T, process_usb_cdc_host, start_usb_host};
@@ -12,6 +14,7 @@ pub struct Out {
     pub from: Receiver<T>,
 }
 
+/// Starts the usb host processors and returns channels to communiate with the device
 pub unsafe fn usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, bound: usize) -> Out {
     let to_usb = mpsc::sync_channel(bound);
     let from_usb = {

@@ -1,3 +1,4 @@
+//! Processor functions. Should be run via threads for proper operation and not with async await
 use esp_idf_sys::{
     TickType_t,
     host::{
@@ -29,6 +30,9 @@ use std::{
 use log::{error, info, warn};
 
 use crate::consts::*;
+
+// TODO: Return a custom struct to control how data is being channeled to and from the usb interface.
+// This should help to facilitate the defined API.
 
 pub type T = String<256>;
 
