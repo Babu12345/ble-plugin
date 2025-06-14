@@ -45,5 +45,14 @@ remote_component = { name = "cherry-embedded/cherryusb", version = "1.4.100" }
 bindings_header = "cherry_usb_host_bindings.h"
 bindings_module = "cherry_host"
 
+# https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md
+# Use this to import the remote components via a git. Make sure the idf_component.yml url and versions are correct
+# [package.metadata.esp-idf-sys.extra_components.1.remote_component]
+# name = "cherry-embedded/cherryusb"
+# git = "whttps://github.com/cherry-embedded/CherryUSB.git"
+# version = "1.4.100"
+# bindings_header = "cherry_usb_host_bindings.h"
+# bindings_module = "cherry_host"
+
 [build-dependencies]
 embuild = "0.33"
