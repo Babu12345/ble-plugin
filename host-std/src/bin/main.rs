@@ -6,6 +6,7 @@ use esp_idf_svc::hal::{
     },
     units::Hertz,
 };
+use esp_idf_sys::cherry_host::usbh_initialize;
 use heapless::String;
 use host_esp::usb_host;
 use std::{str::FromStr, time::Duration};
