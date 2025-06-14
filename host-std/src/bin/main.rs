@@ -1,20 +1,3 @@
-use std::{
-    ffi::c_void,
-    ptr,
-    str::FromStr,
-    sync::{
-        mpsc::{self, Receiver, SyncSender},
-        OnceLock,
-    },
-    thread::Scope,
-    time::Duration,
-};
-
-use ble_plugin::utils::{
-    CONNECTION_TIMEOUT_MS, DEFAULT_DW_DTE_RATE, RX_BUFFER_SIZE, TX_BUFFER_SIZE, TX_TIMEOUT_MS,
-    USB_DEVICE_PID, USB_DEVICE_VID, USB_LIB_EVENT_MAX_DELAY,
-};
-
 use esp_idf_svc::hal::{
     prelude::Peripherals,
     spi::{
@@ -23,205 +6,9 @@ use esp_idf_svc::hal::{
     },
     units::Hertz,
 };
-use esp_idf_sys::{
-    host::{
-        cdc_acm_dev_hdl_t, cdc_acm_host_close, cdc_acm_host_data_tx_blocking,
-        cdc_acm_host_desc_print, cdc_acm_host_dev_event_data_t,
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_DEVICE_DISCONNECTED,
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_ERROR,
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_NETWORK_CONNECTION,
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_SERIAL_STATE, cdc_acm_host_device_config_t,
-        cdc_acm_host_install, cdc_acm_host_line_coding_get, cdc_acm_host_line_coding_set,
-        cdc_acm_host_open, cdc_acm_host_set_control_line_state, cdc_acm_line_coding_t,
-        usb_host_config_t, usb_host_device_free_all, usb_host_install, usb_host_lib_handle_events,
-        ESP_INTR_FLAG_LEVEL1, ESP_OK, USB_HOST_LIB_EVENT_FLAGS_ALL_FREE,
-        USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS,
-    },
-    TickType_t,
-};
-use heapless::{String, Vec};
-use log::{error, info, warn};
-
-type T = String<256>;
-
-static FROM_USB_SENDER: OnceLock<SyncSender<T>> = OnceLock::new();
-
-unsafe fn lib_task() {
-    let mut event_flags = 0;
-    let timeout = TickType_t::from_be(USB_LIB_EVENT_MAX_DELAY);
-
-    info!("USB host library task initiated");
-    loop {
-        usb_host_lib_handle_events(timeout, &mut event_flags);
-
-        if event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS != 0 {
-            let res = usb_host_device_free_all();
-            if res != ESP_OK {
-                error!("Unable to free devices")
-            } else {
-                warn!("No clients connected");
-            }
-        }
-
-        if event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE != 0 {
-            warn!("All clients freed")
-        }
-    }
-}
-
-#[no_mangle]
-unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, _args: *mut c_void) -> bool {
-    let data = core::slice::from_raw_parts(data, data_len);
-    let data = Vec::from_slice(data).unwrap();
-    info!("Data received: {:?}", data);
-    FROM_USB_SENDER
-        .get()
-        .unwrap()
-        .try_send(String::from_utf8(data).unwrap())
-        .ok();
-    true
-}
-
-#[no_mangle]
-#[allow(non_upper_case_globals)]
-unsafe extern "C" fn event_handle(
-    event: *const cdc_acm_host_dev_event_data_t,
-    _user_context: *mut c_void,
-) {
-    let event_val = *event;
-    match event_val.type_ {
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_ERROR => {
-            info!("CDC error {} occurred", event_val.data.error)
-        }
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_DEVICE_DISCONNECTED => {
-            info!("Device suddenly disconnected");
-            let res = cdc_acm_host_close(event_val.data.cdc_hdl);
-            if res != ESP_OK {
-                error!("Failed to close connection")
-            }
-        }
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_SERIAL_STATE => {
-            info!(
-                "Serial state notification {:#04x}",
-                event_val.data.serial_state.val
-            )
-        }
-        cdc_acm_host_dev_event_t_CDC_ACM_HOST_NETWORK_CONNECTION | _ => {
-            error!("Unsupported CDC event {}", event_val.type_)
-        }
-    }
-}
-
-unsafe fn start_usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>) {
-    let host_config = usb_host_config_t {
-        skip_phy_setup: false,
-        intr_flags: ESP_INTR_FLAG_LEVEL1 as i32,
-        enum_filter_cb: None,
-    };
-    info!("Starting the host");
-    let res = usb_host_install(&host_config);
-    if res != ESP_OK {
-        panic!("Unable to install the usb host");
-    }
-    scope.spawn(|| lib_task());
-
-    info!("Installing the CDC-ACM host driver");
-    let res = cdc_acm_host_install(ptr::null());
-
-    if res != ESP_OK {
-        panic!("Unable to install the usb host");
-    }
-}
-
-unsafe fn process_usb_cdc_host<'a>(receiver: Receiver<T>) {
-    let config = cdc_acm_host_device_config_t {
-        connection_timeout_ms: CONNECTION_TIMEOUT_MS,
-        out_buffer_size: TX_BUFFER_SIZE,
-        in_buffer_size: RX_BUFFER_SIZE,
-        user_arg: ptr::null_mut(),
-        event_cb: Some(event_handle),
-        data_cb: Some(data_rx_handle),
-    };
-    info!(
-        "Opening CDC ACM device {:#04x}:{:#04x}",
-        USB_DEVICE_VID, USB_DEVICE_PID
-    );
-    let mut cdc_device_handler: cdc_acm_dev_hdl_t = ptr::null_mut();
-
-    'wait_for_connection: loop {
-        let res = cdc_acm_host_open(
-            USB_DEVICE_VID,
-            USB_DEVICE_PID,
-            0,
-            &config,
-            &mut cdc_device_handler,
-        );
-
-        std::thread::sleep(Duration::from_millis(100));
-
-        if res != ESP_OK {
-            continue 'wait_for_connection;
-        }
-        break 'wait_for_connection;
-    }
-
-    // Print the device description to stdout
-    cdc_acm_host_desc_print(cdc_device_handler);
-
-    'set_configs: loop {
-        let mut line_coding: cdc_acm_line_coding_t = Default::default();
-        line_coding.dwDTERate = DEFAULT_DW_DTE_RATE;
-
-        let res = cdc_acm_host_line_coding_set(cdc_device_handler, &line_coding);
-
-        if res != ESP_OK {
-            error!("Error setting line coding data");
-            continue;
-        }
-
-        let res = cdc_acm_host_line_coding_get(cdc_device_handler, &mut line_coding);
-
-        if res != ESP_OK {
-            error!("Error getting line coding data");
-            continue;
-        }
-
-        if line_coding.dwDTERate != DEFAULT_DW_DTE_RATE {
-            panic!("Line coding set incorrectly")
-        }
-
-        info!("Line coding successfully set: {:?}", line_coding);
-
-        let res = cdc_acm_host_set_control_line_state(cdc_device_handler, true, false);
-        if res != ESP_OK {
-            error!("Error setting control line data");
-            continue;
-        }
-        break 'set_configs;
-    }
-
-    loop {
-        let data = match receiver.recv() {
-            Ok(data) => data,
-            Err(e) => {
-                info!("Error occurred {e}");
-                continue;
-            }
-        };
-
-        let res = cdc_acm_host_data_tx_blocking(
-            cdc_device_handler,
-            data.as_ptr(),
-            data.len(),
-            TX_TIMEOUT_MS,
-        );
-
-        if res != ESP_OK {
-            error!("Error sending data to the CDC ACM device");
-            continue;
-        }
-    }
-}
+use heapless::String;
+use host_esp::usb_host;
+use std::{str::FromStr, time::Duration};
 
 fn main() {
     esp_idf_svc::sys::link_patches();
@@ -244,30 +31,17 @@ fn main() {
     )
     .unwrap();
 
-    let to_usb = mpsc::sync_channel(100);
-    let _from_usb = {
-        let channel = mpsc::sync_channel(100);
-        FROM_USB_SENDER.set(channel.0).unwrap();
-        channel.1
-    };
-
-    unsafe {
-        std::thread::scope(|s| {
-            start_usb_host(s);
-            s.spawn(move || process_usb_cdc_host(to_usb.1));
-            // TODO: I might need a task to add as an intermediary layer. This way different communication protocols like
-            // i2c or SPI only need to interact with this intermediary to send messages
-            s.spawn(move || {
-                let mut i = 0;
-                loop {
-                    to_usb
-                        .0
-                        .send(String::from_str(format!("{i}").as_str()).unwrap())
-                        .ok();
-                    std::thread::sleep(Duration::from_millis(50));
-                    i = i + 1;
-                }
-            });
+    std::thread::scope(|scope| unsafe {
+        let out = usb_host(scope, 100);
+        scope.spawn(move || {
+            let mut i = 0;
+            loop {
+                out.to
+                    .send(String::from_str(format!("{i}").as_str()).unwrap())
+                    .ok();
+                std::thread::sleep(Duration::from_millis(50));
+                i = i + 1;
+            }
         });
-    }
+    });
 } // See https://github.com/espressif/esp-idf/blob/v5.4.1/examples/peripherals/usb/host/cdc/cdc_acm_host/main/usb_cdc_example_main.c

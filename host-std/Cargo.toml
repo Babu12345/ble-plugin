@@ -25,6 +25,7 @@ default = []
 ## Files in shared directory
 lib_utils = {path = "../lib_utils"}
 protocol = {path = "../protocol"}
+host-esp ={ path = "../host-esp" }
 ## Crates
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }

@@ -1,0 +1,11 @@
+[package]
+name = "host-esp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+log = "0.4"
+esp-idf-sys = { version = "0.36.1", default-features = false }
+heapless = "0.8.0"
+
+# In the imported file
