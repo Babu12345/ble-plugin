@@ -9,13 +9,13 @@ use std::{
     thread::Scope,
 };
 
-pub struct Out {
-    pub to: SyncSender<T>,
-    pub from: Receiver<T>,
+pub struct IO {
+    pub sender: SyncSender<T>,
+    pub receiver: Receiver<T>,
 }
 
 /// Starts the usb host processors and returns channels to communiate with the device
-pub unsafe fn usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, bound: usize) -> Out {
+pub unsafe fn usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, bound: usize) -> IO {
     let to_usb = mpsc::sync_channel(bound);
     let from_usb = {
         let channel = mpsc::sync_channel(bound);
@@ -28,8 +28,8 @@ pub unsafe fn usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, bound: usize) -> Out {
         scope.spawn(move || process_usb_cdc_host(to_usb.1));
     }
 
-    Out {
-        to: to_usb.0,
-        from: from_usb,
+    IO {
+        sender: to_usb.0,
+        receiver: from_usb,
     }
 }

@@ -36,7 +36,7 @@ fn main() {
         scope.spawn(move || {
             let mut i = 0;
             loop {
-                out.to
+                out.sender
                     .send(String::from_str(format!("{i}").as_str()).unwrap())
                     .ok();
                 std::thread::sleep(Duration::from_millis(50));
