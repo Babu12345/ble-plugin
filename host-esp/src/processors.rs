@@ -33,7 +33,6 @@ use crate::consts::*;
 
 // TODO: Return a custom struct to control how data is being channeled to and from the usb interface.
 // This should help to facilitate the defined API.
-
 pub type T = String<256>;
 
 pub static FROM_USB_SENDER: OnceLock<SyncSender<T>> = OnceLock::new();
@@ -75,7 +74,7 @@ unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, _args: *mu
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals)]
+#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn event_handle(
     event: *const cdc_acm_host_dev_event_data_t,
     _user_context: *mut c_void,
