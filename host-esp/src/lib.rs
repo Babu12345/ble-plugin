@@ -15,10 +15,10 @@ pub struct IO {
 }
 
 /// Starts the usb host processors and returns channels to communiate with the device
-pub unsafe fn usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, bound: usize) -> IO {
-    let to_usb = mpsc::sync_channel(bound);
+pub unsafe fn usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, channel_buffer_size: usize) -> IO {
+    let to_usb = mpsc::sync_channel(channel_buffer_size);
     let from_usb = {
-        let channel = mpsc::sync_channel(bound);
+        let channel = mpsc::sync_channel(channel_buffer_size);
         FROM_USB_SENDER.set(channel.0).unwrap();
         channel.1
     };
