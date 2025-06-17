@@ -29,7 +29,7 @@ use std::{
 
 use log::{error, info, warn};
 
-use crate::consts::*;
+use crate::constants::*;
 
 // TODO: Return a custom struct to control how data is being channeled to and from the usb interface.
 // This should help to facilitate the defined API.

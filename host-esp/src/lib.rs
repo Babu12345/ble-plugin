@@ -1,6 +1,6 @@
-//! Library to compartimentalize the host controls and only return the channels.
+//! Library to compartimentalize the host controls and only return the channels. Uses the standard espressif esp libary
 #[deny(missing_docs)]
-mod consts;
+mod constants;
 mod processors;
 use processors::{FROM_USB_SENDER, T, process_usb_cdc_host, start_usb_host};
 

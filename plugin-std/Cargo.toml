@@ -23,7 +23,7 @@ heapless = "0.8.0"
 embassy-futures = "0.1.1"
 
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "cherry-embedded/cherryusb", version = "1.4.100" }
+remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~1" }
 bindings_header = "cherry_usb_device_bindings.h"
 bindings_module = "cherry_device"
 
