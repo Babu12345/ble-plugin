@@ -2,7 +2,7 @@
 Starter project for a BLE plugin device set
 
 ## Engineers
-Babuabel Wanyeki (bwanyeki12@gmail.com)
+Babuabel Wanyeki (babs@wanyekitech.com)
 
 ## Links
 https://docs.esp-rs.org/book/writing-your-own-application/generate-project/esp-generate.html 
