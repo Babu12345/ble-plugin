@@ -1,3 +1,4 @@
+use ble_plugin::cherry_usb_host;
 use esp_idf_svc::hal::{
     prelude::Peripherals,
     spi::{
@@ -31,8 +32,23 @@ fn main() {
     )
     .unwrap();
 
+    // std::thread::scope(|scope| unsafe {
+    //     let io = usb_host(scope, 100);
+    //     scope.spawn(move || {
+    //         let mut i = 0;
+    //         loop {
+    //             io.sender
+    //                 .send(String::from_str(format!("{i}").as_str()).unwrap())
+    //                 .ok();
+    //             std::thread::sleep(Duration::from_millis(50));
+    //             i = i + 1;
+    //         }
+    //     });
+    // });
+
     std::thread::scope(|scope| unsafe {
-        let io = usb_host(scope, 100);
+        let io = cherry_usb_host(scope, 100);
+        // usbh_cdc_ac
         scope.spawn(move || {
             let mut i = 0;
             loop {

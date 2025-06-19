@@ -42,7 +42,7 @@ bindings_header = "usb_host_bindings.h"
 bindings_module = "host"
 
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~1" }
+remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~2" }
 bindings_header = "cherry_usb_host_bindings.h"
 bindings_module = "cherry_host"
 
