@@ -9,10 +9,9 @@ use std::{
 use esp_idf_sys::cherry_host::{
     usbh_cdc_acm, usbh_cdc_acm_bulk_in_transfer, usbh_cdc_acm_bulk_out_transfer,
 };
-use heapless::String;
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
-pub type T = String<256>;
+pub type T = [u8; 10];
 
 #[derive(Debug)]
 struct ThreadSafeCDCWrapper(*mut usbh_cdc_acm);
@@ -42,11 +41,13 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
     loop {
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
-            None => continue,
+            None => {
+                std::thread::sleep(Duration::from_millis(50));
+                continue;
+            }
         }
         .0;
-        let mut buffer: T = String::new();
-        // TODO: Validate with return value
+        let mut buffer: T = [0; 10];
         match unsafe {
             usbh_cdc_acm_bulk_in_transfer(
                 cdc_acm_class,
@@ -61,11 +62,11 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
             }
             _ => {}
         };
-        // TODO: Fix stack overflow here
-        // let data: Vec<u8, 256> = Vec::from_slice(&buffer).unwrap();
-        // sender.send(String::from_utf8(data).unwrap()).unwrap();
         log::info!("The data is {:?}", buffer);
-        std::thread::sleep(Duration::from_millis(50));
+        match sender.send(buffer) {
+            Ok(_) => {}
+            Err(e) => log::error!("{e}"),
+        }
     }
 }
 
@@ -73,7 +74,10 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>) {
     loop {
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
-            None => continue,
+            None => {
+                std::thread::sleep(Duration::from_millis(50));
+                continue;
+            }
         }
         .0;
         let mut data = match receiver.recv() {
@@ -92,12 +96,12 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>) {
             )
         } {
             x if x < 0 => {
-                log::error!("Unable to send the data {data}");
+                log::error!("Unable to send the data {:?}", data);
                 continue;
             }
             _ => {}
         };
 
-        log::info!("Data transmitted: {data}");
+        log::info!("Data transmitted: {:?}", data);
     }
 }

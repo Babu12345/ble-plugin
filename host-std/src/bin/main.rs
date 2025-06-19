@@ -9,6 +9,7 @@ use esp_idf_svc::hal::{
 use heapless::String;
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
+use lib_utils::MatchSliceLengths;
 use std::{str::FromStr, time::Duration};
 
 fn main() {
@@ -47,13 +48,11 @@ fn main() {
     // });
 
     std::thread::scope(|scope| unsafe {
-        let io = cherry_usb_host(scope, 100);
         scope.spawn(move || {
+            let io = cherry_usb_host(scope, 100);
             let mut i = 0;
             loop {
-                io.sender
-                    .send(String::from_str(format!("{i}").as_str()).unwrap())
-                    .ok();
+                io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
                 std::thread::sleep(Duration::from_millis(50));
                 i = i + 1;
             }
