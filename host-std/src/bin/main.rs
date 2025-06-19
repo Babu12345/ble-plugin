@@ -1,4 +1,3 @@
-use ble_plugin::cherry_usb_host;
 use esp_idf_svc::hal::{
     prelude::Peripherals,
     spi::{
@@ -8,6 +7,7 @@ use esp_idf_svc::hal::{
     units::Hertz,
 };
 use heapless::String;
+use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
 use std::{str::FromStr, time::Duration};
 
@@ -48,7 +48,6 @@ fn main() {
 
     std::thread::scope(|scope| unsafe {
         let io = cherry_usb_host(scope, 100);
-        // usbh_cdc_ac
         scope.spawn(move || {
             let mut i = 0;
             loop {
