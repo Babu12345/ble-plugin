@@ -6,11 +6,10 @@ use esp_idf_svc::hal::{
     },
     units::Hertz,
 };
-use heapless::String;
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
 use lib_utils::MatchSliceLengths;
-use std::{str::FromStr, time::Duration};
+use std::time::Duration;
 
 fn main() {
     esp_idf_svc::sys::link_patches();

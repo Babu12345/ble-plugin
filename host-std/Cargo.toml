@@ -37,18 +37,16 @@ heapless = "0.8.0"
 embassy-futures = "0.1.1"
 
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "espressif/usb_host_cdc_acm", version = "2.0.6" }
+# remote_component = { name = "espressif/usb_host_cdc_acm", version = "2.0.6" }
+component_dirs = "components/usb_host_cdc_acm"
 bindings_header = "usb_host_bindings.h"
 bindings_module = "host"
 
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~3" }
+# remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~3" }
+component_dirs = "components/cherryusb"
 bindings_header = "cherry_usb_host_bindings.h"
 bindings_module = "cherry_host"
-
-# extra_components = [
-#     { component_dirs = [ "dir1", "dir2" ], bindings_header = "bindings.h", bindings_module = "name" }
-# ]
 
 # https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md
 # Use this to import the remote components via a git. Make sure the idf_component.yml url and versions are correct

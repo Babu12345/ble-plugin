@@ -63,6 +63,7 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
             _ => {}
         };
         log::info!("The data is {:?}", buffer);
+        // log::info!("The data is {:?}", String::from_utf8(Vec::from(&buffer)));
         match sender.send(buffer) {
             Ok(_) => {}
             Err(e) => log::error!("{e}"),
