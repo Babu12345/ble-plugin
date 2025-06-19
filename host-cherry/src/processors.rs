@@ -19,10 +19,9 @@ struct ThreadSafeWrapper(*mut usbh_cdc_acm);
 unsafe impl Send for ThreadSafeWrapper {}
 unsafe impl Sync for ThreadSafeWrapper {}
 
-/// Strong reference to the cdc runner
+/// Strong reference to the cdc runner defined in C
 #[unsafe(no_mangle)]
 pub extern "C" fn usbh_cdc_acm_run(cdc_acm_class: *mut usbh_cdc_acm) {
-    log::info!("This is from rust");
     LOCKER.set(ThreadSafeWrapper(cdc_acm_class)).unwrap();
 }
 
