@@ -42,12 +42,12 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
             None => {
-                std::thread::sleep(Duration::from_millis(50));
+                std::thread::sleep(Duration::from_millis(10));
                 continue;
             }
         }
         .0;
-        let mut buffer: T = [0; 10];
+        let mut buffer = [0; size_of::<T>()];
         match unsafe {
             usbh_cdc_acm_bulk_in_transfer(
                 cdc_acm_class,
@@ -76,7 +76,7 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>) {
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
             None => {
-                std::thread::sleep(Duration::from_millis(50));
+                std::thread::sleep(Duration::from_millis(10));
                 continue;
             }
         }
