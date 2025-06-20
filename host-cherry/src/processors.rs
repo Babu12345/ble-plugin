@@ -11,7 +11,7 @@ use esp_idf_sys::cherry_host::{
 };
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
-pub type T = [u8; 10];
+pub type T = [u8; 20];
 
 #[derive(Debug)]
 struct ThreadSafeCDCWrapper(*mut usbh_cdc_acm);
@@ -38,6 +38,7 @@ pub extern "C" fn usbh_cdc_acm_stop(cdc_acm_class: *mut usbh_cdc_acm) {
 }
 
 pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
+    let mut buffer = [0; size_of::<T>()];
     loop {
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
@@ -47,7 +48,6 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
             }
         }
         .0;
-        let mut buffer = [0; size_of::<T>()];
         match unsafe {
             usbh_cdc_acm_bulk_in_transfer(
                 cdc_acm_class,
@@ -62,11 +62,18 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
             }
             _ => {}
         };
-        log::info!("The data is {:?}", buffer);
-        // log::info!("The data is {:?}", String::from_utf8(Vec::from(&buffer)));
-        match sender.send(buffer) {
+        log::info!("The data is {:?}", String::from_utf8(Vec::from(&buffer)));
+
+        match sender.try_send(buffer) {
             Ok(_) => {}
-            Err(e) => log::error!("{e}"),
+            Err(std::sync::mpsc::TrySendError::Full(_)) => {
+                log::warn!(
+                    "Receive buffer is full. You must ingest in order to receive additional information."
+                );
+            }
+            Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
+                log::error!("Disconnect error");
+            }
         }
     }
 }
@@ -81,13 +88,15 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>) {
             }
         }
         .0;
+
         let mut data = match receiver.recv() {
             Ok(data) => data,
             Err(e) => {
-                log::info!("Error occurred {e}");
+                log::error!("Error occurred {e}");
                 continue;
             }
         };
+
         match unsafe {
             usbh_cdc_acm_bulk_out_transfer(
                 cdc_acm_class,
@@ -97,7 +106,7 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>) {
             )
         } {
             x if x < 0 => {
-                log::error!("Unable to send the data {:?}", data);
+                log::error!("Unable to send the data {:?}", x);
                 continue;
             }
             _ => {}

@@ -48,11 +48,10 @@ fn main() {
 
     std::thread::scope(|scope| unsafe {
         scope.spawn(move || {
-            let io = cherry_usb_host(scope, 100);
+            let io = cherry_usb_host(scope, 1000);
             let mut i = 0;
             loop {
                 io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
-                std::thread::sleep(Duration::from_millis(50));
                 i = i + 1;
             }
         });
