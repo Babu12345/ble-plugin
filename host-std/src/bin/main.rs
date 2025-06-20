@@ -39,7 +39,6 @@ fn main() {
     //             io.sender
     //                 .send(String::from_str(format!("{i}").as_str()).unwrap())
     //                 .ok();
-    //             std::thread::sleep(Duration::from_millis(50));
     //             i = i + 1;
     //         }
     //     });
