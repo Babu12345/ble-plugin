@@ -39,18 +39,17 @@ fn main() {
     )
     .unwrap();
 
-    // std::thread::scope(|scope: &std::thread::Scope<'_, '_>| {
-    //     let io = unsafe { usb_host(scope, 100) };
+    // std::thread::scope(|scope| {
     //     scope.spawn(move || {
+    //         let io = unsafe { usb_host(scope, 100) };
     //         let mut i = 0;
     //         loop {
-    //             io.sender
-    //                 .send(String::from_str(format!("{i}").as_str()).unwrap())
-    //                 .ok();
+    //             io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
     //             i = i + 1;
     //         }
     //     });
     // });
+
     std::thread::scope(|scope| {
         scope.spawn(move || {
             let io = unsafe { cherry_usb_host(scope, 100) };

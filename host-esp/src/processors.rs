@@ -14,7 +14,7 @@ use esp_idf_sys::{
         usb_host_config_t, usb_host_device_free_all, usb_host_install, usb_host_lib_handle_events,
     },
 };
-use heapless::{String, Vec};
+use lib_utils::MatchSliceLengths;
 
 use std::{
     ffi::c_void,
@@ -33,7 +33,7 @@ use crate::constants::*;
 
 // TODO: Return a custom struct to control how data is being channeled to and from the usb interface.
 // This should help to facilitate the defined API.
-pub type T = String<256>;
+pub type T = [u8; 256];
 
 pub static FROM_USB_SENDER: OnceLock<SyncSender<T>> = OnceLock::new();
 
@@ -62,14 +62,21 @@ unsafe fn lib_task() {
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, _args: *mut c_void) -> bool {
-    let data = unsafe { core::slice::from_raw_parts(data, data_len) };
-    let data = Vec::from_slice(data).unwrap();
-    info!("Data received: {:?}", data);
-    FROM_USB_SENDER
-        .get()
-        .unwrap()
-        .try_send(String::from_utf8(data).unwrap())
-        .ok();
+    let data = unsafe { core::slice::from_raw_parts(data, data_len) }.match_size(0);
+
+    log::info!("The data is {:?}", String::from_utf8(Vec::from(&data)));
+
+    match FROM_USB_SENDER.get().unwrap().try_send(data) {
+        Ok(_) => {}
+        Err(std::sync::mpsc::TrySendError::Full(_)) => {
+            log::warn!(
+                "Receive buffer is full. You must ingest in order to receive additional information."
+            );
+        }
+        Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
+            log::error!("Disconnect error");
+        }
+    }
     true
 }
 

@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+## Files in shared directory
+lib_utils = { path = "../lib_utils" }
+# crates
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
@@ -13,9 +16,11 @@ heapless = "0.8.0"
 # In the Cargo.toml file where this is being imported make sure you also do. See the examples attached
 
 # [[package.metadata.esp-idf-sys.extra_components]]
-# remote_component = { name = "espressif/usb_host_cdc_acm", version = "2.0.6" }
+## remote_component = { name = "espressif/usb_host_cdc_acm", version = "2.0.6" }
+# component_dirs = "components/usb_host_cdc_acm"
 # bindings_header = "usb_host_bindings.h"
 # bindings_module = "host"
 
 # Then also define a bindings header file - "usb_host_bindings.h" - to import the specific driver class 
-#include "usb/cdc_acm_host.h"
+## include "usbh_core.h"
+## include "usbh_cdc_acm.h"
