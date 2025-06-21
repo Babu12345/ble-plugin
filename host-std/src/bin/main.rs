@@ -53,7 +53,7 @@ fn main() {
     // });
     std::thread::scope(|scope| {
         scope.spawn(move || {
-            let io = unsafe { cherry_usb_host(scope, 1000) };
+            let io = unsafe { cherry_usb_host(scope, 100) };
             let mut i = 0;
             loop {
                 io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
