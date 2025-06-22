@@ -36,17 +36,5 @@ static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
 
-[[package.metadata.esp-idf-sys.extra_components]]
-# remote_component = { name = "espressif/usb_host_cdc_acm", version = "2.0.6" }
-component_dirs = "components/usb_host_cdc_acm"
-bindings_header = "usb_host_bindings.h"
-bindings_module = "host"
-
-[[package.metadata.esp-idf-sys.extra_components]]
-# remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~3" }
-component_dirs = "components/cherryusb"
-bindings_header = "cherry_usb_host_bindings.h"
-bindings_module = "cherry_host"
-
 [build-dependencies]
 embuild = "0.33"

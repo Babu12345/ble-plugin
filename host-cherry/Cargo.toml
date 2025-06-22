@@ -8,14 +8,8 @@ log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
 
-### WARNING. Please read for proper usage ###
-# In the Cargo.toml file where this is being imported make sure you also do. See the examples attached
-
-# [[package.metadata.esp-idf-sys.extra_components]]
-## remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~3" }
-# component_dirs = "components/cherryusb"
-# bindings_header = "cherry_usb_host_bindings.h"
-# bindings_module = "cherry_host"
-
-# Then also define a bindings header file - "cherry_usb_host_bindings.h" - to import the specific driver class 
-#include "usb/cdc_acm_host.h"
+[[package.metadata.esp-idf-sys.extra_components]]
+# remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~3" }
+component_dirs = "components/cherryusb"
+bindings_header = "cherry_usb_host_bindings.h"
+bindings_module = "cherry_host"
