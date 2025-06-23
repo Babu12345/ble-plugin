@@ -5,6 +5,7 @@
 
 #![deny(missing_docs)]
 
+pub mod errors;
 pub mod host;
 pub mod plugin;
 pub mod primary;

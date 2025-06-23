@@ -39,20 +39,9 @@ fn main() {
     )
     .unwrap();
 
-    std::thread::scope(|scope| {
-        scope.spawn(move || {
-            let io = unsafe { usb_host(scope, 100) };
-            let mut i = 0;
-            loop {
-                io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
-                i = i + 1;
-            }
-        });
-    });
-
     // std::thread::scope(|scope| {
     //     scope.spawn(move || {
-    //         let io = unsafe { cherry_usb_host(scope, 100) };
+    //         let io = unsafe { usb_host(scope, 100) };
     //         let mut i = 0;
     //         loop {
     //             io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
@@ -60,4 +49,15 @@ fn main() {
     //         }
     //     });
     // });
+
+    std::thread::scope(|scope| {
+        scope.spawn(move || {
+            let io = unsafe { cherry_usb_host(scope, 100) };
+            let mut i = 0;
+            loop {
+                io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
+                i = i + 1;
+            }
+        });
+    });
 } // See https://github.com/espressif/esp-idf/blob/v5.4.1/examples/peripherals/usb/host/cdc/cdc_acm_host/main/usb_cdc_example_main.c
