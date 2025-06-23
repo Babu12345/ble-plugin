@@ -8,7 +8,7 @@ use esp_idf_svc::hal::{
 };
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use protocol::host::{HostCommand, HostCommandTypes};
+use protocol::host::{BulkHostCommand, HostCommand, HostCommandTypes};
 use uuid::Uuid;
 
 /**
@@ -56,8 +56,13 @@ fn main() {
         scope.spawn(move || {
             let io = unsafe { cherry_usb_host(scope, 100) };
             loop {
-                io.send(HostCommand {
-                    cmd: HostCommandTypes::ConfigPeripheral("Default name", Uuid::from_u128(0xff)),
+                io.send(BulkHostCommand {
+                    commands: vec![HostCommand {
+                        cmd: HostCommandTypes::ConfigPeripheral(
+                            "Default name",
+                            Uuid::from_u128(0xff),
+                        ),
+                    }],
                 })
                 .ok();
             }

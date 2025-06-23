@@ -114,34 +114,6 @@ impl<'a> BulkHostCommand<'a> {
     }
 }
 
-impl<'a> THostIO<'a> for HostCommand<'a> {
-    /// Convert to bytes
-    fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
-        let bytes = self.serialize_bytes()?;
-        if bytes.len() > N {
-            return Err(errors::Error::SerializationBufferOverflow);
-        }
-        Ok(bytes.match_size(0))
-    }
-
-    /// Convert from bytes
-    fn from_bytes<'input: 'a>(input: &'input [u8]) -> Result<Self> {
-        rmp_serde::from_slice(input).map_err(|_| crate::errors::Error::UnableToDeserializeFromRMP)
-    }
-}
-
-impl<'a> HostCommand<'a> {
-    /// Serialize the host command to a Vec using RMP
-    #[inline(always)]
-    fn serialize_bytes(&self) -> Result<Vec<u8>> {
-        let mut writer = Vec::new();
-        self.serialize(&mut Serializer::new(&mut writer))
-            .map_err(|_| Error::UnableToSerializeToRMP)?;
-        // bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
-        Ok(writer)
-    }
-}
-
 impl<'a> BulkHostData<'a> {
     /// Serialize the host command to a Vec using RMP
     #[inline(always)]
