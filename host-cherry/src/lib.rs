@@ -4,21 +4,11 @@ mod constants;
 mod processors;
 mod utils;
 use processors::*;
+use protocol::host::HostIO;
 
-use std::{
-    sync::mpsc::{Receiver, SyncSender, sync_channel},
-    thread::Scope,
-};
+use std::{sync::mpsc::sync_channel, thread::Scope};
 
 use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
-
-/// Usb host input/output
-pub struct IO {
-    /// USB sender
-    pub sender: SyncSender<T>,
-    /// USB receiver
-    pub receiver: Receiver<T>,
-}
 
 // Initialization
 // https://github.com/zleihao/CherryUSB-CDC-MSC/blob/50095e0b63bbdf6f2d5597e71edfa45dd8be6c1d/cdc_msc/middlewares/CherryUSB-1.4.0/class/cdc/usbh_cdc_acm.c#L170
@@ -28,7 +18,10 @@ pub struct IO {
 // https://github.com/CherryUSB/cherryusb_esp32/blob/main/examples/host/sdkconfig
 
 /// Initialize the usb host and send out receivers and senders to process and send information to the connected usb device via the cdc acm driver class.
-pub unsafe fn cherry_usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, channel_buffer_size: usize) -> IO {
+pub unsafe fn cherry_usb_host<'a, 'b>(
+    scope: &'a Scope<'a, 'b>,
+    channel_buffer_size: usize,
+) -> HostIO<512> {
     let to_usb = sync_channel(channel_buffer_size);
     let from_usb = sync_channel(channel_buffer_size);
 
@@ -37,8 +30,5 @@ pub unsafe fn cherry_usb_host<'a, 'b>(scope: &'a Scope<'a, 'b>, channel_buffer_s
     scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
     scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
 
-    IO {
-        sender: to_usb.0,
-        receiver: from_usb.1,
-    }
+    HostIO::new(to_usb.0, from_usb.1)
 }

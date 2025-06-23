@@ -33,7 +33,7 @@ use crate::constants::*;
 
 // TODO: Return a custom struct to control how data is being channeled to and from the usb interface.
 // This should help to facilitate the defined API.
-pub type T = [u8; 256];
+pub type T = [u8; 512];
 
 pub static FROM_USB_SENDER: OnceLock<SyncSender<T>> = OnceLock::new();
 

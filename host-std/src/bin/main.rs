@@ -9,6 +9,7 @@ use esp_idf_svc::hal::{
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
 use lib_utils::MatchSliceLengths;
+use protocol::host::{HostCommand, HostCommandTypes};
 
 /**
  * General protocal is as follows:
@@ -42,10 +43,11 @@ fn main() {
     // std::thread::scope(|scope| {
     //     scope.spawn(move || {
     //         let io = unsafe { usb_host(scope, 100) };
-    //         let mut i = 0;
     //         loop {
-    //             io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
-    //             i = i + 1;
+    //             io.send(HostCommand {
+    //                 cmd: HostCommandTypes::ConfigPeripheral("Default name", 0u32),
+    //             })
+    //             .ok();
     //         }
     //     });
     // });
@@ -53,10 +55,11 @@ fn main() {
     std::thread::scope(|scope| {
         scope.spawn(move || {
             let io = unsafe { cherry_usb_host(scope, 100) };
-            let mut i = 0;
             loop {
-                io.sender.send(format!("{i}").as_bytes().match_size(0)).ok();
-                i = i + 1;
+                io.send(HostCommand {
+                    cmd: HostCommandTypes::ConfigPeripheral("Default name", 0u32),
+                })
+                .ok();
             }
         });
     });

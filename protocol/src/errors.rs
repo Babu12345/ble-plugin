@@ -12,4 +12,7 @@ pub enum Error {
     UnableToDeserializeFromRMP,
     /// Unable to fit the serialized bytes into the send buffer
     SerializationBufferOverflow,
+    // Transfers
+    /// Send error
+    SendError,
 }
