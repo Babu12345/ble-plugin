@@ -5,6 +5,7 @@ use std::sync::mpsc::{Receiver, SyncSender};
 use lib_utils::MatchSliceLengths;
 use rmp_serde::Serializer;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::errors::{self, Error, Result};
 
@@ -41,7 +42,7 @@ impl<'a, const N: usize> HostIO<N> {
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum HostCommandTypes<'a> {
     /// Configure the BLE name
-    ConfigPeripheral(&'a str, u32),
+    ConfigPeripheral(&'a str, Uuid),
 }
 
 /// Host command data
@@ -92,6 +93,7 @@ impl<'a> HostCommand<'a> {
         let mut writer = Vec::new();
         self.serialize(&mut Serializer::new(&mut writer))
             .map_err(|_| Error::UnableToSerializeToRMP)?;
+        // bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
         Ok(writer)
     }
 }

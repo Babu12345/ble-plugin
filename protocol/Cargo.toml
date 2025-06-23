@@ -12,3 +12,6 @@ heapless = { version = "0.8.0" }
 rmp-serde = "1.3.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_bytes = "0.11.17"
+# TODO: Test between rmp and bincode
+bincode = { version = "2.0.1", features = ["serde"] }
+uuid = { version = "1.17.0", features = ["serde"] }

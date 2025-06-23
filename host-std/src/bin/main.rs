@@ -8,8 +8,8 @@ use esp_idf_svc::hal::{
 };
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use lib_utils::MatchSliceLengths;
 use protocol::host::{HostCommand, HostCommandTypes};
+use uuid::Uuid;
 
 /**
  * General protocal is as follows:
@@ -57,7 +57,7 @@ fn main() {
             let io = unsafe { cherry_usb_host(scope, 100) };
             loop {
                 io.send(HostCommand {
-                    cmd: HostCommandTypes::ConfigPeripheral("Default name", 0u32),
+                    cmd: HostCommandTypes::ConfigPeripheral("Default name", Uuid::from_u128(0)),
                 })
                 .ok();
             }
