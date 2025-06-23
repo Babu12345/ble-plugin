@@ -53,11 +53,27 @@ pub struct HostCommand<'a> {
     pub cmd: HostCommandTypes<'a>,
 }
 
+/// Host command data in bulk
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BulkHostCommand<'a> {
+    /// Commands
+    #[serde(borrow)]
+    pub commands: Vec<HostCommand<'a>>,
+}
+
 /// Host data
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct HostData<'a> {
     /// Actual command type
     pub output: &'a [u8],
+}
+
+/// Host  data in bulk
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BulkHostData<'a> {
+    /// Data
+    #[serde(borrow)]
+    data: Vec<HostData<'a>>,
 }
 
 /// Communication types
@@ -68,6 +84,34 @@ pub trait THostIO<'a> {
     fn from_bytes<'input: 'a>(input: &'input [u8]) -> Result<Self>
     where
         Self: Sized;
+}
+
+impl<'a> THostIO<'a> for BulkHostCommand<'a> {
+    /// Convert to bytes
+    fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
+        let bytes = self.serialize_bytes()?;
+        if bytes.len() > N {
+            return Err(errors::Error::SerializationBufferOverflow);
+        }
+        Ok(bytes.match_size(0))
+    }
+
+    /// Convert from bytes
+    fn from_bytes<'input: 'a>(input: &'input [u8]) -> Result<Self> {
+        rmp_serde::from_slice(input).map_err(|_| crate::errors::Error::UnableToDeserializeFromRMP)
+    }
+}
+
+impl<'a> BulkHostCommand<'a> {
+    /// Serialize the host command to a Vec using RMP
+    #[inline(always)]
+    fn serialize_bytes(&self) -> Result<Vec<u8>> {
+        let mut writer = Vec::new();
+        self.serialize(&mut Serializer::new(&mut writer))
+            .map_err(|_| Error::UnableToSerializeToRMP)?;
+        // bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
+        Ok(writer)
+    }
 }
 
 impl<'a> THostIO<'a> for HostCommand<'a> {
@@ -98,7 +142,7 @@ impl<'a> HostCommand<'a> {
     }
 }
 
-impl<'a> HostData<'a> {
+impl<'a> BulkHostData<'a> {
     /// Serialize the host command to a Vec using RMP
     #[inline(always)]
     fn serialize_bytes(&self) -> Result<Vec<u8>> {
@@ -109,7 +153,7 @@ impl<'a> HostData<'a> {
     }
 }
 
-impl<'a> THostIO<'a> for HostData<'a> {
+impl<'a> THostIO<'a> for BulkHostData<'a> {
     /// Convert to bytes
     fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
         let bytes = self.serialize_bytes()?;
