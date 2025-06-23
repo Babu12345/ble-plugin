@@ -57,7 +57,7 @@ fn main() {
             let io = unsafe { cherry_usb_host(scope, 100) };
             loop {
                 io.send(HostCommand {
-                    cmd: HostCommandTypes::ConfigPeripheral("Default name", Uuid::from_u128(0)),
+                    cmd: HostCommandTypes::ConfigPeripheral("Default name", Uuid::from_u128(0xff)),
                 })
                 .ok();
             }
