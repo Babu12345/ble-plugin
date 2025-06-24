@@ -132,6 +132,7 @@ impl<'a> THostIO<'a> for BulkHostData<'a> {
         if bytes.len() > N {
             return Err(errors::Error::SerializationBufferOverflow);
         }
+        // TODO: Instead of padding with a 0 think of padding with a null character byte
         Ok(bytes.match_size(0))
     }
 
