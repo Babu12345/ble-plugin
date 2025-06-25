@@ -31,8 +31,8 @@ impl<'a, const N: usize> HostIO<N> {
     }
 
     /// Receive the data
-    pub fn receive<T: THostIO<'a>>(&self, input: [u8; N]) -> Result<()> {
-        // let input = self.receiver.recv().unwrap();
+    pub fn receive<T: THostIO<'a>>(&self) -> Result<()> {
+        let _input = self.receiver.recv().unwrap();
         // T::from_bytes(input.);
         todo!()
     }
