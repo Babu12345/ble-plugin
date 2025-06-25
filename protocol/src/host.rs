@@ -2,13 +2,14 @@
 
 use std::sync::mpsc::{Receiver, SyncSender};
 
+use heapless::String;
 use lib_utils::MatchSliceLengths;
 use rmp_serde::Serializer;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::errors::{self, Error, Result};
-
+use crate::MAX_NAME_SIZE;
 /// Usb host input/output
 pub struct HostIO<const N: usize> {
     /// USB sender
@@ -40,26 +41,24 @@ impl<'a, const N: usize> HostIO<N> {
 }
 
 /// Acutal host command type
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-pub enum HostCommandTypes<'a> {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum HostCommandTypes {
     /// Configure the BLE name
-    ConfigPeripheral(&'a str, Uuid),
+    ConfigPeripheral(String<MAX_NAME_SIZE>, Uuid),
 }
 
 /// Host command data
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-pub struct HostCommand<'a> {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct HostCommand {
     /// Actual command type
-    #[serde(borrow)]
-    pub cmd: HostCommandTypes<'a>,
+    pub cmd: HostCommandTypes,
 }
 
 /// Host command data in bulk
 #[derive(Debug, Deserialize, Serialize)]
-pub struct BulkHostCommand<'a> {
+pub struct BulkHostCommand {
     /// Commands
-    #[serde(borrow)]
-    pub commands: Vec<HostCommand<'a>>,
+    pub commands: Vec<HostCommand>,
 }
 
 /// Host data
@@ -87,7 +86,7 @@ pub trait THostIO<'a> {
         Self: Sized;
 }
 
-impl<'a> THostIO<'a> for BulkHostCommand<'a> {
+impl<'a> THostIO<'a> for BulkHostCommand {
     /// Convert to bytes
     fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
         let bytes = self.serialize_bytes()?;
@@ -103,7 +102,7 @@ impl<'a> THostIO<'a> for BulkHostCommand<'a> {
     }
 }
 
-impl<'a> BulkHostCommand<'a> {
+impl BulkHostCommand {
     /// Serialize the host command to a Vec using RMP
     #[inline(always)]
     fn serialize_bytes(&self) -> Result<Vec<u8>> {

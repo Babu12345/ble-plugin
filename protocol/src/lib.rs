@@ -9,3 +9,5 @@ pub mod errors;
 pub mod host;
 pub mod plugin;
 pub mod primary;
+
+const MAX_NAME_SIZE: usize = 30;

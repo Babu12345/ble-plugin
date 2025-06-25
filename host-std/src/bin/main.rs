@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use esp_idf_svc::hal::{
     prelude::Peripherals,
     spi::{
@@ -6,6 +8,7 @@ use esp_idf_svc::hal::{
     },
     units::Hertz,
 };
+use heapless::String;
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
 use protocol::host::{BulkHostCommand, HostCommand, HostCommandTypes};
@@ -19,7 +22,7 @@ use uuid::Uuid;
  * any of the commands. By using a channel we can also dictate how large the buffer should
  * be as well as make sure the order of the commands and data is what we expect.
  */
-fn main() {
+fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
@@ -65,7 +68,7 @@ fn main() {
                     .into_iter()
                     .map(|x| HostCommand {
                         cmd: HostCommandTypes::ConfigPeripheral(
-                            "Default name's",
+                            String::from_str(format!("Name with id: {x}").as_str()).unwrap(),
                             Uuid::from_u128(x),
                         ),
                     })
@@ -74,4 +77,6 @@ fn main() {
             }
         });
     });
+
+    Ok(())
 } // See https://github.com/espressif/esp-idf/blob/v5.4.1/examples/peripherals/usb/host/cdc/cdc_acm_host/main/usb_cdc_example_main.c

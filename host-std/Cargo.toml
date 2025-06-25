@@ -36,6 +36,7 @@ static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
 uuid = "1.17.0"
+anyhow = {version = "1.0.98", default-features = false}
 
 [build-dependencies]
 embuild = "0.33"
