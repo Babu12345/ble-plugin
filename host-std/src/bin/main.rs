@@ -44,8 +44,13 @@ fn main() {
     //     scope.spawn(move || {
     //         let io = unsafe { usb_host(scope, 100) };
     //         loop {
-    //             io.send(HostCommand {
-    //                 cmd: HostCommandTypes::ConfigPeripheral("Default name", 0u32),
+    //             io.send(BulkHostCommand {
+    //                 commands: vec![HostCommand {
+    //                     cmd: HostCommandTypes::ConfigPeripheral(
+    //                         "Default name",
+    //                         Uuid::from_u128(0xff),
+    //                     ),
+    //                 }],
     //             })
     //             .ok();
     //         }
@@ -56,15 +61,16 @@ fn main() {
         scope.spawn(move || {
             let io = unsafe { cherry_usb_host(scope, 100) };
             loop {
-                io.send(BulkHostCommand {
-                    commands: vec![HostCommand {
+                let commands = vec![0, 1, 2]
+                    .into_iter()
+                    .map(|x| HostCommand {
                         cmd: HostCommandTypes::ConfigPeripheral(
-                            "Default name",
-                            Uuid::from_u128(0xff),
+                            "Default name's",
+                            Uuid::from_u128(x),
                         ),
-                    }],
-                })
-                .ok();
+                    })
+                    .collect();
+                io.send(BulkHostCommand { commands: commands }).ok();
             }
         });
     });
