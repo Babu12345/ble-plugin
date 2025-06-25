@@ -31,10 +31,11 @@ impl<'a, const N: usize> HostIO<N> {
     }
 
     /// Receive the data
-    pub fn receive<T: THostIO<'a>>(&self) -> Result<()> {
+    pub fn receive<T: THostIO<'a>>(&self) -> Result<Vec<T>> {
         let _input = self.receiver.recv().unwrap();
         // T::from_bytes(input.);
-        todo!()
+        // TODO: Implement functionality
+        Ok(vec![])
     }
 }
 
@@ -133,7 +134,7 @@ impl<'a> THostIO<'a> for BulkHostData<'a> {
             return Err(errors::Error::SerializationBufferOverflow);
         }
         // TODO: Instead of padding with a 0 think of padding with a null character byte
-        Ok(bytes.match_size(0))
+        Ok(bytes.match_size(0x00))
     }
 
     /// Convert from bytes
