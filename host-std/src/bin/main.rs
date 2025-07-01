@@ -11,7 +11,7 @@ use esp_idf_svc::hal::{
 use heapless::String;
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use protocol::host::{BulkHostCommand, HostCommand, HostCommandTypes};
+use protocol::host::{BulkHostCommand, HostCommand, HostCommandTypes::*};
 use uuid::Uuid;
 
 /**
@@ -67,7 +67,7 @@ fn main() -> anyhow::Result<()> {
                 let commands = vec![0, 1, 2]
                     .into_iter()
                     .map(|x| HostCommand {
-                        cmd: HostCommandTypes::ConfigPeripheral(
+                        cmd: ConfigPeripheral(
                             String::from_str(format!("Name with id: {x}").as_str()).unwrap(),
                             Uuid::from_u128(x),
                         ),
