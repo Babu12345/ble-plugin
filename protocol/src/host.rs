@@ -50,6 +50,8 @@ pub enum HostCommandTypes {
 /// Host command data
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HostCommand {
+    /// Unique command id
+    pub id: Uuid,
     /// Actual command type
     pub cmd: HostCommandTypes,
 }

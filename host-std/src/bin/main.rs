@@ -67,6 +67,7 @@ fn main() -> anyhow::Result<()> {
                 let commands = vec![0, 1, 2]
                     .into_iter()
                     .map(|x| HostCommand {
+                        id: Uuid::from_u128(x),
                         cmd: ConfigPeripheral(
                             String::from_str(format!("Name with id: {x}").as_str()).unwrap(),
                             Uuid::from_u128(x),
