@@ -65,10 +65,11 @@ fn main() -> anyhow::Result<()> {
         let io = unsafe { cherry_usb_host(scope, 100) };
         scope.spawn(move || loop {
             io.0.send(BulkHostCommand {
-                commands: vec![(2, 0x00), (1, 0x00), (0, 0x00)]
+                commands: vec![0x02, 0x01, 0x00]
                     .into_iter()
+                    .enumerate()
                     .map(|x| HostCommand {
-                        id: Uuid::from_u128(x.0),
+                        id: Uuid::from_u128(x.0 as u128),
                         cmd: ConfigPeripheral(
                             String::from_str(format!("Name w/ uuid: {}", x.1).as_str()).unwrap(),
                             Uuid::from_u128(x.1),
