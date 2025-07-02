@@ -11,7 +11,7 @@ use esp_idf_svc::hal::{
 use heapless::String;
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use protocol::host::{BulkHostCommand, HostCommand, HostCommandTypes::*};
+use protocol::host::{BulkHostCommand, BulkHostData, HostCommand, HostCommandTypes::*};
 use uuid::Uuid;
 
 /**
@@ -81,7 +81,15 @@ fn main() -> anyhow::Result<()> {
         });
 
         scope.spawn(move || loop {
-            let _data: BulkHostCommand = io.1.receive().unwrap().decode().unwrap();
+            let data = io.1.receive().unwrap();
+            let bulk_data: Option<BulkHostData> = data.decode().ok();
+            match bulk_data {
+                Some(_) => {}
+                None => {
+                    log::info!("Invalid data");
+                    continue;
+                }
+            }
             std::thread::sleep(Duration::from_millis(10));
         });
     });

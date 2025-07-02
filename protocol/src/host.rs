@@ -80,7 +80,7 @@ pub struct BulkHostCommand {
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct HostData<'a> {
     /// Actual command type
-    pub output: &'a [u8],
+    pub data: &'a [u8],
 }
 
 /// Host  data in bulk
