@@ -101,6 +101,7 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
     }
 
     /// Convert from bytes
+    #[inline(always)]
     fn from_bytes(input: &'a [u8]) -> Result<Self> {
         bincode::serde::borrow_decode_from_slice(input, bincode::config::standard())
             .map_err(|_| crate::errors::Error::UnableToDeserializeFromBincode)?

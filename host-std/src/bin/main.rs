@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
 use esp_idf_svc::hal::{
     prelude::Peripherals,
@@ -47,18 +47,16 @@ fn main() -> anyhow::Result<()> {
     //     scope.spawn(move || {
     //         let io = unsafe { usb_host(scope, 100) };
     //         loop {
-    //             let _ = &io
-    //                 .0
-    //                 .send(BulkHostCommand {
-    //                     commands: vec![HostCommand {
-    //                         id: Uuid::from_u128(0x00),
-    //                         cmd: ConfigPeripheral(
-    //                             String::from_str("Default").unwrap(),
-    //                             Uuid::from_u128(0xff),
-    //                         ),
-    //                     }],
-    //                 })
-    //                 .ok();
+    //             io.0.send(BulkHostCommand {
+    //                 commands: vec![HostCommand {
+    //                     id: Uuid::from_u128(0x00),
+    //                     cmd: ConfigPeripheral(
+    //                         String::from_str("Default").unwrap(),
+    //                         Uuid::from_u128(0xff),
+    //                     ),
+    //                 }],
+    //             })
+    //             .ok();
     //         }
     //     });
     // });
@@ -66,21 +64,24 @@ fn main() -> anyhow::Result<()> {
     std::thread::scope(|scope| {
         let io = unsafe { cherry_usb_host(scope, 100) };
         scope.spawn(move || loop {
-            let commands = vec![0x00, 0x01, 0x02]
-                .into_iter()
-                .map(|x| HostCommand {
-                    id: Uuid::from_u128(x),
-                    cmd: ConfigPeripheral(
-                        String::from_str(format!("Name with id: {x}").as_str()).unwrap(),
-                        Uuid::from_u128(x),
-                    ),
-                })
-                .collect();
-            io.0.send(BulkHostCommand { commands }).ok();
+            io.0.send(BulkHostCommand {
+                commands: vec![(2, 0x00), (1, 0x00), (0, 0x00)]
+                    .into_iter()
+                    .map(|x| HostCommand {
+                        id: Uuid::from_u128(x.0),
+                        cmd: ConfigPeripheral(
+                            String::from_str(format!("Name w/ uuid: {}", x.1).as_str()).unwrap(),
+                            Uuid::from_u128(x.1),
+                        ),
+                    })
+                    .collect(),
+            })
+            .ok();
         });
 
-        scope.spawn(move || {
+        scope.spawn(move || loop {
             let _data: BulkHostCommand = io.1.receive().unwrap().decode().unwrap();
+            std::thread::sleep(Duration::from_millis(10));
         });
     });
 
