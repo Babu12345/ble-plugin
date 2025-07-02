@@ -3,7 +3,7 @@
 mod constants;
 mod processors;
 use processors::{FROM_USB_SENDER, T, process_usb_cdc_host, start_usb_host};
-use protocol::host::HostIO;
+use protocol::host::{HostReceiver, HostSender};
 
 use std::{
     sync::mpsc::{self, Receiver, SyncSender},
@@ -19,7 +19,7 @@ pub struct IO {
 pub unsafe fn usb_host<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
-) -> HostIO<512> {
+) -> (HostSender<512>, HostReceiver<512>) {
     let to_usb = mpsc::sync_channel(channel_buffer_size);
     let from_usb = {
         let channel = mpsc::sync_channel(channel_buffer_size);
@@ -32,5 +32,5 @@ pub unsafe fn usb_host<'a, 'b>(
         scope.spawn(move || process_usb_cdc_host(to_usb.1));
     }
 
-    HostIO::new(to_usb.0, from_usb)
+    (HostSender::new(to_usb.0), HostReceiver::new(from_usb))
 }

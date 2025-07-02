@@ -4,39 +4,52 @@ use std::sync::mpsc::{Receiver, SyncSender};
 
 use heapless::String;
 use lib_utils::MatchSliceLengths;
-use rmp_serde::Serializer;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::errors::{self, Error, Result};
 use crate::MAX_NAME_SIZE;
-/// Usb host input/output
-pub struct HostIO<const N: usize> {
-    /// USB sender
-    sender: SyncSender<[u8; N]>,
-    /// USB receiver
-    receiver: Receiver<[u8; N]>,
+
+/// Securely stores received data
+pub struct ReceivedData<const N: usize>([u8; N]);
+
+/// Sender
+pub struct HostSender<const N: usize>(SyncSender<[u8; N]>);
+
+/// Receiver
+pub struct HostReceiver<const N: usize>(Receiver<[u8; N]>);
+
+impl<'a, const N: usize> ReceivedData<N> {
+    /// Decode the data to the type
+    pub fn decode<T: THostIO<'a>>(&'a self) -> Result<T> {
+        T::from_bytes(&self.0)
+    }
 }
 
-impl<'a, const N: usize> HostIO<N> {
+impl<'a, const N: usize> HostSender<N> {
     /// Create a new instance
-    pub fn new(sender: SyncSender<[u8; N]>, receiver: Receiver<[u8; N]>) -> Self {
-        Self { sender, receiver }
+    pub fn new(sender: SyncSender<[u8; N]>) -> Self {
+        Self(sender)
     }
 
     /// Send the data
     pub fn send<T: THostIO<'a>>(&self, input: T) -> Result<()> {
-        self.sender
+        self.0
             .send(input.to_bytes::<N>()?)
             .map_err(|_| crate::errors::Error::SendError)
     }
+}
+
+impl<'a, const N: usize> HostReceiver<N> {
+    /// Create a new instance
+    pub fn new(receiver: Receiver<[u8; N]>) -> Self {
+        Self(receiver)
+    }
 
     /// Receive the data
-    pub fn receive<T: THostIO<'a>>(&self) -> Result<Vec<T>> {
-        let _input = self.receiver.recv().unwrap();
-        // T::from_bytes(input.);
-        // TODO: Implement functionality
-        Ok(vec![])
+    pub fn receive(&self) -> Result<ReceivedData<N>> {
+        let input = self.0.recv().map_err(|_| errors::Error::ReceiveError)?;
+        Ok(ReceivedData(input))
     }
 }
 
@@ -79,17 +92,23 @@ pub struct BulkHostData<'a> {
 }
 
 /// Communication types
-pub trait THostIO<'a> {
-    /// Serialize to bytes
-    fn to_bytes<const N: usize>(&self) -> Result<[u8; N]>;
-    /// Deserialize back to the type
-    fn from_bytes<'input: 'a>(input: &'input [u8]) -> Result<Self>
-    where
-        Self: Sized;
-}
+pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
+    /// Serialize the host command to a Vec using bincode
+    #[inline(always)]
+    fn serialize_bytes(&self) -> Result<Vec<u8>> {
+        bincode::serde::encode_to_vec(self, bincode::config::standard())
+            .map_err(|_| Error::UnableToSerializeToBincode)
+    }
 
-impl<'a> THostIO<'a> for BulkHostCommand {
-    /// Convert to bytes
+    /// Convert from bytes
+    fn from_bytes(input: &'a [u8]) -> Result<Self> {
+        bincode::serde::borrow_decode_from_slice(input, bincode::config::standard())
+            .map_err(|_| crate::errors::Error::UnableToDeserializeFromBincode)?
+            .0
+    }
+
+    /// Serialize to bytes
+    #[inline(always)]
     fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
         let bytes = self.serialize_bytes()?;
         if bytes.len() > N {
@@ -97,49 +116,8 @@ impl<'a> THostIO<'a> for BulkHostCommand {
         }
         Ok(bytes.match_size(0))
     }
-
-    /// Convert from bytes
-    fn from_bytes<'input: 'a>(input: &'input [u8]) -> Result<Self> {
-        rmp_serde::from_slice(input).map_err(|_| crate::errors::Error::UnableToDeserializeFromRMP)
-    }
 }
 
-impl BulkHostCommand {
-    /// Serialize the host command to a Vec using RMP
-    #[inline(always)]
-    fn serialize_bytes(&self) -> Result<Vec<u8>> {
-        let mut writer = Vec::new();
-        self.serialize(&mut Serializer::new(&mut writer))
-            .map_err(|_| Error::UnableToSerializeToRMP)?;
-        // bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
-        Ok(writer)
-    }
-}
+impl<'a> THostIO<'a> for BulkHostCommand {}
 
-impl<'a> BulkHostData<'a> {
-    /// Serialize the host command to a Vec using RMP
-    #[inline(always)]
-    fn serialize_bytes(&self) -> Result<Vec<u8>> {
-        let mut writer = Vec::new();
-        self.serialize(&mut Serializer::new(&mut writer))
-            .map_err(|_| Error::UnableToSerializeToRMP)?;
-        Ok(writer)
-    }
-}
-
-impl<'a> THostIO<'a> for BulkHostData<'a> {
-    /// Convert to bytes
-    fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
-        let bytes = self.serialize_bytes()?;
-        if bytes.len() > N {
-            return Err(errors::Error::SerializationBufferOverflow);
-        }
-        // TODO: Instead of padding with a 0 think of padding with a null character byte
-        Ok(bytes.match_size(0x00))
-    }
-
-    /// Convert from bytes
-    fn from_bytes<'input: 'a>(input: &'input [u8]) -> Result<Self> {
-        rmp_serde::from_slice(input).map_err(|_| crate::errors::Error::UnableToDeserializeFromRMP)
-    }
-}
+impl<'a> THostIO<'a> for BulkHostData<'a> {}

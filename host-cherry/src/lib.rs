@@ -4,7 +4,7 @@ mod constants;
 mod processors;
 mod utils;
 use processors::*;
-use protocol::host::HostIO;
+use protocol::host::{HostReceiver, HostSender};
 
 use std::{sync::mpsc::sync_channel, thread::Scope};
 
@@ -21,7 +21,7 @@ use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
 pub unsafe fn cherry_usb_host<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
-) -> HostIO<512> {
+) -> (HostSender<512>, HostReceiver<512>) {
     let to_usb = sync_channel(channel_buffer_size);
     let from_usb = sync_channel(channel_buffer_size);
 
@@ -30,5 +30,5 @@ pub unsafe fn cherry_usb_host<'a, 'b>(
     scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
     scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
 
-    HostIO::new(to_usb.0, from_usb.1)
+    (HostSender::new(to_usb.0), HostReceiver::new(from_usb.1))
 }
