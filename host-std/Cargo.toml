@@ -24,7 +24,7 @@ default = []
 [dependencies]
 ## Files in shared directory
 lib_utils = {path = "../lib_utils"}
-protocol = {path = "../protocol"}
+protocol = {path = "../protocol", default-features = true}
 host-esp ={ path = "../host-esp" }
 host-cherry = {path = "../host-cherry"}
 ## Crates

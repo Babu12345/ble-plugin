@@ -1,5 +1,4 @@
 //! Host interface protocol to communicate with the plugin device.
-
 use std::sync::mpsc::{Receiver, SyncSender};
 
 use heapless::String;
@@ -115,7 +114,7 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
         if bytes.len() > N {
             return Err(errors::Error::SerializationBufferOverflow);
         }
-        Ok(bytes.match_size(0))
+        Ok(bytes.match_size(0x00))
     }
 }
 

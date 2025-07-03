@@ -1,0 +1,31 @@
+[target.xtensa-esp32s3-none-elf]
+runner = "espflash flash --monitor --no-stub --baud 115200 -s 4mb -f 80mhz"
+
+[build]
+rustflags = [
+  "-C", "link-arg=-nostartfiles",
+]
+
+target = "xtensa-esp32s3-none-elf"
+
+# Make sure you run . $HOME/export-esp.sh
+
+# [env]
+# TARGET_CC="xtensa-esp32s3-elf-cc"
+# TARGET_AR="xtensa-esp32s3-elf-ar"
+
+[unstable]
+build-std = ["alloc", "core"]
+
+[alias]
+r = "run --release"
+s = "size --release"
+sa = "size --bin async_main --release -- -A"
+c = "check --release"
+d = "run --release --bin device"
+h = "run --release --bin host"
+hr = "run --release --bin host_reader"
+# These 2 are from an external dependecency called cargo-bloat
+bf = "bloat --release -n 10" # Get the top 10 largest functions (by binary size)
+bc = "bloat --release --crates -n 10" # Get the top 10 largest crates (by binary size)
+f = "fmt"
