@@ -21,7 +21,7 @@ use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
 pub unsafe fn cherry_usb_host<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
-) -> (HostSender<512>, HostReceiver<512>) {
+) -> (HostSender<64>, HostReceiver<64>) {
     let to_usb = sync_channel(channel_buffer_size);
     let from_usb = sync_channel(channel_buffer_size);
 

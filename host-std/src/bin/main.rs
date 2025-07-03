@@ -1,5 +1,6 @@
 use std::{str::FromStr, time::Duration};
 
+use ble_plugin::utils::random_uuid;
 use esp_idf_svc::hal::{
     prelude::Peripherals,
     spi::{
@@ -11,8 +12,7 @@ use esp_idf_svc::hal::{
 use heapless::String;
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use protocol::host::{BulkHostCommand, BulkHostData, HostCommand, HostCommandTypes::*};
-use uuid::Uuid;
+use protocol::host::{BulkHostCommand, HostCommand, HostCommandTypes};
 
 /**
  * General protocal is as follows:
@@ -62,35 +62,47 @@ fn main() -> anyhow::Result<()> {
     // });
 
     std::thread::scope(|scope| {
-        let io = unsafe { cherry_usb_host(scope, 100) };
+        let io = unsafe { cherry_usb_host(scope, 200) };
+
         scope.spawn(move || loop {
-            io.0.send(BulkHostCommand {
-                commands: vec![0x02, 0x01, 0x00]
-                    .into_iter()
-                    .enumerate()
-                    .map(|x| HostCommand {
-                        id: Uuid::from_u128(x.0 as u128),
-                        cmd: ConfigPeripheral(
-                            String::from_str(format!("Name w/ uuid: {}", x.1).as_str()).unwrap(),
-                            Uuid::from_u128(x.1),
+            io.0.send({
+                BulkHostCommand {
+                    commands: vec![HostCommand {
+                        uuid: unsafe { random_uuid() },
+                        cmd: HostCommandTypes::ConfigPeripheral(
+                            String::from_str("Portrait").unwrap(),
+                            unsafe { random_uuid() },
                         ),
-                    })
-                    .collect(),
+                    }],
+                }
             })
             .ok();
+
+            std::thread::sleep(Duration::from_millis(20));
         });
 
         scope.spawn(move || loop {
+            std::thread::sleep(Duration::from_millis(10));
+
             let data = io.1.receive().unwrap();
-            let bulk_data: Option<BulkHostData> = data.decode().ok();
-            match bulk_data {
-                Some(_) => {}
+            // let bulk_data: Option<BulkHostData> = data.decode().ok();
+            // match bulk_data {
+            //     Some(_) => {}
+            //     None => {
+            //         log::info!("Invalid data");
+            //         continue;
+            //     }
+            // }
+            let bulk_cmd: Option<BulkHostCommand> = data.decode().ok();
+            match bulk_cmd {
+                Some(res) => {
+                    log::info!("{:?}", res)
+                }
                 None => {
                     log::info!("Invalid data");
                     continue;
                 }
             }
-            std::thread::sleep(Duration::from_millis(10));
         });
     });
 

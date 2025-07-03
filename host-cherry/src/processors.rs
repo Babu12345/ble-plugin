@@ -11,7 +11,7 @@ use esp_idf_sys::cherry_host::{
 };
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
-pub type T = [u8; 512];
+pub type T = [u8; 64];
 
 #[derive(Debug)]
 struct ThreadSafeCDCWrapper(*mut usbh_cdc_acm);
@@ -62,7 +62,6 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
             }
             _ => {}
         };
-        log::info!("The data is {:?}", String::from_utf8(Vec::from(&buffer)));
 
         match sender.try_send(buffer) {
             Ok(_) => {}
@@ -112,6 +111,6 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>) {
             _ => {}
         };
 
-        log::info!("Data transmitted: {:?}", data);
+        log::debug!("Data transmitted: {:?}", data);
     }
 }

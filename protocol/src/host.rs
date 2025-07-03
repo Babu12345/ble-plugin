@@ -1,4 +1,5 @@
 //! Host interface protocol to communicate with the plugin device.
+use std::fmt::Debug;
 use std::sync::mpsc::{Receiver, SyncSender};
 
 use heapless::String;
@@ -20,7 +21,7 @@ pub struct HostReceiver<const N: usize>(Receiver<[u8; N]>);
 
 impl<'a, const N: usize> ReceivedData<N> {
     /// Decode the data to the type
-    pub fn decode<T: THostIO<'a>>(&'a self) -> Result<T> {
+    pub fn decode<T: THostIO<'a, N>>(&'a self) -> Result<T> {
         T::from_bytes(&self.0)
     }
 }
@@ -32,9 +33,9 @@ impl<'a, const N: usize> HostSender<N> {
     }
 
     /// Send the data
-    pub fn send<T: THostIO<'a>>(&self, input: T) -> Result<()> {
+    pub fn send<T: THostIO<'a, N>>(&self, input: T) -> Result<()> {
         self.0
-            .send(input.to_bytes::<N>()?)
+            .send(input.to_bytes()?)
             .map_err(|_| crate::errors::Error::SendError)
     }
 }
@@ -63,7 +64,7 @@ pub enum HostCommandTypes {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HostCommand {
     /// Unique command id
-    pub id: Uuid,
+    pub uuid: Uuid,
     /// Actual command type
     pub cmd: HostCommandTypes,
 }
@@ -91,7 +92,7 @@ pub struct BulkHostData<'a> {
 }
 
 /// Communication types
-pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
+pub trait THostIO<'a, const N: usize>: Serialize + Deserialize<'a> + Sized + Debug {
     /// Serialize the host command to a Vec using bincode
     #[inline(always)]
     fn serialize_bytes(&self) -> Result<Vec<u8>> {
@@ -102,22 +103,41 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
     /// Convert from bytes
     #[inline(always)]
     fn from_bytes(input: &'a [u8]) -> Result<Self> {
-        bincode::serde::borrow_decode_from_slice(input, bincode::config::standard())
-            .map_err(|_| crate::errors::Error::UnableToDeserializeFromBincode)?
-            .0
+        let length_lsb = input[0] as u16;
+        let length_msb = input[1] as u16;
+        let length = (((length_msb << 8) & 0xFF00) + (length_lsb & 0x00FF)) as usize;
+        if length > 512 {
+            return Err(crate::errors::Error::UnableToDeserializeFromBincode);
+        }
+
+        let res: Self = bincode::serde::borrow_decode_from_slice(
+            &input[2..(2 + length)],
+            bincode::config::standard(),
+        )
+        .map_err(|_| errors::Error::UnableToDeserializeFromBincode)?
+        .0;
+
+        Ok(res)
     }
 
     /// Serialize to bytes
     #[inline(always)]
-    fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
-        let bytes = self.serialize_bytes()?;
-        if bytes.len() > N {
+    fn to_bytes(&self) -> Result<[u8; N]> {
+        let mut serialized_bytes = self.serialize_bytes()?;
+        let length = serialized_bytes.len() as u16;
+        let mut length_data: Vec<u8> = Vec::from([length & 0xFF, (length >> 8) & 0xFF])
+            .into_iter()
+            .map(|x| x as u8)
+            .collect();
+        length_data.append(&mut serialized_bytes);
+
+        if length_data.len() > N {
             return Err(errors::Error::SerializationBufferOverflow);
         }
-        Ok(bytes.match_size(0x00))
+        Ok(length_data.match_size(0x00))
     }
 }
 
-impl<'a> THostIO<'a> for BulkHostCommand {}
+impl<'a, const N: usize> THostIO<'a, N> for BulkHostCommand {}
 
-impl<'a> THostIO<'a> for BulkHostData<'a> {}
+impl<'a, const N: usize> THostIO<'a, N> for BulkHostData<'a> {}
