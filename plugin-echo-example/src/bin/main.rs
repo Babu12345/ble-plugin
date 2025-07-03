@@ -107,9 +107,7 @@ async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconn
     let mut buf = [0; BUFFER_SIZE as usize];
     loop {
         let n = class.read_packet(&mut buf).await?;
-        // Simple echo back
-        let data = &buf[..n];
-        class.write_packet(data).await?;
+        class.write_packet(&buf[..n]).await?;
     }
 }
 
