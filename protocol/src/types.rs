@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::{MAX_NAME_SIZE, MAX_VEC_SIZE};
 
 /// Acutal host command type
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum HostCommandTypes {
     /// Configure the BLE name
     ConfigPeripheral(String<MAX_NAME_SIZE>, Uuid),
@@ -15,7 +15,7 @@ pub enum HostCommandTypes {
 }
 
 /// Host command data
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct HostCommand {
     /// Unique command id
     pub uuid: Uuid,
@@ -24,21 +24,21 @@ pub struct HostCommand {
 }
 
 /// Host command data in bulk
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct BulkHostCommand {
     /// Commands
     pub commands: Vec<HostCommand, MAX_VEC_SIZE>,
 }
 
 /// Host data
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct HostData<'a> {
     /// Actual command type
     pub data: &'a [u8],
 }
 
 /// Host  data in bulk
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct BulkHostData<'a> {
     /// Data
     #[serde(borrow)]
