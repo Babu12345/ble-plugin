@@ -55,8 +55,6 @@ mod host_std {
     }
 }
 
-mod host {}
-
 impl<'a, const N: usize> ReceivedData<N> {
     /// Decode the data to the type
     pub fn decode<T: THostIO<'a>>(&'a self) -> Result<T> {
