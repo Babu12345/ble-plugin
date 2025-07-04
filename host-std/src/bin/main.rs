@@ -12,7 +12,7 @@ use esp_idf_svc::hal::{
 use heapless::{String, Vec};
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use protocol::types::{BulkHostCommand, HostCommand, HostCommandTypes::*};
+use protocol::types::{BulkHostCommand, BulkHostData, HostCommand, HostCommandTypes::*};
 
 /**
  * General protocal is as follows:
@@ -101,6 +101,16 @@ fn main() -> anyhow::Result<()> {
             // }
             let bulk_cmd: Option<BulkHostCommand> = data.decode().ok();
             match bulk_cmd {
+                Some(res) => {
+                    log::info!("{:?}", res)
+                }
+                None => {
+                    log::info!("Invalid cmd");
+                }
+            }
+
+            let bulk_data: Option<BulkHostData> = data.decode().ok();
+            match bulk_data {
                 Some(res) => {
                     log::info!("{:?}", res)
                 }

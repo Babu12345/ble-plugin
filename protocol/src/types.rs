@@ -33,6 +33,8 @@ pub struct BulkHostCommand {
 /// Host data
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct HostData<'a> {
+    /// Source peripheral id that was configured
+    src_id: Uuid,
     /// Actual command type
     pub data: &'a [u8],
 }
