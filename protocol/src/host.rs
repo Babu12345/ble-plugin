@@ -146,47 +146,73 @@ mod tests {
     #[test]
     fn test_std_encoding_and_decoding() {
         let cmd = BulkHostCommand {
-            commands: Vec::from_slice(&[
-                HostCommand {
-                    uuid: Uuid::from_u128(0x01),
-                    cmd: crate::types::HostCommandTypes::ConfigService,
-                },
-                HostCommand {
-                    uuid: Uuid::from_u128(0x02),
-                    cmd: crate::types::HostCommandTypes::ConfigPeripheral(
-                        String::from_str("Test name").unwrap(),
-                        Uuid::from_u128(0x02),
-                    ),
-                },
-            ])
+            commands: Vec::from_slice(&[HostCommand {
+                uuid: Uuid::from_u128(0x01),
+                cmd: crate::types::HostCommandTypes::ConfigService,
+            }])
             .unwrap(),
         };
         let data: [u8; 256] = cmd.to_bytes().unwrap();
         let decoded_cmd = BulkHostCommand::from_bytes(&data).unwrap();
-        assert_eq!(cmd, decoded_cmd);
+        assert_eq!(
+            cmd, decoded_cmd,
+            "Testing a single command being encoded and decoded"
+        );
+
+        let commands: Vec<HostCommand, 10> = (0..10)
+            .map(|x| HostCommand {
+                uuid: Uuid::from_u128(x),
+                cmd: crate::types::HostCommandTypes::ConfigPeripheral(
+                    String::from_str("Test name").unwrap(),
+                    Uuid::from_u128(0x02),
+                ),
+            })
+            .collect();
+
+        let cmd = BulkHostCommand { commands };
+        let data: [u8; 512] = cmd.to_bytes().unwrap();
+        let decoded_cmd = BulkHostCommand::from_bytes(&data).unwrap();
+        assert_eq!(
+            cmd, decoded_cmd,
+            "Testing a bulk send of commands being encoded and decoded"
+        );
     }
 
     #[test]
     fn test_no_std_encoding_and_decoding() {
         let cmd = BulkHostCommand {
-            commands: Vec::from_slice(&[
-                HostCommand {
-                    uuid: Uuid::from_u128(0x01),
-                    cmd: crate::types::HostCommandTypes::ConfigService,
-                },
-                HostCommand {
-                    uuid: Uuid::from_u128(0x02),
-                    cmd: crate::types::HostCommandTypes::ConfigPeripheral(
-                        String::from_str("Test name").unwrap(),
-                        Uuid::from_u128(0x02),
-                    ),
-                },
-            ])
+            commands: Vec::from_slice(&[HostCommand {
+                uuid: Uuid::from_u128(0x01),
+                cmd: crate::types::HostCommandTypes::ConfigService,
+            }])
             .unwrap(),
         };
-        let mut buffer: [u8; 256] = [0u8; 256];
+        let mut buffer = [0u8; 256];
         cmd.to_bytes_in_slice(&mut buffer).unwrap();
         let decoded_cmd = BulkHostCommand::from_bytes(&buffer).unwrap();
-        assert_eq!(cmd, decoded_cmd);
+        assert_eq!(
+            cmd, decoded_cmd,
+            "Testing a single command being encoded and decoded"
+        );
+
+        let commands: Vec<HostCommand, 10> = (0..10)
+            .map(|x| HostCommand {
+                uuid: Uuid::from_u128(x),
+                cmd: crate::types::HostCommandTypes::ConfigPeripheral(
+                    String::from_str("Test name").unwrap(),
+                    Uuid::from_u128(0x02),
+                ),
+            })
+            .collect();
+
+        let cmd = BulkHostCommand { commands };
+
+        let mut buffer = [0u8; 512];
+        cmd.to_bytes_in_slice(&mut buffer).unwrap();
+        let decoded_cmd = BulkHostCommand::from_bytes(&buffer).unwrap();
+        assert_eq!(
+            cmd, decoded_cmd,
+            "Testing a bulk send of commands being encoded and decoded"
+        );
     }
 }
