@@ -1,14 +1,14 @@
 //! Host interface protocol to communicate with the plugin device.
+#![cfg(feature = "std")]
 use std::fmt::Debug;
 use std::sync::mpsc::{Receiver, SyncSender};
 
-use heapless::String;
 use lib_utils::MatchSliceLengths;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::errors::{self, Error, Result};
-use crate::MAX_NAME_SIZE;
+use crate::types::{BulkHostCommand, BulkHostData};
+use crate::MAX_TRANSFER_SIZE;
 
 /// Securely stores received data
 pub struct ReceivedData<const N: usize>([u8; N]);
@@ -53,44 +53,6 @@ impl<'a, const N: usize> HostReceiver<N> {
     }
 }
 
-/// Acutal host command type
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum HostCommandTypes {
-    /// Configure the BLE name
-    ConfigPeripheral(String<MAX_NAME_SIZE>, Uuid),
-}
-
-/// Host command data
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct HostCommand {
-    /// Unique command id
-    pub uuid: Uuid,
-    /// Actual command type
-    pub cmd: HostCommandTypes,
-}
-
-/// Host command data in bulk
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BulkHostCommand {
-    /// Commands
-    pub commands: Vec<HostCommand>,
-}
-
-/// Host data
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-pub struct HostData<'a> {
-    /// Actual command type
-    pub data: &'a [u8],
-}
-
-/// Host  data in bulk
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BulkHostData<'a> {
-    /// Data
-    #[serde(borrow)]
-    data: Vec<HostData<'a>>,
-}
-
 /// Communication types
 pub trait THostIO<'a, const N: usize>: Serialize + Deserialize<'a> + Sized + Debug {
     /// Serialize the host command to a Vec using bincode
@@ -106,7 +68,7 @@ pub trait THostIO<'a, const N: usize>: Serialize + Deserialize<'a> + Sized + Deb
         let length_lsb = input[0] as u16;
         let length_msb = input[1] as u16;
         let length = (((length_msb << 8) & 0xFF00) + (length_lsb & 0x00FF)) as usize;
-        if length > 512 {
+        if length > MAX_TRANSFER_SIZE {
             return Err(crate::errors::Error::UnableToDeserializeFromBincode);
         }
 

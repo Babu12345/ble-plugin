@@ -1,9 +1,14 @@
 [package]
 name = "plugin-echo-example"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+## Files in shared directory
+lib_utils = { path = "../lib_utils" }
+protocol = { path = "../protocol", default-features = false }
+
+## External crates
 anyhow = { version = "1.0", default-features = false }
 esp-backtrace = { version = "0.15.1", features = [
     "esp32s3",

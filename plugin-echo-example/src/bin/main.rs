@@ -5,16 +5,16 @@
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_usb::{
-    Builder,
     class::cdc_acm::{CdcAcmClass, State},
     driver::EndpointError,
+    Builder,
 };
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
     otg_fs::{
-        Usb,
         asynch::{Config, Driver},
+        Usb,
     },
     timer::systimer::SystemTimer,
 };
@@ -104,7 +104,7 @@ async fn main(_spawner: Spawner) {
 }
 
 async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconnected> {
-    let mut buf = [0; BUFFER_SIZE as usize];
+    let mut buf = [0; 512];
     loop {
         let n = class.read_packet(&mut buf).await?;
         class.write_packet(&buf[..n]).await?;

@@ -9,10 +9,10 @@ use esp_idf_svc::hal::{
     },
     units::Hertz,
 };
-use heapless::String;
+use heapless::{String, Vec};
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use protocol::host::{BulkHostCommand, HostCommand, HostCommandTypes};
+use protocol::types::{BulkHostCommand, HostCommand, HostCommandTypes::*};
 
 /**
  * General protocal is as follows:
@@ -67,13 +67,19 @@ fn main() -> anyhow::Result<()> {
         scope.spawn(move || loop {
             io.0.send({
                 BulkHostCommand {
-                    commands: vec![HostCommand {
-                        uuid: unsafe { random_uuid() },
-                        cmd: HostCommandTypes::ConfigPeripheral(
-                            String::from_str("Portrait").unwrap(),
-                            unsafe { random_uuid() },
-                        ),
-                    }],
+                    commands: Vec::from_slice(&[
+                        HostCommand {
+                            uuid: unsafe { random_uuid() },
+                            cmd: ConfigPeripheral(String::from_str("Portrait").unwrap(), unsafe {
+                                random_uuid()
+                            }),
+                        },
+                        HostCommand {
+                            uuid: unsafe { random_uuid() },
+                            cmd: ConfigService,
+                        },
+                    ])
+                    .unwrap(),
                 }
             })
             .ok();

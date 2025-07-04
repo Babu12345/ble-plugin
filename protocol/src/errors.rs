@@ -1,5 +1,4 @@
 //! Contains library errors
-
 use serde::Deserialize;
 
 /// Result type with the custom error

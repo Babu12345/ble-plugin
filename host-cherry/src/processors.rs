@@ -11,7 +11,7 @@ use esp_idf_sys::cherry_host::{
 };
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
-pub type T = [u8; 64];
+pub type T = [u8; 256];
 
 #[derive(Debug)]
 struct ThreadSafeCDCWrapper(*mut usbh_cdc_acm);

@@ -2,12 +2,15 @@
 //! transfer data and commands between each other.
 //!
 //! Defines Input, Output, and a combination IO trait for each module for facilitating data transfer
-
+#![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 
 pub mod errors;
 pub mod host;
 pub mod plugin;
 pub mod primary;
+pub mod types;
 
 const MAX_NAME_SIZE: usize = 30;
+const MAX_TRANSFER_SIZE: usize = 512;
+const MAX_VEC_SIZE: usize = 5;
