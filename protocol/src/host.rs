@@ -7,8 +7,6 @@ use crate::MAX_TRANSFER_SIZE;
 
 #[cfg(feature = "std")]
 pub use self::host_std::*;
-#[cfg(feature = "std")]
-use lib_utils::MatchSliceLengths;
 
 /// Securely stores received data
 pub struct ReceivedData<const N: usize>([u8; N]);
@@ -103,6 +101,8 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
     #[inline(always)]
     #[cfg(feature = "std")]
     fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
+        use lib_utils::MatchSliceLengths;
+
         let mut serialized_bytes = self.serialize_bytes()?;
         let length = serialized_bytes.len() as u16;
         let mut length_data: Vec<u8> = Vec::from([length & 0xFF, (length >> 8) & 0xFF])
