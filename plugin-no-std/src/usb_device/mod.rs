@@ -40,7 +40,10 @@ async fn echo<'d>(
         let _n = class.read_packet(&mut buf).await?;
         let decoded_cmd: Option<BulkHostCommand> = ReceivedData::new(buf).decode().ok();
         if let Some(cmd) = decoded_cmd {
-            sender.borrow_send_async(&cmd).await.ok();
+            match sender.borrow_send_async(&cmd).await.ok() {
+                Some(_) => {}
+                None => log::error!("Unable to send the data to the BLE side"),
+            }
             info!("{:?}", &cmd);
         }
         // USB_TO_BLE.send(buf).await;
