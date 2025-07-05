@@ -27,7 +27,7 @@ use std::{
     time::Duration,
 };
 
-use log::{error, info, warn};
+use log::{error, info, trace, warn};
 
 use crate::constants::*;
 
@@ -64,17 +64,17 @@ unsafe fn lib_task() {
 unsafe extern "C" fn data_rx_handle(data: *const u8, data_len: usize, _args: *mut c_void) -> bool {
     let data = unsafe { core::slice::from_raw_parts(data, data_len) }.match_size(0);
 
-    log::info!("The data is {:?}", String::from_utf8(Vec::from(&data)));
+    trace!("Data received: {:?}", String::from_utf8(Vec::from(&data)));
 
     match FROM_USB_SENDER.get().unwrap().try_send(data) {
         Ok(_) => {}
         Err(std::sync::mpsc::TrySendError::Full(_)) => {
-            log::warn!(
+            warn!(
                 "Receive buffer is full. You must ingest in order to receive additional information."
             );
         }
         Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
-            log::error!("Disconnect error");
+            error!("Disconnect error");
         }
     }
     true
@@ -89,10 +89,10 @@ unsafe extern "C" fn event_handle(
     let event_val = unsafe { *event };
     match event_val.type_ {
         cdc_acm_host_dev_event_t_CDC_ACM_HOST_ERROR => {
-            info!("CDC error {} occurred", unsafe { event_val.data.error })
+            error!("CDC error {} occurred", unsafe { event_val.data.error })
         }
         cdc_acm_host_dev_event_t_CDC_ACM_HOST_DEVICE_DISCONNECTED => {
-            info!("Device suddenly disconnected");
+            warn!("Device suddenly disconnected");
             let res = unsafe { cdc_acm_host_close(event_val.data.cdc_hdl) };
             if res != ESP_OK {
                 error!("Failed to close connection")
@@ -221,5 +221,6 @@ pub unsafe fn process_usb_cdc_host<'a>(receiver: Receiver<T>) {
             error!("Error sending data to the CDC ACM device");
             continue;
         }
+        trace!("Data transmitted: {:?}", data);
     }
 }

@@ -65,22 +65,20 @@ fn main() -> anyhow::Result<()> {
         let io = unsafe { cherry_usb_host(scope, 200) };
 
         scope.spawn(move || loop {
-            io.0.send({
-                BulkHostCommand {
-                    commands: Vec::from_slice(&[
-                        HostCommand {
-                            uuid: unsafe { random_uuid() },
-                            cmd: ConfigPeripheral(String::from_str("Portrait").unwrap(), unsafe {
-                                random_uuid()
-                            }),
-                        },
-                        HostCommand {
-                            uuid: unsafe { random_uuid() },
-                            cmd: ConfigService,
-                        },
-                    ])
-                    .unwrap(),
-                }
+            io.0.send(BulkHostCommand {
+                commands: Vec::from_slice(&[
+                    HostCommand {
+                        uuid: unsafe { random_uuid() },
+                        cmd: ConfigPeripheral(String::from_str("Portrait").unwrap(), unsafe {
+                            random_uuid()
+                        }),
+                    },
+                    HostCommand {
+                        uuid: unsafe { random_uuid() },
+                        cmd: ConfigService,
+                    },
+                ])
+                .unwrap(),
             })
             .ok();
 
@@ -94,12 +92,12 @@ fn main() -> anyhow::Result<()> {
 
             let bulk_cmd: Option<BulkHostCommand> = data.decode().ok();
             if let Some(cmd) = bulk_cmd {
-                log::info!("{:?}", cmd);
+                log::info!("{:?}", cmd)
             }
 
             let bulk_data: Option<BulkHostData> = data.decode().ok();
             if let Some(data) = bulk_data {
-                log::info!("{:?}", data);
+                log::info!("{:?}", data)
             }
         });
     });
