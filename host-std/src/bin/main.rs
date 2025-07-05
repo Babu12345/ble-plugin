@@ -91,6 +91,7 @@ fn main() -> anyhow::Result<()> {
             std::thread::sleep(Duration::from_millis(10));
 
             let data = io.1.receive().unwrap();
+
             let bulk_cmd: Option<BulkHostCommand> = data.decode().ok();
             match bulk_cmd {
                 Some(res) => {

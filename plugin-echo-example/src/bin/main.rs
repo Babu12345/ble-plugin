@@ -21,6 +21,7 @@ use esp_hal::{
 use log::info;
 
 use esp_hal_embassy::main;
+use protocol::{host::ReceivedData, types::BulkHostCommand};
 
 const BUFFER_SIZE: u8 = 64;
 #[main]
@@ -107,6 +108,12 @@ async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconn
     let mut buf = [0; 512];
     loop {
         let n = class.read_packet(&mut buf).await?;
+        let decoded_data = ReceivedData::new(buf);
+        let decoded_cmd: Option<BulkHostCommand> = decoded_data.decode().ok();
+        match decoded_cmd {
+            Some(_data) => {}
+            None => {}
+        }
         class.write_packet(&buf[..n]).await?;
     }
 }

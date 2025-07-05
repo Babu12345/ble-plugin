@@ -11,6 +11,13 @@ pub use self::host_std::*;
 /// Securely stores received data
 pub struct ReceivedData<const N: usize>([u8; N]);
 
+impl<const N: usize> ReceivedData<N> {
+    /// Create a new ReceivedData struct that can be used for decoding
+    pub fn new(input: [u8; N]) -> Self {
+        Self(input)
+    }
+}
+
 /// Host std types and functions
 #[cfg(feature = "std")]
 mod host_std {
@@ -48,7 +55,7 @@ mod host_std {
         /// Receive the data
         pub fn receive(&self) -> Result<ReceivedData<N>> {
             let input = self.0.recv().map_err(|_| errors::Error::ReceiveError)?;
-            Ok(ReceivedData(input))
+            Ok(ReceivedData::new(input))
         }
     }
 }
