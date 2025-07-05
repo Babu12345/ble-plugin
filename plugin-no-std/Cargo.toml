@@ -8,6 +8,10 @@ name = "plugin-no-std"
 path = "src/bin/main.rs"
 
 [dependencies]
+# Internal crates
+protocol = { path = "../protocol", default-features = false }
+
+# External crates
 anyhow = { version = "1.0", default-features = false }
 esp-backtrace = { version = "0.15.1", features = [
   "esp32s3",

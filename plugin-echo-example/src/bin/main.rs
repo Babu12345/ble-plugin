@@ -108,8 +108,7 @@ async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconn
     let mut buf = [0; 512];
     loop {
         let n = class.read_packet(&mut buf).await?;
-        let decoded_data = ReceivedData::new(buf);
-        let decoded_cmd: Option<BulkHostCommand> = decoded_data.decode().ok();
+        let decoded_cmd: Option<BulkHostCommand> = ReceivedData::new(buf).decode().ok();
         if let Some(cmd) = decoded_cmd {
             info!("{:?}", cmd)
         }
