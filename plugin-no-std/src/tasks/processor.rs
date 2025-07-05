@@ -24,8 +24,8 @@ pub async fn usb_processor(
 pub async fn ble_processor(
     server: Server<'static>,
     peripheral: Peripheral<'static, TController<BleConnector<'static>>>,
-    _receiver: PluginReceiver<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
-    _sender: PluginSender<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
+    receiver: PluginReceiver<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
+    sender: PluginSender<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
 ) {
-    crate::ble::processor(server, peripheral).await
+    crate::ble::processor(server, peripheral, &receiver, &sender).await
 }
