@@ -28,8 +28,8 @@ impl<T: for<'a> THostIO<'a>, const N: usize> SendingData<T, N> {
     }
 
     /// Get the buffer after processing
-    pub fn to_bytes(self) -> Result<[u8; N]> {
-        Ok(self.1)
+    pub fn to_bytes(self) -> [u8; N] {
+        self.1
     }
 }
 
@@ -63,13 +63,13 @@ impl<'a, const N: usize, const CH_SIZE: usize, R: RawMutex> PluginSender<'a, R, 
 
     /// Send the data
     pub async fn borrow_send_async<T: for<'b> THostIO<'b>>(&self, input: T) -> Result<()> {
-        let send_data = SendingData::new(input)?.to_bytes()?;
+        let send_data = SendingData::new(input)?.to_bytes();
         self.send_bytes_async(send_data).await
     }
 
     /// Try sending data
     pub fn borrow_try_send<T: for<'b> THostIO<'b>>(&self, input: T) -> Result<()> {
-        let send_data = SendingData::new(input)?.to_bytes()?;
+        let send_data = SendingData::new(input)?.to_bytes();
         self.try_send_bytes(send_data)
     }
 
