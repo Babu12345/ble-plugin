@@ -1,5 +1,6 @@
 ## Description
-Starter project for a BLE plugin device set
+Project for a BLE plugin device set. Contains implementation for the host and plugin side processing.
+Where possible, it also contains std and no_std implementations of the host and plugin code.
 
 ## Engineers
 Babuabel Wanyeki (babs@wanyekitech.com)
