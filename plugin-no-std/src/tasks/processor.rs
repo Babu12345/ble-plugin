@@ -1,7 +1,7 @@
 //! Processor tasks
 use crate::configs::{Server, TController};
 
-use crate::tasks::{BUFFER_SIZE, CHANNEL_SIZE, TChannel};
+use crate::tasks::{BUFFER_SIZE, CHANNEL_SIZE};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_usb::class::cdc_acm::CdcAcmClass;
 use esp_hal::otg_fs::asynch::Driver;
@@ -16,7 +16,7 @@ pub async fn usb_processor(
     receiver: PluginReceiver<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
     sender: PluginSender<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
 ) {
-    crate::usb_device::processor(class, receiver, sender).await
+    crate::usb_device::processor(class, &receiver, &sender).await
 }
 
 #[embassy_executor::task]
