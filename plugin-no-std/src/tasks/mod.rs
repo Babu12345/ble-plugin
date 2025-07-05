@@ -1,5 +1,5 @@
 //! Async task initializations
-
+#[deny(missing_docs)]
 mod channel;
 mod processor;
 mod runners;

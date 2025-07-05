@@ -11,14 +11,19 @@ pub use self::host_std::*;
 /// Securely stores received data
 pub struct ReceivedData<const N: usize>([u8; N]);
 
-impl<const N: usize> ReceivedData<N> {
+impl<'a, const N: usize> ReceivedData<N> {
     /// Create a new ReceivedData struct that can be used for decoding
     pub fn new(input: [u8; N]) -> Self {
         Self(input)
     }
+
+    /// Decode the data to the type
+    pub fn decode<T: THostIO<'a>>(&'a self) -> Result<T> {
+        T::from_bytes(&self.0)
+    }
 }
 
-/// Host std types and functions
+/// Std sync send and receive
 #[cfg(feature = "std")]
 mod host_std {
     use crate::{
@@ -57,13 +62,6 @@ mod host_std {
             let input = self.0.recv().map_err(|_| errors::Error::ReceiveError)?;
             Ok(ReceivedData::new(input))
         }
-    }
-}
-
-impl<'a, const N: usize> ReceivedData<N> {
-    /// Decode the data to the type
-    pub fn decode<T: THostIO<'a>>(&'a self) -> Result<T> {
-        T::from_bytes(&self.0)
     }
 }
 

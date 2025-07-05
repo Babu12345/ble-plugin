@@ -1110,6 +1110,7 @@ name = "protocol"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "embassy-sync",
  "heapless",
  "lib_utils",
  "log",

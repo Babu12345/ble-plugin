@@ -1,14 +1,12 @@
 //! USB device runner
 
-use crate::{
-    configs::{BUFFER_SIZE, Disconnected},
-    tasks::USB_TO_BLE,
-};
+use crate::configs::{BUFFER_SIZE, Disconnected};
+use crate::tasks::CHANNEL_SIZE;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_usb::{UsbDevice, class::cdc_acm::CdcAcmClass};
 use esp_hal::otg_fs::asynch::Driver;
 use log::info;
-use protocol::{host::ReceivedData, types::BulkHostCommand};
-
+use protocol::plugin::{PluginReceiver, PluginSender};
 /// Usb runner
 pub async fn run(usb_device: &mut UsbDevice<'static, Driver<'static>>) -> ! {
     loop {
@@ -17,7 +15,11 @@ pub async fn run(usb_device: &mut UsbDevice<'static, Driver<'static>>) -> ! {
 }
 
 /// Usb device processor
-pub async fn processor(mut class: CdcAcmClass<'static, Driver<'static>>) -> ! {
+pub async fn processor(
+    mut class: CdcAcmClass<'static, Driver<'static>>,
+    receiver: PluginReceiver<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
+    sender: PluginSender<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
+) -> ! {
     loop {
         class.wait_connection().await;
         esp_println::println!("Connected");
@@ -30,14 +32,14 @@ pub async fn processor(mut class: CdcAcmClass<'static, Driver<'static>>) -> ! {
 async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconnected> {
     let mut buf = [0; BUFFER_SIZE as usize];
     loop {
-        let n = class.read_packet(&mut buf).await?;
-        USB_TO_BLE.send(buf).await;
-        let decoded_cmd: Option<BulkHostCommand> = ReceivedData::new(buf).decode().ok();
-        if let Some(cmd) = decoded_cmd {
-            info!("{:?}", cmd)
-        }
-        let info = USB_TO_BLE.receive().await;
-        let data = &info[..n];
-        class.write_packet(data).await?;
+        // let n = class.read_packet(&mut buf).await?;
+        // USB_TO_BLE.send(buf).await;
+        // let decoded_cmd: Option<BulkHostCommand> = ReceivedData::new(buf).decode().ok();
+        // if let Some(cmd) = decoded_cmd {
+        //     info!("{:?}", cmd)
+        // }
+        // let info = USB_TO_BLE.receive().await;
+        // let data = &info[..n];
+        // class.write_packet(data).await?;
     }
 }
