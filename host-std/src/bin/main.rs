@@ -93,24 +93,13 @@ fn main() -> anyhow::Result<()> {
             let data = io.1.receive().unwrap();
 
             let bulk_cmd: Option<BulkHostCommand> = data.decode().ok();
-            match bulk_cmd {
-                Some(res) => {
-                    log::info!("{:?}", res)
-                }
-                None => {
-                    log::info!("Invalid cmd");
-                }
+            if let Some(cmd) = bulk_cmd {
+                log::info!("{:?}", cmd);
             }
 
             let bulk_data: Option<BulkHostData> = data.decode().ok();
-            match bulk_data {
-                Some(res) => {
-                    log::info!("{:?}", res)
-                }
-                None => {
-                    log::info!("Invalid data");
-                    continue;
-                }
+            if let Some(data) = bulk_data {
+                log::info!("{:?}", data);
             }
         });
     });
