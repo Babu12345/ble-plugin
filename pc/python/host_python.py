@@ -28,12 +28,12 @@ class Example:
     name: list[int]
 
 def main() -> None:
-    # bulk_cmd = BulkHostCommand(commands=[HostCommand(uuid="123")])
-    # serialized = attrs2bin.serialize(bulk_cmd)
-    # deserialized = attrs2bin.deserialize(serialized, BulkHostCommand)
-    my_sprite = Sprite(name="My sprite", x=35, y=[70])
-    serialized = attrs2bin.serialize(my_sprite)
-    deserialized = attrs2bin.deserialize(serialized, Sprite)
+    bulk_cmd = BulkHostCommand(commands=[HostCommand(uuid="123"), HostCommand(uuid="321")])
+    serialized = attrs2bin.serialize(bulk_cmd)
+    deserialized = attrs2bin.deserialize(serialized, BulkHostCommand)
+    # my_sprite = Sprite(name="My sprite", x=35, y=[70])
+    # serialized = attrs2bin.serialize(my_sprite)
+    # deserialized = attrs2bin.deserialize(serialized, Sprite)
     print(deserialized)
 
 main()
