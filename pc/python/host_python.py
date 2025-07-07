@@ -20,8 +20,8 @@ class BulkHostCommand:
 @attr.s(auto_attribs=True)
 class Sprite:
     name: str
-    x: list[int]
-    y: int
+    x: int
+    y: list[int]
 
 @attr.s(auto_attribs=True)
 class Example:
@@ -31,7 +31,7 @@ def main() -> None:
     # bulk_cmd = BulkHostCommand(commands=[HostCommand(uuid="123")])
     # serialized = attrs2bin.serialize(bulk_cmd)
     # deserialized = attrs2bin.deserialize(serialized, BulkHostCommand)
-    my_sprite = Sprite("My sprite", 35, [70])
+    my_sprite = Sprite(name="My sprite", x=35, y=[70])
     serialized = attrs2bin.serialize(my_sprite)
     deserialized = attrs2bin.deserialize(serialized, Sprite)
     print(deserialized)
