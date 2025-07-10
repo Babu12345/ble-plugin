@@ -11,4 +11,3 @@ pub mod types;
 
 const MAX_NAME_SIZE: usize = 30;
 const MAX_TRANSFER_SIZE: usize = 512;
-const MAX_VEC_SIZE: usize = 10;

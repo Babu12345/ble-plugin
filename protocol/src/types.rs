@@ -1,33 +1,36 @@
 //! Contains the basic types to reuse
-use heapless::{String, Vec};
+use heapless::String;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{MAX_NAME_SIZE, MAX_VEC_SIZE};
+use crate::{host::THostIO, MAX_NAME_SIZE};
 
-/// Acutal host command type
+/// Host command. Configure peripheral
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub enum HostCommandTypes {
-    /// Configure the BLE name and id
-    ConfigPeripheral(String<MAX_NAME_SIZE>, Uuid),
-    /// Configure the service
-    ConfigService,
-}
-
-/// Host command data
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct HostCommand {
-    /// Command id
+pub struct HostCommandConfigurePeripheral {
+    /// Peripheral name
+    pub name: String<MAX_NAME_SIZE>,
+    /// Peripheral UUID
     pub uuid: Uuid,
-    /// Actual command type
-    pub cmd: HostCommandTypes,
 }
 
-/// Host command data in bulk
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub struct BulkHostCommand {
-    /// Commands
-    pub commands: Vec<HostCommand, MAX_VEC_SIZE>,
+/// Host command. Configure peripheral
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct HostCommandConfigureService {}
+
+/// Represents the send type of the data. Was it due to a
+/// write event (central -> peripheral), notify event (peripheral -> client),
+/// or read attempt (central -> peripheral). Depending on which a response
+/// might be expected or sent
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[repr(u8)]
+pub enum HostDataSendType {
+    /// Notified from the central bluetooth device
+    Notify,
+    /// Read attempt from the central bluetooth device
+    Read,
+    /// Written from the central bluetooth device
+    Write,
 }
 
 /// Host data
@@ -37,12 +40,10 @@ pub struct HostData<'a> {
     pub src_id: Uuid,
     /// Actual command type
     pub data: &'a [u8],
+    /// Send type of the data
+    pub send_type: HostDataSendType,
 }
 
-/// Host  data in bulk
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub struct BulkHostData<'a> {
-    /// Data
-    #[serde(borrow)]
-    pub data: Vec<HostData<'a>, MAX_VEC_SIZE>,
-}
+impl<'a> THostIO<'a> for HostCommandConfigurePeripheral {}
+impl<'a> THostIO<'a> for HostCommandConfigureService {}
+impl<'a> THostIO<'a> for HostData<'a> {}

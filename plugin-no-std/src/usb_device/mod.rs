@@ -8,7 +8,7 @@ use esp_hal::otg_fs::asynch::Driver;
 use log::info;
 use protocol::host::ReceivedData;
 use protocol::plugin::{PluginReceiver, PluginSender};
-use protocol::types::BulkHostCommand;
+use protocol::types::HostCommandConfigurePeripheral;
 /// Usb runner
 pub async fn run(usb_device: &mut UsbDevice<'static, Driver<'static>>) -> ! {
     loop {
@@ -38,7 +38,8 @@ async fn echo<'d>(
     let mut buf = [0; BUFFER_SIZE as usize];
     loop {
         let _n = class.read_packet(&mut buf).await?;
-        let decoded_cmd: Option<BulkHostCommand> = ReceivedData::new(buf).decode().ok();
+        let decoded_cmd: Option<HostCommandConfigurePeripheral> =
+            ReceivedData::new(buf).decode().ok();
         if let Some(cmd) = decoded_cmd {
             match sender.borrow_send_async(&cmd).await.ok() {
                 Some(_) => {}

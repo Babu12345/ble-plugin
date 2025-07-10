@@ -1,8 +1,9 @@
 //! Host interface protocol to communicate with the plugin device.
+
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{self, Error, Result};
-use crate::types::{BulkHostCommand, BulkHostData};
+
 use crate::MAX_TRANSFER_SIZE;
 
 #[cfg(feature = "std")]
@@ -67,6 +68,10 @@ mod host_std {
 
 /// Communication types
 pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
+    /// The size in bytes of the length of the sent and received serialized
+    /// packet
+    const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
+
     /// Serialize the host command to a Vec using bincode
     #[inline(always)]
     #[cfg(feature = "std")]
@@ -110,10 +115,11 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
 
         let mut serialized_bytes = self.serialize_bytes()?;
         let length = serialized_bytes.len() as u16;
-        let mut length_data: Vec<u8> = Vec::from([length & 0xFF, (length >> 8) & 0xFF])
-            .into_iter()
-            .map(|x| x as u8)
+
+        let mut length_data: Vec<u8> = (0..Self::DATA_BYTES_LENGTH_IN_BYTES)
+            .map(|x| ((length >> (x * 8)) & 0xFF) as u8)
             .collect();
+
         length_data.append(&mut serialized_bytes);
 
         if length_data.len() > N {
@@ -125,7 +131,7 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
     /// Serialize to bytes
     #[inline(always)]
     fn to_bytes_in_slice<const N: usize>(&self, buffer: &'a mut [u8; N]) -> Result<()> {
-        let (left, right) = buffer.split_at_mut(2);
+        let (left, right) = buffer.split_at_mut(Self::DATA_BYTES_LENGTH_IN_BYTES);
         let length = self.serialize_bytes_in_slice(right)? as u16;
         let length_data = [(length & 0xFF) as u8, ((length >> 8) & 0xFF) as u8];
         left.copy_from_slice(&length_data);
@@ -136,89 +142,39 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
     }
 }
 
-impl<'a> THostIO<'a> for BulkHostCommand {}
-impl<'a> THostIO<'a> for BulkHostData<'a> {}
-
 #[cfg(test)]
 mod tests {
-    use core::str::FromStr;
-
     use super::*;
-    use crate::types::HostCommand;
-    use crate::{MAX_TRANSFER_SIZE, MAX_VEC_SIZE};
-    use heapless::{String, Vec};
+    use crate::MAX_TRANSFER_SIZE;
+    use heapless::String;
     use uuid::Uuid;
 
     #[test]
     fn test_std_encoding_and_decoding() {
-        let cmd = BulkHostCommand {
-            commands: Vec::from_slice(&[HostCommand {
-                uuid: Uuid::from_u128(0x01),
-                cmd: crate::types::HostCommandTypes::ConfigService,
-            }])
-            .unwrap(),
+        let cmd = HostCommandConfigurePeripheral {
+            name: String::from_str("Hello").unwrap(),
+            uuid: Uuid::from_u128(0x01),
         };
         let data: [u8; MAX_TRANSFER_SIZE] = cmd.to_bytes().unwrap();
-        let decoded_cmd = BulkHostCommand::from_bytes(&data).unwrap();
+        let decoded_cmd = HostCommandConfigurePeripheral::from_bytes(&data).unwrap();
         assert_eq!(
             cmd, decoded_cmd,
             "Testing a single command being encoded and decoded"
-        );
-
-        let commands: Vec<HostCommand, MAX_VEC_SIZE> = (0..MAX_VEC_SIZE as u128)
-            .map(|x| HostCommand {
-                uuid: Uuid::from_u128(x),
-                cmd: crate::types::HostCommandTypes::ConfigPeripheral(
-                    String::from_str("Test name").unwrap(),
-                    Uuid::from_u128(0x02),
-                ),
-            })
-            .collect();
-
-        let cmd = BulkHostCommand { commands };
-        let data: [u8; MAX_TRANSFER_SIZE] = cmd.to_bytes().unwrap();
-        let decoded_cmd = BulkHostCommand::from_bytes(&data).unwrap();
-        assert_eq!(
-            cmd, decoded_cmd,
-            "Testing a bulk send of commands being encoded and decoded"
         );
     }
 
     #[test]
     fn test_no_std_encoding_and_decoding() {
-        let cmd = BulkHostCommand {
-            commands: Vec::from_slice(&[HostCommand {
-                uuid: Uuid::from_u128(0x01),
-                cmd: crate::types::HostCommandTypes::ConfigService,
-            }])
-            .unwrap(),
+        let cmd = HostCommandConfigurePeripheral {
+            name: String::from_str("Hello").unwrap(),
+            uuid: Uuid::from_u128(0x01),
         };
         let mut buffer = [0u8; MAX_TRANSFER_SIZE];
         cmd.to_bytes_in_slice(&mut buffer).unwrap();
-        let decoded_cmd = BulkHostCommand::from_bytes(&buffer).unwrap();
+        let decoded_cmd = HostCommandConfigurePeripheral::from_bytes(&buffer).unwrap();
         assert_eq!(
             cmd, decoded_cmd,
             "Testing a single command being encoded and decoded"
-        );
-
-        let commands: Vec<HostCommand, MAX_VEC_SIZE> = (0..MAX_VEC_SIZE as u128)
-            .map(|x| HostCommand {
-                uuid: Uuid::from_u128(x),
-                cmd: crate::types::HostCommandTypes::ConfigPeripheral(
-                    String::from_str("Test name").unwrap(),
-                    Uuid::from_u128(0x02),
-                ),
-            })
-            .collect();
-
-        let cmd = BulkHostCommand { commands };
-
-        let mut buffer = [0u8; MAX_TRANSFER_SIZE];
-        cmd.to_bytes_in_slice(&mut buffer).unwrap();
-        let decoded_cmd = BulkHostCommand::from_bytes(&buffer).unwrap();
-        assert_eq!(
-            cmd, decoded_cmd,
-            "Testing a bulk send of commands being encoded and decoded"
         );
     }
 }

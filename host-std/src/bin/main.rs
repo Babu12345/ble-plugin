@@ -9,10 +9,10 @@ use esp_idf_svc::hal::{
     },
     units::Hertz,
 };
-use heapless::{String, Vec};
+use heapless::String;
 use host_cherry::cherry_usb_host;
 use host_esp::usb_host;
-use protocol::types::{BulkHostCommand, BulkHostData, HostCommand, HostCommandTypes::*};
+use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService, HostData};
 
 /**
  * General protocal is as follows:
@@ -65,22 +65,12 @@ fn main() -> anyhow::Result<()> {
         let io = unsafe { cherry_usb_host(scope, 200) };
 
         scope.spawn(move || loop {
-            io.0.send(BulkHostCommand {
-                commands: Vec::from_slice(&[
-                    HostCommand {
-                        uuid: unsafe { random_uuid() },
-                        cmd: ConfigPeripheral(String::from_str("Portrait").unwrap(), unsafe {
-                            random_uuid()
-                        }),
-                    },
-                    HostCommand {
-                        uuid: unsafe { random_uuid() },
-                        cmd: ConfigService,
-                    },
-                ])
-                .unwrap(),
+            io.0.send(HostCommandConfigurePeripheral {
+                uuid: unsafe { random_uuid() },
+                name: String::from_str("Portrait").unwrap(),
             })
             .ok();
+            io.0.send(HostCommandConfigureService {}).ok();
 
             std::thread::sleep(Duration::from_millis(20));
         });
@@ -90,12 +80,12 @@ fn main() -> anyhow::Result<()> {
 
             let data = io.1.receive().unwrap();
 
-            let bulk_cmd: Option<BulkHostCommand> = data.decode().ok();
+            let bulk_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
             if let Some(cmd) = bulk_cmd {
                 log::info!("{:?}", cmd)
             }
 
-            let bulk_data: Option<BulkHostData> = data.decode().ok();
+            let bulk_data: Option<HostData> = data.decode().ok();
             if let Some(data) = bulk_data {
                 log::info!("{:?}", data)
             }
