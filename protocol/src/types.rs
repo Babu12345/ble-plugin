@@ -38,10 +38,10 @@ pub enum HostDataSendType {
 pub struct HostData<'a> {
     /// Source peripheral id that this data is orginating from.
     pub src_id: Uuid,
-    /// Actual command type
-    pub data: &'a [u8],
     /// Send type of the data
     pub send_type: HostDataSendType,
+    /// Actual command type
+    pub data: &'a [u8],
 }
 
 impl<'a> THostIO<'a> for HostCommandConfigurePeripheral {}
