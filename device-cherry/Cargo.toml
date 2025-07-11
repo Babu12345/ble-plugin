@@ -1,0 +1,18 @@
+[package]
+name = "device-cherry"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Custom
+protocol = { path = "../protocol" }
+
+# Crates
+log = "0.4"
+esp-idf-sys = { version = "0.36.1", default-features = false }
+heapless = "0.8.0"
+
+[[package.metadata.esp-idf-sys.extra_components]]
+component_dirs = "components/cherryusb"
+bindings_header = "cherry_usb_device_bindings.h"
+bindings_module = "cherry_device"

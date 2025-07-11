@@ -12,6 +12,7 @@ harness = false # do not use the built in cargo test harness -> resolve rust-ana
 ## Files in shared directory
 lib_utils = {path = "../lib_utils"}
 protocol = {path = "../protocol"}
+device-cherry = {path = "../device-cherry"}
 ## Crates
 esp32-nimble = "0.11.0"
 log = "0.4"
@@ -21,11 +22,6 @@ esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time
 static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
-
-[[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.0~1" }
-bindings_header = "cherry_usb_device_bindings.h"
-bindings_module = "cherry_device"
 
 [build-dependencies]
 embuild = "0.33"
