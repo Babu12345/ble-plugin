@@ -8,8 +8,7 @@ use protocol::host::{HostReceiver, HostSender};
 
 use std::{sync::mpsc::sync_channel, thread::Scope};
 
-use esp_idf_sys::cherry_device;
-
+use esp_idf_sys::cherry_device::ESP_USBD_BASE;
 // Initialization - host
 // https://github.com/zleihao/CherryUSB-CDC-MSC/blob/50095e0b63bbdf6f2d5597e71edfa45dd8be6c1d/cdc_msc/middlewares/CherryUSB-1.4.0/class/cdc/usbh_cdc_acm.c#L170
 // https://github.com/cherry-embedded/CherryUSB/blob/f23f5494920b64987350abc87c8154f410c6f5f9/platform/nuttx/usbh_serial.c#L180
@@ -25,5 +24,6 @@ pub unsafe fn cherry_usb_host<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
 ) -> (HostSender<256>, HostReceiver<256>) {
+    unsafe { cdc_init(0, ESP_USBD_BASE) };
     todo!()
 }

@@ -2,6 +2,8 @@ use esp32_nimble::{
     enums::{AuthReq, SecurityIOCap},
     BLEDevice,
 };
+use esp_idf_sys::cherry_device::ESP_USBD_BASE;
+use plugin_std::usb_device::cdc_init;
 
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() {
@@ -18,4 +20,6 @@ fn main() {
         .set_passkey(123456)
         .set_io_cap(SecurityIOCap::DisplayOnly)
         .resolve_rpa();
+
+    unsafe { cdc_init(0, ESP_USBD_BASE) };
 }
