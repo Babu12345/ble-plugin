@@ -7,9 +7,19 @@ use esp_idf_sys::cherry_device::{
     USB_DESCRIPTOR_TYPE_CONFIGURATION, USB_DESCRIPTOR_TYPE_DEVICE,
     USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER, USB_DESCRIPTOR_TYPE_ENDPOINT,
     USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION,
-    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DEVICE_CLASS_CDC, USB_STRING_MFC_INDEX,
-    USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
+    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DESCRIPTOR_TYPE_STRING, USB_DEVICE_CLASS_CDC,
+    USB_STRING_MFC_INDEX, USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
 };
+
+pub const CDC_MAX_MPS: u32 = 64;
+
+pub fn usb_langid_init(id: u32) -> Vec<u32> {
+    vec![
+        0x04,                              /* bLength */
+        USB_DESCRIPTOR_TYPE_STRING as u32, /* bDescriptorType */
+        id,                                /* wLangID0 */
+    ]
+}
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L628
 pub fn device_descriptor_init(
@@ -29,7 +39,7 @@ pub fn device_descriptor_init(
         b_device_class,             /* bDeviceClass */
         b_device_sub_class,         /* bDeviceSubClass */
         b_device_protocol,          /* bDeviceProtocol */
-        0x40,                       /* bMaxPacketSize */
+        CDC_MAX_MPS,                /* bMaxPacketSize */
         id_vendor,                  /* idVendor */
         id_product,                 /* idProduct */
         bcd_device,                 /* bcdDevice */
@@ -61,7 +71,7 @@ pub fn config_descriptor_init(
 }
 
 // https://github.com/telehua/DAP_GD32F407/blob/d6e9db5b7bf8972bfb22bb8b8ed0b06a3f7c4801/source/cherry_usb/common/usb_def.h#L692
-pub fn other_speed_config_descriptor_init(
+pub fn other_speed_descriptor_init(
     w_total_length: u32,
     b_num_interfaces: u32,
     b_configuration_value: u32,
@@ -95,7 +105,7 @@ pub fn device_qualifier_descriptor_init(
         b_device_class,                       /* bDeviceClass */
         b_device_sub_class,                   /* bDeviceSubClass */
         b_device_protocol,                    /* bDeviceProtocol */
-        0x40,                                 /* bMaxPacketSize */
+        CDC_MAX_MPS,                          /* bMaxPacketSize */
         b_num_configurations,                 /* bNumConfigurations */
         0x00,                                 /* bReserved */
     ]
@@ -175,4 +185,16 @@ pub fn cdc_acm_descriptor_init(
         w_max_packet_size,             /* wMaxPacketSize */
         0x00,
     ]
+}
+
+#[macro_export]
+/// Makes an object static even after the start of the program.
+/// When you are okay with using a nightly compiler it's better to use https://docs.rs/static_cell/2.1.0/static_cell/macro.make_static.html
+macro_rules! mk_static {
+    ($t:ty,$val:expr) => {{
+        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
+        #[deny(unused_attributes)]
+        let x = STATIC_CELL.uninit().write(($val));
+        x
+    }};
 }

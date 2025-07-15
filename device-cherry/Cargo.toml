@@ -3,6 +3,14 @@ name = "device-cherry"
 version = "0.1.0"
 edition = "2024"
 
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true    # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
+
 [dependencies]
 # Custom
 protocol = { path = "../protocol" }
@@ -11,6 +19,7 @@ protocol = { path = "../protocol" }
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
+static_cell = "2"
 
 [[package.metadata.esp-idf-sys.extra_components]]
 component_dirs = "components/cherryusb"

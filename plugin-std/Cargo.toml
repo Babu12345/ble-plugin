@@ -2,11 +2,21 @@
 name = "plugin-std"
 version = "0.1.0"
 edition = "2021"
+resolver = "2"
+rust-version = "1.77"
 
 [[bin]]
 name = "plugin-std"
 path = "src/bin/main.rs"
 harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
+
+[profile.release]
+opt-level = "s"
+debug = true    # Symbols are nice and they don't increase the size on Flash
+
+[profile.dev]
+debug = true    # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
 
 [dependencies]
 ## Files in shared directory
@@ -16,7 +26,7 @@ device-cherry = {path = "../device-cherry"}
 ## Crates
 esp32-nimble = "0.11.0"
 log = "0.4"
-esp-idf-sys = { version = "0.36.1"}
+esp-idf-sys = { version = "0.36.1", default-features = false }
 esp-println = { version = "0.13.1", features = ["esp32s3", "log"] }
 esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time-driver", "embassy-sync"], default-features = false }
 static_cell = "2"
