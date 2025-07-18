@@ -4,9 +4,9 @@ use esp32_nimble::{
     enums::{AuthReq, SecurityIOCap},
     BLEDevice,
 };
-use esp_backtrace as _;
+// use esp_backtrace as _;
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
-
+use plugin_std::usb_device::{cdc_init, send_data};
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() {
     esp_idf_svc::sys::link_patches();
@@ -24,11 +24,15 @@ fn main() {
         .resolve_rpa();
 
     std::thread::scope(|scope| {
-        scope.spawn(|| loop {
-            let mut send_buffer: [u8; 64] = [0; 64];
-            std::thread::sleep(Duration::from_secs(1));
-            log::info!("Data sent");
-        });
+        unsafe { cdc_init(0, ESP_USBD_BASE) };
+
+        // scope.spawn(|| loop {
+        //     log::info!("Data start");
+        //     let mut send_buffer: [u8; 64] = [0; 64];
+        //     unsafe { send_data(&mut send_buffer) };
+        //     std::thread::sleep(Duration::from_secs(1));
+        //     log::info!("Data sent");
+        // });
     });
 
     loop {
