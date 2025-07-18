@@ -26,7 +26,9 @@ cargo generate <test_project>
 
 ### Upload esp code to a board. Usually only needs to be done once. You can then make sure to source permanently by adding a line to the source file
 espup install
+
 . /Users/babuwanyeki/export-esp.sh or . $HOME/export-esp.sh
+
 source ~/.zprofile
 
 
