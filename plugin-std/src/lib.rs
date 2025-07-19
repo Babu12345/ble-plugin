@@ -14,3 +14,24 @@ macro_rules! mk_static {
         x
     }};
 }
+
+#[macro_export]
+/// Concat N arrays
+macro_rules! concat_n_arrays {
+    ($arr:expr) => { $arr };
+
+    ($arr1:expr, $arr2:expr) => {{
+        let a1 = $arr1;
+        let a2 = $arr2;
+        std::array::from_fn(|i| {
+            if i < a1.len() { a1[i] } else { a2[i - a1.len()] }
+        })
+    }};
+
+    ($first:expr, $($rest:expr),+) => {
+        concat_arrays!(
+            $first,
+            concat_arrays!($($rest),+)
+        )
+    };
+}

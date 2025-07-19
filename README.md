@@ -15,7 +15,11 @@ https://docs.google.com/document/d/1Dux7SiKq3yMgd7yeh_1pGXjGcVbrisn82CYdyfDYuJs/
 ## Useful commands
 
 ### Find all usb devices connected to the computer
-ls /dev/tty.*
+For serial devices: ls /dev/tty.*
+
+or
+
+For all usb devices and their names / product details: system_profiler SPUSBDataType
 
 ### Monitor usb serial port. Useful when the main usb port is busy / programmed to operate differently
 cargo espmonitor <SERIAL_DEVICE_PATH>

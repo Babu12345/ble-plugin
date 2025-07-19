@@ -31,6 +31,7 @@ esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time
 static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
+esp-println = {version = "0.12.0", features = ["esp32s3","jtag-serial"], default-features = false}
 
 [build-dependencies]
 embuild = "0.33"

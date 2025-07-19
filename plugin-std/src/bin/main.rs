@@ -6,7 +6,7 @@ use std::time::Duration;
 // };
 // use esp_backtrace as _;
 use esp_idf_sys::{cherry_device::ESP_USBD_BASE, vTaskDelay};
-use plugin_std::usb_device::{cdc_init, send_data};
+use plugin_std::usb_device::{send_data, CdcAcmDevice};
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() {
     esp_idf_svc::sys::link_patches();
@@ -23,8 +23,10 @@ fn main() {
     //     .set_io_cap(SecurityIOCap::DisplayOnly)
     //     .resolve_rpa();
 
+    let _device = unsafe { CdcAcmDevice::new().init(0, ESP_USBD_BASE) }.ok();
+
     std::thread::scope(|scope| {
-        unsafe { cdc_init(0, 0x60080000) };
+        // unsafe { cdc_init(0, ESP_USBD_BASE).unwrap() };
 
         // scope.spawn(|| loop {
         //     log::info!("Data start");
@@ -40,5 +42,8 @@ fn main() {
         // log::info!("Testing");
         // println!("Hello");
         // unsafe { vTaskDelay(100) };
+
+        // esp_println::dbg!("Hello");
+        println!("Hello");
     }
 }
