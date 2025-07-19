@@ -5,11 +5,18 @@ use esp_idf_sys::cherry_device::{
     USB_DESCRIPTOR_TYPE_CONFIGURATION, USB_DESCRIPTOR_TYPE_DEVICE,
     USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER, USB_DESCRIPTOR_TYPE_ENDPOINT,
     USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION,
-    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DESCRIPTOR_TYPE_STRING, USB_DEVICE_CLASS_CDC,
-    USB_STRING_MFC_INDEX, USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
+    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DEVICE_CLASS_CDC, USB_STRING_MFC_INDEX,
+    USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
 };
 
 pub const CDC_MAX_MPS: u32 = 64;
+
+// #define WBVAL(x) (x & 0xFF), ((x >> 8) & 0xFF)
+
+#[allow(unused, non_snake_case)]
+pub const fn WBVAL(x: u32) -> [u32; 2] {
+    [(x & 0xFF), ((x >> 8) & 0xFF)]
+}
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L628
 pub const fn device_descriptor_init(
@@ -21,18 +28,22 @@ pub const fn device_descriptor_init(
     id_product: u32,
     bcd_device: u32,
     b_num_configurations: u32,
-) -> [u32; 14] {
+) -> [u32; 18] {
     [
         0x12,                       /* bLength */
         USB_DESCRIPTOR_TYPE_DEVICE, /* bDescriptorType */
-        bcd_usb,                    /* bcdUSB */
+        bcd_usb & 0xff,             /* bcdUSB */
+        (bcd_usb >> 8) & 0xFF,      /* bcdUSB */
         b_device_class,             /* bDeviceClass */
         b_device_sub_class,         /* bDeviceSubClass */
         b_device_protocol,          /* bDeviceProtocol */
         CDC_MAX_MPS,                /* bMaxPacketSize */
-        id_vendor,                  /* idVendor */
-        id_product,                 /* idProduct */
-        bcd_device,                 /* bcdDevice */
+        id_vendor & 0xff,           /* idVendor */
+        (id_vendor >> 8) & 0xFF,    /* idVendor */
+        id_product & 0xff,          /* idProduct */
+        (id_product >> 8) & 0xFF,   /* idProduct */
+        bcd_device & 0xff,          /* bcdDevice */
+        (bcd_device >> 8) & 0xFF,   /* bcdDevice */
         USB_STRING_MFC_INDEX,       /* iManufacturer */
         USB_STRING_PRODUCT_INDEX,   /* iProduct */
         USB_STRING_SERIAL_INDEX,    /* iSerial */
@@ -47,16 +58,17 @@ pub const fn config_descriptor_init(
     b_configuration_value: u32,
     bm_attributes: u32,
     b_max_power: u32,
-) -> [u32; 8] {
+) -> [u32; 9] {
     [
         0x09,                              /* bLength */
         USB_DESCRIPTOR_TYPE_CONFIGURATION, /* bDescriptorType */
-        w_total_length,                    /* wTotalLength */
+        w_total_length & 0xff,             /* wTotalLength */
+        (w_total_length >> 8) & 0xFF,      /* wTotalLength */
         b_num_interfaces,                  /* bNumInterfaces */
         b_configuration_value,             /* bConfigurationValue */
         0x00,                              /* iConfiguration */
         bm_attributes,                     /* bmAttributes */
-        b_max_power,                       /* bMaxPower */
+        b_max_power / 2,                   /* bMaxPower */
     ]
 }
 
@@ -67,16 +79,17 @@ pub const fn other_speed_descriptor_init(
     b_configuration_value: u32,
     bm_attributes: u32,
     b_max_power: u32,
-) -> [u32; 8] {
+) -> [u32; 9] {
     [
         0x09,                            /* bLength */
         USB_DESCRIPTOR_TYPE_OTHER_SPEED, /* bDescriptorType */
-        w_total_length,                  /* wTotalLength */
+        w_total_length & 0xff,           /* wTotalLength */
+        (w_total_length >> 8) & 0xFF,    /* wTotalLength */
         b_num_interfaces,                /* bNumInterfaces */
         b_configuration_value,           /* bConfigurationValue */
         0x00,                            /* iConfiguration */
         bm_attributes,                   /* bmAttributes */
-        b_max_power,                     /* bMaxPower */
+        b_max_power / 2,                 /* bMaxPower */
     ]
 }
 
@@ -87,11 +100,12 @@ pub const fn device_qualifier_descriptor_init(
     b_device_sub_class: u32,
     b_device_protocol: u32,
     b_num_configurations: u32,
-) -> [u32; 9] {
+) -> [u32; 10] {
     [
         0x0A,                                 /* bLength */
         USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER, /* bDescriptorType */
-        bcd_usb,                              /* bcdUSB */
+        bcd_usb & 0xff,                       /* bcdUSB */
+        (bcd_usb >> 8) & 0xFF,                /* bcdUSB */
         b_device_class,                       /* bDeviceClass */
         b_device_sub_class,                   /* bDeviceSubClass */
         b_device_protocol,                    /* bDeviceProtocol */
@@ -109,7 +123,7 @@ pub const fn cdc_acm_descriptor_init(
     in_ep: u32,
     w_max_packet_size: u32,
     str_idx: u32,
-) -> [u32; 63] {
+) -> [u32; 66] {
     [
         0x08,                                      /* bLength */
         USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION, /* bDescriptorType */
@@ -131,7 +145,8 @@ pub const fn cdc_acm_descriptor_init(
         0x05,                                      /* bLength */
         CDC_CS_INTERFACE,                          /* bDescriptorType */
         CDC_FUNC_DESC_HEADER,                      /* bDescriptorSubtype */
-        CDC_V1_10,                                 /* bcdCDC */
+        CDC_V1_10 & 0xff,                          /* bcdCDC */
+        (CDC_V1_10 >> 8) & 0xFF,                   /* bcdCDC */
         0x05,                                      /* bLength */
         CDC_CS_INTERFACE,                          /* bDescriptorType */
         CDC_FUNC_DESC_CALL_MANAGEMENT,             /* bDescriptorSubtype */
@@ -151,28 +166,30 @@ pub const fn cdc_acm_descriptor_init(
         int_ep,                                    /* bEndpointAddress */
         0x03,                                      /* bmAttributes */
         0x08,
-        0x00,                          /* wMaxPacketSize */
-        0x0a,                          /* bInterval */
-        0x09,                          /* bLength */
-        USB_DESCRIPTOR_TYPE_INTERFACE, /* bDescriptorType */
-        b_first_interface + 1,         /* bInterfaceNumber */
-        0x00,                          /* bAlternateSetting */
-        0x02,                          /* bNumEndpoints */
-        CDC_DATA_INTERFACE_CLASS,      /* bInterfaceClass */
-        0x00,                          /* bInterfaceSubClass */
-        0x00,                          /* bInterfaceProtocol */
-        0x00,                          /* iInterface */
-        0x07,                          /* bLength */
-        USB_DESCRIPTOR_TYPE_ENDPOINT,  /* bDescriptorType */
-        out_ep,                        /* bEndpointAddress */
-        0x02,                          /* bmAttributes */
-        w_max_packet_size,             /* wMaxPacketSize */
-        0x00,                          /* bInterval */
-        0x07,                          /* bLength */
-        USB_DESCRIPTOR_TYPE_ENDPOINT,  /* bDescriptorType */
-        in_ep,                         /* bEndpointAddress */
-        0x02,                          /* bmAttributes */
-        w_max_packet_size,             /* wMaxPacketSize */
+        0x00,                            /* wMaxPacketSize */
+        0x0a,                            /* bInterval */
+        0x09,                            /* bLength */
+        USB_DESCRIPTOR_TYPE_INTERFACE,   /* bDescriptorType */
+        b_first_interface + 1,           /* bInterfaceNumber */
+        0x00,                            /* bAlternateSetting */
+        0x02,                            /* bNumEndpoints */
+        CDC_DATA_INTERFACE_CLASS,        /* bInterfaceClass */
+        0x00,                            /* bInterfaceSubClass */
+        0x00,                            /* bInterfaceProtocol */
+        0x00,                            /* iInterface */
+        0x07,                            /* bLength */
+        USB_DESCRIPTOR_TYPE_ENDPOINT,    /* bDescriptorType */
+        out_ep,                          /* bEndpointAddress */
+        0x02,                            /* bmAttributes */
+        w_max_packet_size & 0xff,        /* wMaxPacketSize */
+        (w_max_packet_size >> 8) & 0xFF, /* wMaxPacketSize */
+        0x00,                            /* bInterval */
+        0x07,                            /* bLength */
+        USB_DESCRIPTOR_TYPE_ENDPOINT,    /* bDescriptorType */
+        in_ep,                           /* bEndpointAddress */
+        0x02,                            /* bmAttributes */
+        w_max_packet_size & 0xff,        /* wMaxPacketSize */
+        (w_max_packet_size >> 8) & 0xFF, /* wMaxPacketSize */
         0x00,
     ]
 }
