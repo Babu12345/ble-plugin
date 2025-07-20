@@ -5,7 +5,8 @@ use esp32_nimble::{
     BLEDevice,
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
-use plugin_std::usb_device::CdcAcmDevice;
+use lib_utils::MatchSliceLengths;
+use plugin_std::usb_device::{send_data, CdcAcmDevice};
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() {
     esp_idf_svc::sys::link_patches();
@@ -22,20 +23,13 @@ fn main() {
         .resolve_rpa();
 
     let _device = unsafe { CdcAcmDevice::new().init(0, ESP_USBD_BASE) }.unwrap();
-
-    std::thread::scope(|_scope| {
-
-        // scope.spawn(|| loop {
-        //     log::info!("Data start");
-        //     let mut send_buffer: [u8; 64] = [0; 64];
-        //     unsafe { send_data(&mut send_buffer) };
-        //     std::thread::sleep(Duration::from_secs(1));
-        //     log::info!("Data sent");
-        // });
+    std::thread::scope(|scope| {
+        scope.spawn(|| loop {
+            log::info!("Data start");
+            let mut send_buffer: [u8; 64] = b"Hello\n".match_size(0);
+            unsafe { send_data(&mut send_buffer) };
+            std::thread::sleep(Duration::from_secs(1));
+            log::info!("Data sent");
+        });
     });
-
-    loop {
-        std::thread::sleep(Duration::from_secs(1));
-        ::log::info!("Hello");
-    }
 }
