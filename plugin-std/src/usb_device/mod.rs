@@ -3,7 +3,8 @@
 //! how this will be called and referenced in code.
 #![allow(static_mut_refs)]
 use std::marker::PhantomData;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::{sync_channel, Receiver, Sender, SyncSender};
 use std::time::Duration;
 
 use esp_idf_sys::cherry_device::{
@@ -28,7 +29,7 @@ use utils::{
 };
 
 use std::ptr;
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 const CDC_IN_EP: u8 = 0x81;
 const CDC_OUT_EP: u8 = 0x02;
 const CDC_INT_EP: u8 = 0x83; // 0x85
@@ -36,6 +37,8 @@ const USB_CONFIG_SIZE: u32 = 9 + CDC_ACM_DESCRIPTOR_LEN;
 const USBD_VID: u16 = 0xFFFF;
 const USBD_PID: u16 = 0xFFFF;
 const USBD_MAX_POWER: u32 = 100; // 2mA * 100 = 100 mA
+
+static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 static mut READ_BUFFER: [u8; 2048] = [0; 2048];
 static mut WRITER_BUFFER: [u8; 2048] = [0; 2048];
@@ -145,7 +148,7 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 #[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, _nbytes: u32) {
     // log::info!("Event");
-    let _res = usbd_ep_start_read(busid, CDC_OUT_EP as u8, READ_BUFFER.as_mut_ptr(), 2048);
+    // let _res = usbd_ep_start_read(busid, CDC_OUT_EP as u8, READ_BUFFER.as_mut_ptr(), 2048);
 
     // log::info!("Data incoming: {:?}", READ_BUFFER);
 }
@@ -157,7 +160,7 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
     let ep_mps = usbd_get_ep_mps(busid, ep) as u32;
     if (nbytes % ep_mps) == 0 && nbytes > 0 {
         /* send zlp */
-        let _res = usbd_ep_start_write(busid, ep, ptr::null(), 0);
+        // let _res = usbd_ep_start_write(busid, ep, ptr::null(), 0);
         return;
     }
 }
@@ -175,11 +178,20 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
         | usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP
         | usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP => {}
         usbd_event_type_USBD_EVENT_CONFIGURED => {
-            let _res = usbd_ep_start_read(busid, CDC_OUT_EP as u8, READ_BUFFER.as_mut_ptr(), 2048);
+            // let _res = usbd_ep_start_read(busid, CDC_OUT_EP as u8, READ_BUFFER.as_mut_ptr(), 2048);
         }
         _ => {}
     }
 }
+
+/// test
+pub type T = [u8; 256];
+
+/// test
+pub unsafe fn receive_usb_data(_sender: Sender<T>) {}
+
+/// test
+pub unsafe fn send_usb_data(_receiver: Receiver<T>) {}
 
 /// Sending usb data
 pub unsafe fn send_data(data: &mut [u8]) {
@@ -249,15 +261,23 @@ impl CdcAcmDevice<PREINIT> {
 
     /// initialize the device
     pub unsafe fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDevice<POSTINIT>> {
+        match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
+            true => {
+                return Err(Error::CustomError("Already initialized"));
+            }
+            false => {}
+        }
         usbd_desc_register(busid, self.descriptor);
         usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0));
         usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1));
         usbd_add_endpoint(busid, self.cdc_out_ep);
         usbd_add_endpoint(busid, self.cdc_in_ep);
-        let res = usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler));
 
-        if res < 0 {
-            return Err(Error::CustomError("Failed to initialize the usb device"));
+        match usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler)) {
+            x if x < 0 => {
+                return Err(Error::CustomError("Failed to initialize the usb device"));
+            }
+            _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
         }
 
         Ok(CdcAcmDevice {
@@ -271,4 +291,12 @@ impl CdcAcmDevice<PREINIT> {
     }
 }
 
-impl CdcAcmDevice<POSTINIT> {}
+impl CdcAcmDevice<POSTINIT> {
+    /// Input and output to process data to and from the usb peripheral
+    pub fn processors(self, channel_buffer_size: usize) -> (SyncSender<T>, Receiver<T>) {
+        let to_usb = sync_channel(channel_buffer_size);
+        let from_usb = sync_channel(channel_buffer_size);
+
+        (to_usb.0, from_usb.1)
+    }
+}

@@ -24,14 +24,17 @@ lib_utils = {path = "../lib_utils"}
 protocol = {path = "../protocol"}
 device-cherry = {path = "../device-cherry"}
 ## Crates
-# esp32-nimble = "0.11.0"
+esp32-nimble ={version =  "0.11.0", default-features = false, features = ["no_std"]}
+# esp32-nimble ={version =  "0.11.0"}
 # log = "0.4.27"
 esp-idf-sys = { version = "0.36.1", default-features = false }
-esp-idf-svc = { version = "0.51", features = ["alloc", "binstart", "embassy-time-driver", "embassy-sync"], default-features = false }
+# esp-idf-svc = { version = "0.51", features = ["alloc","embassy-sync"], default-features = false }
+esp-idf-svc = { version = "0.51", features = ["binstart", "embassy-sync"], default-features = false }
+
 static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
-esp-println = {version = "0.12.0", features = ["esp32s3","jtag-serial"], default-features = false}
+# esp-println = {version = "0.12.0", features = ["esp32s3","jtag-serial"], default-features = false}
 
 [build-dependencies]
 embuild = "0.33"
