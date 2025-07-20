@@ -286,6 +286,8 @@ impl CdcAcmDevice<PREINIT> {
             _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
         }
 
+        ::log::info!("Usb device initialized");
+
         Ok(CdcAcmDevice {
             cdc_out_ep: self.cdc_out_ep,
             cdc_in_ep: self.cdc_in_ep,

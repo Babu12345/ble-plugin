@@ -36,6 +36,6 @@ fn main() {
 
     loop {
         std::thread::sleep(Duration::from_secs(1));
-        println!("Hello");
+        ::log::info!("Hello");
     }
 }

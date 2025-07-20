@@ -16,7 +16,7 @@ opt-level = "z"
 protocol = { path = "../protocol" }
 
 # Crates
-log = "0.4"
+log = {version = "0.4.27", default-features = false}
 esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
 static_cell = "2"

@@ -285,6 +285,8 @@ impl CdcAcmDevice<PREINIT> {
             }
         }
 
+        ::log::info!("Usb device initialized");
+
         Ok(CdcAcmDevice {
             cdc_out_ep: self.cdc_out_ep,
             cdc_in_ep: self.cdc_in_ep,
