@@ -181,15 +181,6 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
     }
 }
 
-/// test
-pub type T = [u8; 256];
-
-/// test
-pub unsafe fn receive_usb_data(_sender: Sender<T>) {}
-
-/// test
-pub unsafe fn send_usb_data(_receiver: Receiver<T>) {}
-
 /// Sending usb data
 pub unsafe fn send_data(data: &mut [u8]) {
     let _res = usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), 2048);

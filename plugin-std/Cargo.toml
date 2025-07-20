@@ -22,7 +22,7 @@ opt-level = "z"
 ## Files in shared directory
 lib_utils = {path = "../lib_utils"}
 protocol = {path = "../protocol"}
-# device-cherry = {path = "../device-cherry"}
+device-cherry = {path = "../device-cherry"}
 ## Crates
 # esp32-nimble = "0.11.0"
 # log = "0.4.27"
@@ -35,10 +35,3 @@ esp-println = {version = "0.12.0", features = ["esp32s3","jtag-serial"], default
 
 [build-dependencies]
 embuild = "0.33"
-
-
-[[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.1~5" }
-# component_dirs = "components/cherryusb"
-bindings_header = "cherry_usb_device_bindings.h"
-bindings_module = "cherry_device"
