@@ -12,7 +12,6 @@ fn main() {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     let device = BLEDevice::take();
-    let _device2 = BLEDevice::take();
     let _ble_advertising = device.get_advertising();
 
     device
