@@ -4,22 +4,13 @@ use esp_idf_sys::cherry_device::{
     CDC_ABSTRACT_CONTROL_MODEL, CDC_COMMON_PROTOCOL_AT_COMMANDS, CDC_CS_INTERFACE,
     CDC_DATA_INTERFACE_CLASS, CDC_FUNC_DESC_ABSTRACT_CONTROL_MANAGEMENT,
     CDC_FUNC_DESC_CALL_MANAGEMENT, CDC_FUNC_DESC_HEADER, CDC_FUNC_DESC_UNION, CDC_V1_10,
-    USB_DESCRIPTOR_TYPE_CONFIGURATION, USB_DESCRIPTOR_TYPE_DEVICE,
-    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER, USB_DESCRIPTOR_TYPE_ENDPOINT,
+    USB_DESCRIPTOR_TYPE_CONFIGURATION, USB_DESCRIPTOR_TYPE_DEVICE, USB_DESCRIPTOR_TYPE_ENDPOINT,
     USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION,
-    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DESCRIPTOR_TYPE_STRING, USB_DEVICE_CLASS_CDC,
-    USB_STRING_MFC_INDEX, USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
+    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DEVICE_CLASS_CDC, USB_STRING_MFC_INDEX,
+    USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
 };
 
 pub const CDC_MAX_MPS: u32 = 64;
-
-pub fn usb_langid_init(id: u32) -> Vec<u32> {
-    vec![
-        0x04,                              /* bLength */
-        USB_DESCRIPTOR_TYPE_STRING as u32, /* bDescriptorType */
-        id,                                /* wLangID0 */
-    ]
-}
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L628
 pub fn device_descriptor_init(
@@ -31,23 +22,28 @@ pub fn device_descriptor_init(
     id_product: u32,
     bcd_device: u32,
     b_num_configurations: u32,
-) -> Vec<u32> {
-    vec![
+) -> [u8; 18] {
+    [
         0x12,                       /* bLength */
         USB_DESCRIPTOR_TYPE_DEVICE, /* bDescriptorType */
-        bcd_usb,                    /* bcdUSB */
+        bcd_usb & 0xff,             /* bcdUSB */
+        (bcd_usb >> 8) & 0xFF,      /* bcdUSB */
         b_device_class,             /* bDeviceClass */
         b_device_sub_class,         /* bDeviceSubClass */
         b_device_protocol,          /* bDeviceProtocol */
         CDC_MAX_MPS,                /* bMaxPacketSize */
-        id_vendor,                  /* idVendor */
-        id_product,                 /* idProduct */
-        bcd_device,                 /* bcdDevice */
+        id_vendor & 0xff,           /* idVendor */
+        (id_vendor >> 8) & 0xFF,    /* idVendor */
+        id_product & 0xff,          /* idProduct */
+        (id_product >> 8) & 0xFF,   /* idProduct */
+        bcd_device & 0xff,          /* bcdDevice */
+        (bcd_device >> 8) & 0xFF,   /* bcdDevice */
         USB_STRING_MFC_INDEX,       /* iManufacturer */
         USB_STRING_PRODUCT_INDEX,   /* iProduct */
         USB_STRING_SERIAL_INDEX,    /* iSerial */
         b_num_configurations,       /* bNumConfigurations */
     ]
+    .map(|x| x as u8)
 }
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L644
@@ -57,58 +53,42 @@ pub fn config_descriptor_init(
     b_configuration_value: u32,
     bm_attributes: u32,
     b_max_power: u32,
-) -> Vec<u32> {
-    vec![
+) -> [u8; 9] {
+    [
         0x09,                              /* bLength */
         USB_DESCRIPTOR_TYPE_CONFIGURATION, /* bDescriptorType */
-        w_total_length,                    /* wTotalLength */
+        w_total_length & 0xff,             /* wTotalLength */
+        (w_total_length >> 8) & 0xFF,      /* wTotalLength */
         b_num_interfaces,                  /* bNumInterfaces */
         b_configuration_value,             /* bConfigurationValue */
         0x00,                              /* iConfiguration */
         bm_attributes,                     /* bmAttributes */
-        b_max_power,                       /* bMaxPower */
+        b_max_power / 2,                   /* bMaxPower */
     ]
+    .map(|x| x as u8)
 }
 
 // https://github.com/telehua/DAP_GD32F407/blob/d6e9db5b7bf8972bfb22bb8b8ed0b06a3f7c4801/source/cherry_usb/common/usb_def.h#L692
+#[allow(unused)]
 pub fn other_speed_descriptor_init(
     w_total_length: u32,
     b_num_interfaces: u32,
     b_configuration_value: u32,
     bm_attributes: u32,
     b_max_power: u32,
-) -> Vec<u32> {
-    vec![
+) -> [u8; 9] {
+    [
         0x09,                            /* bLength */
         USB_DESCRIPTOR_TYPE_OTHER_SPEED, /* bDescriptorType */
-        w_total_length,                  /* wTotalLength */
+        w_total_length & 0xff,           /* wTotalLength */
+        (w_total_length >> 8) & 0xFF,    /* wTotalLength */
         b_num_interfaces,                /* bNumInterfaces */
         b_configuration_value,           /* bConfigurationValue */
         0x00,                            /* iConfiguration */
         bm_attributes,                   /* bmAttributes */
-        b_max_power,                     /* bMaxPower */
+        b_max_power / 2,                 /* bMaxPower */
     ]
-}
-
-// https://github.com/telehua/DAP_GD32F407/blob/d6e9db5b7bf8972bfb22bb8b8ed0b06a3f7c4801/source/cherry_usb/common/usb_def.h#L681
-pub fn device_qualifier_descriptor_init(
-    bcd_usb: u32,
-    b_device_class: u32,
-    b_device_sub_class: u32,
-    b_device_protocol: u32,
-    b_num_configurations: u32,
-) -> Vec<u32> {
-    vec![
-        0x0A,                                 /* bLength */
-        USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER, /* bDescriptorType */
-        bcd_usb,                              /* bcdUSB */
-        b_device_class,                       /* bDeviceClass */
-        b_device_sub_class,                   /* bDeviceSubClass */
-        b_device_protocol,                    /* bDeviceProtocol */
-        CDC_MAX_MPS,                          /* bMaxPacketSize */
-        b_num_configurations,                 /* bNumConfigurations */
-        0x00,                                 /* bReserved */
-    ]
+    .map(|x| x as u8)
 }
 
 // https://github.com/wdfk-prog/RT-Thread-Study/blob/919ba18009f95ddc74f3d6fd54ac7f7ef81139c0/42%20USB.md?plain=1#L1654
@@ -119,8 +99,8 @@ pub fn cdc_acm_descriptor_init(
     in_ep: u32,
     w_max_packet_size: u32,
     str_idx: u32,
-) -> Vec<u32> {
-    vec![
+) -> [u8; 66] {
+    [
         0x08,                                      /* bLength */
         USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION, /* bDescriptorType */
         b_first_interface,                         /* bFirstInterface */
@@ -141,7 +121,8 @@ pub fn cdc_acm_descriptor_init(
         0x05,                                      /* bLength */
         CDC_CS_INTERFACE,                          /* bDescriptorType */
         CDC_FUNC_DESC_HEADER,                      /* bDescriptorSubtype */
-        CDC_V1_10,                                 /* bcdCDC */
+        CDC_V1_10 & 0xff,                          /* bcdCDC */
+        (CDC_V1_10 >> 8) & 0xFF,                   /* bcdCDC */
         0x05,                                      /* bLength */
         CDC_CS_INTERFACE,                          /* bDescriptorType */
         CDC_FUNC_DESC_CALL_MANAGEMENT,             /* bDescriptorSubtype */
@@ -161,30 +142,33 @@ pub fn cdc_acm_descriptor_init(
         int_ep,                                    /* bEndpointAddress */
         0x03,                                      /* bmAttributes */
         0x08,
-        0x00,                          /* wMaxPacketSize */
-        0x0a,                          /* bInterval */
-        0x09,                          /* bLength */
-        USB_DESCRIPTOR_TYPE_INTERFACE, /* bDescriptorType */
-        b_first_interface + 1,         /* bInterfaceNumber */
-        0x00,                          /* bAlternateSetting */
-        0x02,                          /* bNumEndpoints */
-        CDC_DATA_INTERFACE_CLASS,      /* bInterfaceClass */
-        0x00,                          /* bInterfaceSubClass */
-        0x00,                          /* bInterfaceProtocol */
-        0x00,                          /* iInterface */
-        0x07,                          /* bLength */
-        USB_DESCRIPTOR_TYPE_ENDPOINT,  /* bDescriptorType */
-        out_ep,                        /* bEndpointAddress */
-        0x02,                          /* bmAttributes */
-        w_max_packet_size,             /* wMaxPacketSize */
-        0x00,                          /* bInterval */
-        0x07,                          /* bLength */
-        USB_DESCRIPTOR_TYPE_ENDPOINT,  /* bDescriptorType */
-        in_ep,                         /* bEndpointAddress */
-        0x02,                          /* bmAttributes */
-        w_max_packet_size,             /* wMaxPacketSize */
+        0x00,                            /* wMaxPacketSize */
+        0x0a,                            /* bInterval */
+        0x09,                            /* bLength */
+        USB_DESCRIPTOR_TYPE_INTERFACE,   /* bDescriptorType */
+        b_first_interface + 1,           /* bInterfaceNumber */
+        0x00,                            /* bAlternateSetting */
+        0x02,                            /* bNumEndpoints */
+        CDC_DATA_INTERFACE_CLASS,        /* bInterfaceClass */
+        0x00,                            /* bInterfaceSubClass */
+        0x00,                            /* bInterfaceProtocol */
+        0x00,                            /* iInterface */
+        0x07,                            /* bLength */
+        USB_DESCRIPTOR_TYPE_ENDPOINT,    /* bDescriptorType */
+        out_ep,                          /* bEndpointAddress */
+        0x02,                            /* bmAttributes */
+        w_max_packet_size & 0xff,        /* wMaxPacketSize */
+        (w_max_packet_size >> 8) & 0xFF, /* wMaxPacketSize */
+        0x00,                            /* bInterval */
+        0x07,                            /* bLength */
+        USB_DESCRIPTOR_TYPE_ENDPOINT,    /* bDescriptorType */
+        in_ep,                           /* bEndpointAddress */
+        0x02,                            /* bmAttributes */
+        w_max_packet_size & 0xff,        /* wMaxPacketSize */
+        (w_max_packet_size >> 8) & 0xFF, /* wMaxPacketSize */
         0x00,
     ]
+    .map(|x| x as u8)
 }
 
 #[macro_export]
@@ -197,4 +181,79 @@ macro_rules! mk_static {
         let x = STATIC_CELL.uninit().write(($val));
         x
     }};
+}
+
+#[macro_export]
+/// Concat N arrays
+macro_rules! concat_n_arrays {
+    ($arr:expr) => { $arr };
+
+    ($arr1:expr, $arr2:expr) => {{
+        let a1 = $arr1;
+        let a2 = $arr2;
+        std::array::from_fn(|i| {
+            if i < a1.len() { a1[i] } else { a2[i - a1.len()] }
+        })
+    }};
+
+    ($first:expr, $($rest:expr),+) => {
+        concat_arrays!(
+            $first,
+            concat_arrays!($($rest),+)
+        )
+    };
+}
+
+/// 4-byte aligned buffer wrapper
+#[repr(align(4))]
+pub struct AlignedBuffer {
+    data: [u8; 2048],
+}
+
+impl AlignedBuffer {
+    pub const fn new() -> Self {
+        Self { data: [0; 2048] }
+    }
+
+    #[allow(unused)]
+    fn as_ptr(&self) -> *const u8 {
+        self.data.as_ptr()
+    }
+
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.data.as_mut_ptr()
+    }
+
+    #[allow(unused)]
+    fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+
+impl std::ops::Index<usize> for AlignedBuffer {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for AlignedBuffer {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
+    }
+}
+
+impl std::ops::Index<std::ops::Range<usize>> for AlignedBuffer {
+    type Output = [u8];
+
+    fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl std::ops::IndexMut<std::ops::Range<usize>> for AlignedBuffer {
+    fn index_mut(&mut self, index: std::ops::Range<usize>) -> &mut Self::Output {
+        &mut self.data[index]
+    }
 }

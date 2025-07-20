@@ -35,3 +35,55 @@ macro_rules! concat_n_arrays {
         )
     };
 }
+
+// 4-byte aligned buffer wrapper
+#[repr(align(4))]
+struct AlignedBuffer {
+    data: [u8; 2048],
+}
+
+impl AlignedBuffer {
+    const fn new() -> Self {
+        Self { data: [0; 2048] }
+    }
+
+    fn as_ptr(&self) -> *const u8 {
+        self.data.as_ptr()
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.data.as_mut_ptr()
+    }
+
+    fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+
+impl std::ops::Index<usize> for AlignedBuffer {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for AlignedBuffer {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
+    }
+}
+
+impl std::ops::Index<std::ops::Range<usize>> for AlignedBuffer {
+    type Output = [u8];
+
+    fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl std::ops::IndexMut<std::ops::Range<usize>> for AlignedBuffer {
+    fn index_mut(&mut self, index: std::ops::Range<usize>) -> &mut Self::Output {
+        &mut self.data[index]
+    }
+}

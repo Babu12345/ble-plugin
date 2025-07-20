@@ -1,80 +1,71 @@
-//! Processors for the usb device using the cherry-usb usb stack.
-//! NOTE: This implementation is currently not working!
-
-use std::sync::mpsc::{Receiver, Sender};
+//! USB device class for the esp-idf hal interace
+//! Taking example for https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/usb_serial.rs for the final product of
+//! how this will be called and referenced in code.
+#![allow(static_mut_refs)]
+use std::marker::PhantomData;
+use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::{Receiver, Sender, SyncSender, sync_channel};
 
 use esp_idf_sys::cherry_device::{
-    CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_BULK_EP_MPS_FS, USB_BULK_EP_MPS_HS,
-    USB_CONFIG_BUS_POWERED, USB_DEVICE_CLASS_CDC, USB_SPEED_FULL, USB_SPEED_HIGH, usb_descriptor,
-    usbd_add_endpoint, usbd_add_interface, usbd_cdc_acm_init_intf, usbd_desc_register,
-    usbd_endpoint, usbd_ep_start_read, usbd_ep_start_write,
-    usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP, usbd_event_type_USBD_EVENT_CONFIGURED,
-    usbd_event_type_USBD_EVENT_CONNECTED, usbd_event_type_USBD_EVENT_DISCONNECTED,
-    usbd_event_type_USBD_EVENT_RESET, usbd_event_type_USBD_EVENT_RESUME,
-    usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP, usbd_event_type_USBD_EVENT_SUSPEND,
-    usbd_initialize, usbd_interface,
+    CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
+    USB_DEVICE_CLASS_MISC, usb_descriptor, usbd_add_endpoint, usbd_add_interface,
+    usbd_cdc_acm_init_intf, usbd_cdc_acm_set_dtr, usbd_desc_register, usbd_endpoint,
+    usbd_ep_start_read, usbd_ep_start_write, usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP,
+    usbd_event_type_USBD_EVENT_CONFIGURED, usbd_event_type_USBD_EVENT_CONNECTED,
+    usbd_event_type_USBD_EVENT_DISCONNECTED, usbd_event_type_USBD_EVENT_RESET,
+    usbd_event_type_USBD_EVENT_RESUME, usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP,
+    usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
 
-use crate::mk_static;
+use crate::utils::AlignedBuffer;
 use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
-    device_qualifier_descriptor_init, other_speed_descriptor_init,
 };
+use crate::{concat_n_arrays, mk_static};
 
 use std::ptr;
-use std::sync::{LazyLock, Mutex};
-const CDC_IN_EP: u32 = 0x81;
-const CDC_OUT_EP: u32 = 0x02;
-const CDC_INT_EP: u32 = 0x83;
+use std::sync::LazyLock;
+const CDC_IN_EP: u8 = 0x81;
+const CDC_OUT_EP: u8 = 0x02;
+const CDC_INT_EP: u8 = 0x83; // 0x85
 const USB_CONFIG_SIZE: u32 = 9 + CDC_ACM_DESCRIPTOR_LEN;
 const USBD_VID: u16 = 0xFFFF;
 const USBD_PID: u16 = 0xFFFF;
-const USBD_MAX_POWER: u32 = 50; // 2mA * 50 = 100 mA
+const USBD_MAX_POWER: u32 = 100; // 2mA * 100 = 100 mA
+const SIZE: usize = CDC_MAX_MPS as usize;
 
-static READ_BUFFER_LOCKER: Mutex<[u8; 2048]> = Mutex::new([0; 2048]);
+static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-unsafe extern "C" {
-    unsafe static mut ep_tx_busy_flag: bool;
-    // unsafe static mut dtr_enable: bool;
+static mut READ_BUFFER: AlignedBuffer = AlignedBuffer::new();
+static mut WRITER_BUFFER: AlignedBuffer = AlignedBuffer::new();
+
+/// Class error type
+#[derive(Debug)]
+pub enum Error {
+    /// Custom error type
+    CustomError(&'static str),
 }
 
-// /// Strong reference to the function defined in C
-// #[unsafe(no_mangle)]
-// #[allow(unused_variables)]
-// pub extern "C" fn usbd_cdc_acm_set_dtr(busid: u8, intf: u8, dtr: bool) {
-//     unsafe { std::ptr::write_volatile(&raw mut dtr_enable, dtr) }
-// }
-
-/// Strong reference to the cdc acm stopper defined in C
-#[unsafe(no_mangle)]
-#[allow(unused_variables)]
-pub unsafe extern "C" fn cdc_acm_data_send_with_dtr_test(busid: u8) {
-    if unsafe { core::ptr::read_volatile(&raw const ep_tx_busy_flag) } {
-        unsafe { core::ptr::write_volatile(&raw mut ep_tx_busy_flag, true) };
-        let mut data = [0; 2048];
-        usbd_ep_start_write(busid, CDC_IN_EP as u8, data.as_mut_ptr(), 2048);
-        while unsafe { core::ptr::read_volatile(&raw const ep_tx_busy_flag) } {}
-    }
-}
+/// Result type with the custom error
+pub type Result<T> = core::result::Result<T, Error>;
 
 // https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L19
-static DEVICE_DESCRIPTOR: LazyLock<Vec<u32>> = LazyLock::new(|| {
-    [device_descriptor_init(
+static DEVICE_DESCRIPTOR: LazyLock<[u8; 18]> = LazyLock::new(|| {
+    device_descriptor_init(
         USB_2_0,
-        USB_DEVICE_CLASS_CDC,
+        USB_DEVICE_CLASS_MISC, // USB_DEVICE_CLASS_CDC
         0x02,
         0x01,
         USBD_VID as u32,
         USBD_PID as u32,
         0x0100,
         0x01,
-    )]
-    .concat()
+    )
 });
 
-// https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L23
-static CONFIG_DESCRIPTOR_HS: LazyLock<Vec<u32>> = LazyLock::new(|| {
-    [
+// https://claude.ai/chat/b333a37f-351f-4bd3-b4af-ed1c3888b205
+static CONFIG_DESCRIPTOR: LazyLock<[u8; 75]> = LazyLock::new(|| {
+    concat_n_arrays!(
         config_descriptor_init(
             USB_CONFIG_SIZE,
             0x02,
@@ -84,164 +75,96 @@ static CONFIG_DESCRIPTOR_HS: LazyLock<Vec<u32>> = LazyLock::new(|| {
         ),
         cdc_acm_descriptor_init(
             0x00,
-            CDC_INT_EP,
-            CDC_OUT_EP,
-            CDC_IN_EP,
-            USB_BULK_EP_MPS_HS,
+            CDC_INT_EP as u32,
+            CDC_OUT_EP as u32,
+            CDC_IN_EP as u32,
+            CDC_MAX_MPS,
             0x02,
-        ),
-    ]
-    .concat()
+        )
+    )
 });
 
-// https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L28
-static CONFIG_DESCRIPTOR_FS: LazyLock<Vec<u32>> = LazyLock::new(|| {
-    [
-        config_descriptor_init(
-            USB_CONFIG_SIZE,
-            0x02,
-            0x01,
-            USB_CONFIG_BUS_POWERED,
-            USBD_MAX_POWER,
-        ),
-        cdc_acm_descriptor_init(
-            0x00,
-            CDC_INT_EP,
-            CDC_OUT_EP,
-            CDC_IN_EP,
-            USB_BULK_EP_MPS_FS,
-            0x02,
-        ),
-    ]
-    .concat()
-});
+static DEVICE_QUALITY_DESCRIPTOR: [u8; 10] = [
+    0x0a,                                       // bLength
+    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER as u8, // bDescriptorType (Device Qualifier)
+    0x00,
+    0x02, // bcdUSB
+    0x00, // bDeviceClass
+    0x00, // bDeviceSubClass
+    0x00, // bDeviceProtocol
+    0x40, // bMaxPacketSize0
+    0x00, // bNumConfigurations
+    0x00, // bReserved
+];
 
-// https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L33C22-L33C47
-static DEVICE_QUALITY_DESCRIPTOR: LazyLock<Vec<u32>> = LazyLock::new(|| {
-    [device_qualifier_descriptor_init(
-        USB_2_0,
-        USB_DEVICE_CLASS_CDC,
-        0x02,
-        0x01,
-        0x01,
-    )]
-    .concat()
-});
-
-// https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L23
-static OTHER_SPEED_CONFIG_DESCRIPTOR_HS: LazyLock<Vec<u32>> = LazyLock::new(|| {
-    [
-        other_speed_descriptor_init(
-            USB_CONFIG_SIZE,
-            0x02,
-            0x01,
-            USB_CONFIG_BUS_POWERED,
-            USBD_MAX_POWER,
-        ),
-        cdc_acm_descriptor_init(
-            0x00,
-            CDC_INT_EP,
-            CDC_OUT_EP,
-            CDC_IN_EP,
-            USB_BULK_EP_MPS_FS,
-            0x02,
-        ),
-    ]
-    .concat()
-});
-
-// https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L28
-static OTHER_SPEED_CONFIG_DESCRIPTOR_FS: LazyLock<Vec<u32>> = LazyLock::new(|| {
-    [
-        other_speed_descriptor_init(
-            USB_CONFIG_SIZE,
-            0x02,
-            0x01,
-            USB_CONFIG_BUS_POWERED,
-            USBD_MAX_POWER,
-        ),
-        cdc_acm_descriptor_init(
-            0x00,
-            CDC_INT_EP,
-            CDC_OUT_EP,
-            CDC_IN_EP,
-            USB_BULK_EP_MPS_FS,
-            0x02,
-        ),
-    ]
-    .concat()
-});
-
-static STRING_DESCRIPTOR: LazyLock<[&'static str; 4]> = LazyLock::new(|| {
-    [
-        std::str::from_utf8(&[0x09, 0x04]).unwrap(),
-        "HPMicro",
-        "HPMicro CDC DEMO",
-        "2024051702",
-    ]
-});
+static STRING_MANUFACTURER: &[u8] = b"CherryUSB\0";
+static STRING_PRODUCT: &[u8] = b"CherryUSB CDC DEMO\0";
+static STRING_SERIAL: &[u8] = b"2022123456\0";
+static STRING_LANGID: &[u8] = b"\x09\x04\0";
 
 // https://github.com/orangecms/RV-Debugger-BL702/blob/05739699b50a9235f8906bd80b4b8f7dd0c37e62/components/usb_stack/common/usb_def.h#L473
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn device_descriptor_callback(_speed: u8) -> *const u8 {
     DEVICE_DESCRIPTOR.as_ptr() as *const u8
 }
 
 // https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L72
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn device_quality_descriptor_callback(_speed: u8) -> *const u8 {
-    DEVICE_QUALITY_DESCRIPTOR.as_ptr() as *const u8
-}
-
-unsafe extern "C" fn config_descriptor_callback(speed: u8) -> *const u8 {
-    log::info!("Config: {speed}");
-    match speed as u32 {
-        USB_SPEED_HIGH => CONFIG_DESCRIPTOR_HS.as_ptr() as *const u8,
-        USB_SPEED_FULL => CONFIG_DESCRIPTOR_FS.as_ptr() as *const u8,
-        _ => ptr::null(),
-    }
-}
-
-unsafe extern "C" fn other_speed_descriptor_callback(speed: u8) -> *const u8 {
-    log::info!("Other: {speed}");
-    match speed as u32 {
-        USB_SPEED_HIGH => OTHER_SPEED_CONFIG_DESCRIPTOR_HS.as_ptr() as *const u8,
-        USB_SPEED_FULL => OTHER_SPEED_CONFIG_DESCRIPTOR_FS.as_ptr() as *const u8,
-        _ => ptr::null(),
-    }
-}
-
-unsafe extern "C" fn string_descriptor_callback(speed: u8, index: u8) -> *const u8 {
-    log::info!("String: {speed}");
-    match index >= STRING_DESCRIPTOR.len() as u8 {
-        true => ptr::null(),
-        false => STRING_DESCRIPTOR[index as usize].as_ptr() as *const u8,
-    }
-}
-
-unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, _nbytes: u32) {
-    log::info!("Data incoming ...");
-
-    let _res = usbd_ep_start_read(
-        busid,
-        ep,
-        READ_BUFFER_LOCKER.lock().unwrap().as_mut_ptr(),
-        2048,
-    );
-
-    // log::info!("Data incoming: {:?}", *READ_BUFFER_LOCKER.lock().unwrap());
+    DEVICE_QUALITY_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
-    log::info!("Outgoing");
-    if (nbytes % CDC_MAX_MPS) == 0 && nbytes > 0 {
-        /* send zlp */
-        let _res = usbd_ep_start_write(busid, ep, ptr::null(), 0);
-        return;
+#[allow(non_upper_case_globals, non_snake_case)]
+unsafe extern "C" fn config_descriptor_callback(_speed: u8) -> *const u8 {
+    CONFIG_DESCRIPTOR.as_ptr()
+}
+
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals, non_snake_case)]
+unsafe extern "C" fn other_speed_descriptor_callback(_speed: u8) -> *const u8 {
+    DEVICE_QUALITY_DESCRIPTOR.as_ptr()
+}
+
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals, non_snake_case)]
+unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const u8 {
+    match index {
+        0 => STRING_LANGID.as_ptr() as *const u8,
+        1 => STRING_MANUFACTURER.as_ptr() as *const u8,
+        2 => STRING_PRODUCT.as_ptr() as *const u8,
+        3 => STRING_SERIAL.as_ptr() as *const u8,
+        _ => ptr::null(),
     }
 }
 
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals, non_snake_case)]
+unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, _nbytes: u32) {
+    // log::info!("Event");
+    let _res = unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32) };
+    // log::info!("Data incoming: {:?}", READ_BUFFER);
+}
+
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals, non_snake_case)]
+unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
+    // log::info!("Outgoing");
+    let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) as u32 };
+    match (nbytes % ep_mps) == 0 && nbytes > 0 {
+        true => {
+            unsafe { usbd_ep_start_write(busid, ep, ptr::null(), 0) };
+        }
+        false => {}
+    };
+}
+
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
-    #[allow(non_upper_case_globals)]
+    #[allow(non_upper_case_globals, non_snake_case)]
     match event as u32 {
         usbd_event_type_USBD_EVENT_RESET
         | usbd_event_type_USBD_EVENT_CONNECTED
@@ -251,13 +174,14 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
         | usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP
         | usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP => {}
         usbd_event_type_USBD_EVENT_CONFIGURED => {
-            let _res = usbd_ep_start_read(
-                busid,
-                CDC_OUT_EP as u8,
-                READ_BUFFER_LOCKER.lock().unwrap().as_mut_ptr(),
-                2048,
-            );
-            log::info!("Event: {event}");
+            let _res = unsafe {
+                usbd_ep_start_read(
+                    busid,
+                    CDC_OUT_EP as u8,
+                    READ_BUFFER.as_mut_ptr(),
+                    SIZE as u32,
+                )
+            };
         }
         _ => {}
     }
@@ -274,14 +198,31 @@ pub unsafe fn send_usb_data(_receiver: Receiver<T>) {}
 
 /// Sending usb data
 pub unsafe fn send_data(data: &mut [u8]) {
-    let _res = usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), 2048);
+    let _res = usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), SIZE as u32);
 }
 
+/// Main CDC ACM device structure
+#[derive(Debug)]
+pub struct CdcAcmDevice<STATE> {
+    descriptor: &'static usb_descriptor,
+    cdc_out_ep: &'static mut usbd_endpoint,
+    cdc_in_ep: &'static mut usbd_endpoint,
+    intf0: &'static mut usbd_interface,
+    intf1: &'static mut usbd_interface,
+    _state: PhantomData<STATE>,
+}
+
+/// Pre device configuration
+pub struct PREINIT;
+
+/// Post device configuration
+pub struct POSTINIT;
+
 /// https://github.com/CherryUSB/cherryusb_esp32/tree/main/examples/device
-pub unsafe fn cdc_init(busid: u8, reg_base: u32) {
-    usbd_desc_register(
-        busid,
-        mk_static!(
+impl CdcAcmDevice<PREINIT> {
+    /// Initiates a new cdc device
+    pub fn new() -> Self {
+        let descriptor = mk_static!(
             usb_descriptor,
             usb_descriptor {
                 device_descriptor_callback: Some(device_descriptor_callback),
@@ -291,35 +232,82 @@ pub unsafe fn cdc_init(busid: u8, reg_base: u32) {
                 string_descriptor_callback: Some(string_descriptor_callback),
                 ..Default::default()
             }
-        ),
-    );
-    usbd_add_interface(
-        busid,
-        usbd_cdc_acm_init_intf(busid, mk_static!(usbd_interface, Default::default())),
-    );
-    usbd_add_interface(
-        busid,
-        usbd_cdc_acm_init_intf(busid, mk_static!(usbd_interface, Default::default())),
-    );
-    usbd_add_endpoint(
-        busid,
-        mk_static!(
+        );
+        let intf0 = mk_static!(usbd_interface, usbd_interface::default());
+        let intf1 = mk_static!(usbd_interface, usbd_interface::default());
+
+        let cdc_out_ep = mk_static!(
             usbd_endpoint,
             usbd_endpoint {
                 ep_addr: CDC_OUT_EP as u8,
                 ep_cb: Some(usbd_cdc_acm_bulk_out),
             }
-        ),
-    );
-    usbd_add_endpoint(
-        busid,
-        mk_static!(
+        );
+
+        let cdc_in_ep = mk_static!(
             usbd_endpoint,
             usbd_endpoint {
                 ep_addr: CDC_IN_EP as u8,
                 ep_cb: Some(usbd_cdc_acm_bulk_in),
             }
-        ),
-    );
-    usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler));
+        );
+
+        Self {
+            cdc_out_ep,
+            cdc_in_ep,
+            intf0,
+            intf1,
+            descriptor,
+            _state: PhantomData::<PREINIT>,
+        }
+    }
+
+    /// initialize the device
+    pub unsafe fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDevice<POSTINIT>> {
+        match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
+            true => {
+                return Err(Error::CustomError("Already initialized"));
+            }
+            false => {}
+        }
+        unsafe {
+            usbd_desc_register(busid, self.descriptor);
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0));
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1));
+            usbd_add_endpoint(busid, self.cdc_out_ep);
+            usbd_add_endpoint(busid, self.cdc_in_ep);
+
+            match usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler)) {
+                x if x < 0 => {
+                    return Err(Error::CustomError("Failed to initialize the usb device"));
+                }
+                _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
+            }
+        }
+
+        Ok(CdcAcmDevice {
+            cdc_out_ep: self.cdc_out_ep,
+            cdc_in_ep: self.cdc_in_ep,
+            intf0: self.intf0,
+            intf1: self.intf1,
+            descriptor: self.descriptor,
+            _state: PhantomData::<POSTINIT>,
+        })
+    }
+}
+
+impl CdcAcmDevice<POSTINIT> {
+    /// Input and output to process data to and from the usb peripheral
+    pub fn processors(self, channel_buffer_size: usize) -> (SyncSender<T>, Receiver<T>) {
+        let to_usb = sync_channel(channel_buffer_size);
+        let from_usb = sync_channel(channel_buffer_size);
+        (to_usb.0, from_usb.1)
+    }
+
+    /// Set the dtr of the usb cdc device
+    pub fn set_dtr(&self, busid: u8, intf: u8, dtr: bool) {
+        unsafe {
+            usbd_cdc_acm_set_dtr(busid, intf, dtr);
+        }
+    }
 }

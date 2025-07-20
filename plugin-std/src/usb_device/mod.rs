@@ -5,28 +5,22 @@
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{sync_channel, Receiver, Sender, SyncSender};
-use std::time::Duration;
 
 use esp_idf_sys::cherry_device::{
-    cdc_line_coding, usb_descriptor, usbd_add_endpoint, usbd_add_interface, usbd_cdc_acm_init_intf,
-    usbd_cdc_acm_set_line_coding, usbd_desc_register, usbd_endpoint, usbd_ep_start_read,
+    usb_descriptor, usbd_add_endpoint, usbd_add_interface, usbd_cdc_acm_init_intf,
+    usbd_cdc_acm_set_dtr, usbd_desc_register, usbd_endpoint, usbd_ep_start_read,
     usbd_ep_start_write, usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP,
     usbd_event_type_USBD_EVENT_CONFIGURED, usbd_event_type_USBD_EVENT_CONNECTED,
     usbd_event_type_USBD_EVENT_DISCONNECTED, usbd_event_type_USBD_EVENT_RESET,
     usbd_event_type_USBD_EVENT_RESUME, usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP,
     usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
-    CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_2_1, USB_BULK_EP_MPS_FS, USB_BULK_EP_MPS_HS,
-    USB_CONFIG_BUS_POWERED, USB_DBG_LOG, USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
-    USB_DEVICE_CLASS_CDC, USB_DEVICE_CLASS_MISC, USB_SPEED_FULL, USB_SPEED_HIGH,
+    CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
+    USB_DEVICE_CLASS_MISC,
 };
-use esp_idf_sys::vTaskDelay;
 
-use crate::{concat_n_arrays, mk_static};
+use crate::{concat_n_arrays, mk_static, AlignedBuffer};
 mod utils;
-use utils::{
-    cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
-    other_speed_descriptor_init, CDC_MAX_MPS,
-};
+use utils::{cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init, CDC_MAX_MPS};
 
 use std::ptr;
 use std::sync::LazyLock;
@@ -37,11 +31,12 @@ const USB_CONFIG_SIZE: u32 = 9 + CDC_ACM_DESCRIPTOR_LEN;
 const USBD_VID: u16 = 0xFFFF;
 const USBD_PID: u16 = 0xFFFF;
 const USBD_MAX_POWER: u32 = 100; // 2mA * 100 = 100 mA
+const SIZE: usize = CDC_MAX_MPS as usize;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-static mut READ_BUFFER: [u8; 2048] = [0; 2048];
-static mut WRITER_BUFFER: [u8; 2048] = [0; 2048];
+static mut READ_BUFFER: AlignedBuffer = AlignedBuffer::new();
+static mut WRITER_BUFFER: AlignedBuffer = AlignedBuffer::new();
 
 /// Class error type
 #[derive(Debug)]
@@ -148,7 +143,12 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 #[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, _nbytes: u32) {
     // log::info!("Event");
-    // let _res = usbd_ep_start_read(busid, CDC_OUT_EP as u8, READ_BUFFER.as_mut_ptr(), 2048);
+    let _res = usbd_ep_start_read(
+        busid,
+        CDC_OUT_EP as u8,
+        READ_BUFFER.as_mut_ptr(),
+        SIZE as u32,
+    );
 
     // log::info!("Data incoming: {:?}", READ_BUFFER);
 }
@@ -158,11 +158,12 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, _nbytes: u32) {
 unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
     // log::info!("Outgoing");
     let ep_mps = usbd_get_ep_mps(busid, ep) as u32;
-    if (nbytes % ep_mps) == 0 && nbytes > 0 {
-        /* send zlp */
-        // let _res = usbd_ep_start_write(busid, ep, ptr::null(), 0);
-        return;
-    }
+    match (nbytes % ep_mps) == 0 && nbytes > 0 {
+        true => {
+            usbd_ep_start_write(busid, ep, ptr::null(), 0);
+        }
+        false => {}
+    };
 }
 
 #[unsafe(no_mangle)]
@@ -178,7 +179,12 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
         | usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP
         | usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP => {}
         usbd_event_type_USBD_EVENT_CONFIGURED => {
-            // let _res = usbd_ep_start_read(busid, CDC_OUT_EP as u8, READ_BUFFER.as_mut_ptr(), 2048);
+            let _res = usbd_ep_start_read(
+                busid,
+                CDC_OUT_EP as u8,
+                READ_BUFFER.as_mut_ptr(),
+                SIZE as u32,
+            );
         }
         _ => {}
     }
@@ -195,7 +201,7 @@ pub unsafe fn send_usb_data(_receiver: Receiver<T>) {}
 
 /// Sending usb data
 pub unsafe fn send_data(data: &mut [u8]) {
-    let _res = usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), 2048);
+    let _res = usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), SIZE as u32);
 }
 
 /// Main CDC ACM device structure
@@ -268,8 +274,8 @@ impl CdcAcmDevice<PREINIT> {
             false => {}
         }
         usbd_desc_register(busid, self.descriptor);
-        usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0));
-        usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1));
+        usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0)); // 0
+        usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1)); // 1
         usbd_add_endpoint(busid, self.cdc_out_ep);
         usbd_add_endpoint(busid, self.cdc_in_ep);
 
@@ -296,7 +302,13 @@ impl CdcAcmDevice<POSTINIT> {
     pub fn processors(self, channel_buffer_size: usize) -> (SyncSender<T>, Receiver<T>) {
         let to_usb = sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
-
         (to_usb.0, from_usb.1)
+    }
+
+    /// Set the dtr of the usb cdc device
+    pub fn set_dtr(&self, busid: u8, intf: u8, dtr: bool) {
+        unsafe {
+            usbd_cdc_acm_set_dtr(busid, intf, dtr);
+        }
     }
 }
