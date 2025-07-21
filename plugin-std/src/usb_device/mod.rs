@@ -2,6 +2,7 @@
 //! Taking example for https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/usb_serial.rs for the final product of
 //! how this will be called and referenced in code.
 #![allow(static_mut_refs)]
+use std::cmp::min;
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
@@ -308,7 +309,12 @@ impl CdcAcmDevice<POSTINIT> {
             match to_usb.1.recv() {
                 Ok(mut data) => {
                     match unsafe {
-                        usbd_ep_start_write(busid, CDC_IN_EP as u8, data.as_mut_ptr(), SIZE as u32)
+                        usbd_ep_start_write(
+                            busid,
+                            CDC_IN_EP as u8,
+                            data.as_mut_ptr(),
+                            min(data.len() as u32, SIZE as u32),
+                        )
                     } {
                         x if x < 0 => ::log::error!("Failed to send via usb device"),
                         _ => {}
