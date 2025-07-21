@@ -23,10 +23,8 @@ fn main() {
         .resolve_rpa();
 
     std::thread::scope(|scope| {
-        let processors = unsafe { CdcAcmDevice::new().init(0, ESP_USBD_BASE) }
-            .unwrap()
-            .processors(0, scope, 50)
-            .unwrap();
+        let device = unsafe { CdcAcmDevice::new().init(0, ESP_USBD_BASE) }.unwrap();
+        let processors = device.processors(0, scope, 50).unwrap();
 
         scope.spawn(move || loop {
             let data = processors.1.recv().unwrap();
