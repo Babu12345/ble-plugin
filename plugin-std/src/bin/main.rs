@@ -5,6 +5,7 @@ use esp32_nimble::{
     BLEDevice,
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
+use heapless::{String, Vec};
 use lib_utils::MatchSliceLengths;
 use plugin_std::usb_device::{send_data, CdcAcmDevice};
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
@@ -22,14 +23,28 @@ fn main() {
         .set_io_cap(SecurityIOCap::DisplayOnly)
         .resolve_rpa();
 
-    let _device = unsafe { CdcAcmDevice::new().init(0, ESP_USBD_BASE) }.unwrap();
     std::thread::scope(|scope| {
-        scope.spawn(|| loop {
-            log::info!("Data start");
-            let mut send_buffer: [u8; 64] = b"Hello\n".match_size(0);
-            unsafe { send_data(&mut send_buffer) };
-            std::thread::sleep(Duration::from_secs(1));
-            log::info!("Data sent");
-        });
+        let processors = unsafe { CdcAcmDevice::new().init(0, ESP_USBD_BASE) }
+            .unwrap()
+            .processors(scope, 50)
+            .unwrap();
+
+        loop {
+            let data = processors.1.recv().unwrap();
+            log::info!("Data aquired: {:?}", data);
+            // let mut send_buffer: [u8; 64] = b"Hello\n".match_size(0);
+            // unsafe { send_data(&mut send_buffer) };
+            // std::thread::sleep(Duration::from_secs(1));
+            // log::info!("Data sent");
+        }
+        // scope.spawn(move || loop {
+        //     let processors = device.processors(scope, 50);
+
+        //     log::info!("Data start");
+        //     let mut send_buffer: [u8; 64] = b"Hello\n".match_size(0);
+        //     unsafe { send_data(&mut send_buffer) };
+        //     std::thread::sleep(Duration::from_secs(1));
+        //     log::info!("Data sent");
+        // });
     });
 }

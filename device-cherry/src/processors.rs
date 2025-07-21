@@ -36,8 +36,8 @@ const SIZE: usize = CDC_MAX_MPS as usize;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-static mut READ_BUFFER: AlignedBuffer = AlignedBuffer::new();
-static mut WRITER_BUFFER: AlignedBuffer = AlignedBuffer::new();
+static mut READ_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
+static mut WRITER_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
 
 /// Class error type
 #[derive(Debug)]
