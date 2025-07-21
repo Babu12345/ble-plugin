@@ -228,6 +228,10 @@ impl<const N: usize> AlignedBuffer<N> {
     fn len(&self) -> usize {
         self.data.len()
     }
+
+    pub fn get_data(&self) -> [u8; N] {
+        self.data
+    }
 }
 
 impl<const N: usize> std::ops::Index<usize> for AlignedBuffer<N> {

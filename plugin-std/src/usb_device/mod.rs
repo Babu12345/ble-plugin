@@ -4,7 +4,7 @@
 #![allow(static_mut_refs)]
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicBool;
-use std::sync::mpsc::{sync_channel, Receiver, Sender, SyncSender};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::thread::Scope;
 use std::time::Duration;
 

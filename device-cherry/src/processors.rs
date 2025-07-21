@@ -4,7 +4,9 @@
 #![allow(static_mut_refs)]
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicBool;
-use std::sync::mpsc::{Receiver, Sender, SyncSender, sync_channel};
+use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+use std::thread::Scope;
+use std::time::Duration;
 
 use esp_idf_sys::cherry_device::{
     CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
@@ -17,11 +19,11 @@ use esp_idf_sys::cherry_device::{
     usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
 
-use crate::utils::AlignedBuffer;
+use crate::{AlignedBuffer, concat_n_arrays, mk_static};
+
 use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
 };
-use crate::{concat_n_arrays, mk_static};
 
 use std::ptr;
 use std::sync::LazyLock;
@@ -35,9 +37,12 @@ const USBD_MAX_POWER: u32 = 100; // 2mA * 100 = 100 mA
 const SIZE: usize = CDC_MAX_MPS as usize;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
+static NEW_DATA: AtomicBool = AtomicBool::new(false);
 
 static mut READ_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
-static mut WRITER_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
+
+/// Sending and receiving type
+pub type TSendAndReceive = [u8; 64];
 
 /// Class error type
 #[derive(Debug)]
@@ -142,17 +147,24 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 
 #[unsafe(no_mangle)]
 #[allow(non_upper_case_globals, non_snake_case)]
-unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, _nbytes: u32) {
-    // log::info!("Event");
-    let _res = unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32) };
-    // log::info!("Data incoming: {:?}", READ_BUFFER);
+unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
+    let res = unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), nbytes) };
+
+    match res {
+        x if x < 0 => {
+            return;
+        }
+        _ => {}
+    }
+
+    NEW_DATA.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
 #[unsafe(no_mangle)]
 #[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
     // log::info!("Outgoing");
-    let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) as u32 };
+    let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) } as u32;
     match (nbytes % ep_mps) == 0 && nbytes > 0 {
         true => {
             unsafe { usbd_ep_start_write(busid, ep, ptr::null(), 0) };
@@ -185,20 +197,6 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
         }
         _ => {}
     }
-}
-
-/// test
-pub type T = [u8; 256];
-
-/// test
-pub unsafe fn receive_usb_data(_sender: Sender<T>) {}
-
-/// test
-pub unsafe fn send_usb_data(_receiver: Receiver<T>) {}
-
-/// Sending usb data
-pub unsafe fn send_data(data: &mut [u8]) {
-    let _res = usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), SIZE as u32);
 }
 
 /// Main CDC ACM device structure
@@ -272,8 +270,8 @@ impl CdcAcmDevice<PREINIT> {
         }
         unsafe {
             usbd_desc_register(busid, self.descriptor);
-            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0));
-            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1));
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0)); // 0
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1)); // 1
             usbd_add_endpoint(busid, self.cdc_out_ep);
             usbd_add_endpoint(busid, self.cdc_in_ep);
 
@@ -300,10 +298,58 @@ impl CdcAcmDevice<PREINIT> {
 
 impl CdcAcmDevice<POSTINIT> {
     /// Input and output to process data to and from the usb peripheral
-    pub fn processors(self, channel_buffer_size: usize) -> (SyncSender<T>, Receiver<T>) {
-        let to_usb = sync_channel(channel_buffer_size);
+    pub fn processors<'a, 'b>(
+        self,
+        busid: u8,
+        scope: &'a Scope<'a, 'b>,
+        channel_buffer_size: usize,
+    ) -> Result<(SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>)> {
+        let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
+            sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
-        (to_usb.0, from_usb.1)
+
+        // Writing to the usb endpoint
+        scope.spawn(move || {
+            loop {
+                match to_usb.1.recv() {
+                    Ok(mut data) => {
+                        match unsafe {
+                            usbd_ep_start_write(
+                                busid,
+                                CDC_IN_EP as u8,
+                                data.as_mut_ptr(),
+                                SIZE as u32,
+                            )
+                        } {
+                            x if x < 0 => ::log::error!("Failed to send via usb device"),
+                            _ => {}
+                        }
+                    }
+                    Err(e) => ::log::error!("Unable to recieve data: {e}"),
+                }
+            }
+        });
+
+        // TODO: Improve the performance of reads. Preferably by moving the send to the read callback
+        scope.spawn(move || {
+            loop {
+                if !NEW_DATA.load(std::sync::atomic::Ordering::Relaxed) {
+                    std::thread::sleep(Duration::from_millis(10));
+                    continue;
+                }
+
+                match from_usb.0.try_send(unsafe { READ_BUFFER.get_data() }) {
+                    Ok(_) => {
+                        NEW_DATA.store(false, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    Err(e) => {
+                        ::log::error!("Unable to send data: {e}");
+                    }
+                };
+            }
+        });
+
+        Ok((to_usb.0, from_usb.1))
     }
 
     /// Set the dtr of the usb cdc device

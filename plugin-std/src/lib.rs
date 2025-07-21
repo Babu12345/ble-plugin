@@ -47,6 +47,7 @@ impl<const N: usize> AlignedBuffer<N> {
         Self { data: [0; N] }
     }
 
+    #[allow(unused)]
     fn as_ptr(&self) -> *const u8 {
         self.data.as_ptr()
     }
@@ -55,6 +56,7 @@ impl<const N: usize> AlignedBuffer<N> {
         self.data.as_mut_ptr()
     }
 
+    #[allow(unused)]
     fn len(&self) -> usize {
         self.data.len()
     }
