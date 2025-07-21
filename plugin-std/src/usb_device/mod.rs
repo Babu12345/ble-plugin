@@ -40,6 +40,9 @@ static NEW_DATA: AtomicBool = AtomicBool::new(false);
 
 static mut READ_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
 
+/// Sending and receiving type
+pub type TSendAndReceive = [u8; 64];
+
 /// Class error type
 #[derive(Debug)]
 pub enum Error {
@@ -193,20 +196,6 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
     }
 }
 
-/// test
-pub type T = [u8; 64];
-
-/// test
-pub unsafe fn receive_usb_data(_sender: Sender<T>) {}
-
-/// test
-pub unsafe fn send_usb_data(_receiver: Receiver<T>) {}
-
-/// Sending usb data
-pub unsafe fn send_data(data: &mut [u8]) {
-    let _res = usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), SIZE as u32);
-}
-
 /// Main CDC ACM device structure
 #[derive(Debug)]
 pub struct CdcAcmDevice<STATE> {
@@ -306,10 +295,12 @@ impl CdcAcmDevice<POSTINIT> {
     /// Input and output to process data to and from the usb peripheral
     pub fn processors<'a, 'b>(
         self,
+        busid: u8,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-    ) -> Result<(SyncSender<T>, Receiver<T>)> {
-        let to_usb: (SyncSender<[u8; 64]>, Receiver<[u8; 64]>) = sync_channel(channel_buffer_size);
+    ) -> Result<(SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>)> {
+        let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
+            sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
         // Writing to the usb endpoint
@@ -317,7 +308,7 @@ impl CdcAcmDevice<POSTINIT> {
             match to_usb.1.recv() {
                 Ok(mut data) => {
                     match unsafe {
-                        usbd_ep_start_write(0, CDC_IN_EP as u8, data.as_mut_ptr(), SIZE as u32)
+                        usbd_ep_start_write(busid, CDC_IN_EP as u8, data.as_mut_ptr(), SIZE as u32)
                     } {
                         x if x < 0 => ::log::error!("Failed to send via usb device"),
                         _ => {}
