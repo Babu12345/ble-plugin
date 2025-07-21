@@ -319,6 +319,7 @@ impl CdcAcmDevice<POSTINIT> {
         });
 
         // TODO: Improve the performance of reads. Preferably by moving the send to the read callback
+        // Reading from the usb endpoint
         scope.spawn(move || loop {
             if !NEW_DATA.load(std::sync::atomic::Ordering::Relaxed) {
                 std::thread::sleep(Duration::from_millis(10));
