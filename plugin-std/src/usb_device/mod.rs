@@ -4,11 +4,14 @@
 #![allow(static_mut_refs)]
 use std::cmp::min;
 use std::marker::PhantomData;
+use std::num::NonZeroU32;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
-use std::thread::Scope;
+use std::thread::{yield_now, Scope};
 use std::time::Duration;
 
+use esp32_nimble::utilities::mutex::Mutex;
+use esp_idf_svc::hal::task::notification::{Notification, Notifier};
 use esp_idf_sys::cherry_device::{
     usb_descriptor, usbd_add_endpoint, usbd_add_interface, usbd_cdc_acm_init_intf,
     usbd_cdc_acm_set_dtr, usbd_desc_register, usbd_endpoint, usbd_ep_start_read,
@@ -20,6 +23,8 @@ use esp_idf_sys::cherry_device::{
     CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
     USB_DEVICE_CLASS_MISC,
 };
+use esp_idf_sys::{vPortYield, xQueueSemaphoreTake};
+use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
 
 use crate::{concat_n_arrays, mk_static, AlignedBuffer};
 mod utils;
@@ -39,7 +44,10 @@ const SIZE: usize = CDC_MAX_MPS as usize;
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 static NEW_DATA: AtomicBool = AtomicBool::new(false);
 
+static mut RING_BUFFER: ConstGenericRingBuffer<TSendAndReceive, 50> = ConstGenericRingBuffer::new();
+
 static mut READ_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
+static mut INPUT: [u8; SIZE] = [0; SIZE];
 
 /// Sending and receiving type
 pub type TSendAndReceive = [u8; 64];
@@ -102,39 +110,34 @@ static DEVICE_QUALITY_DESCRIPTOR: [u8; 10] = [
     0x00, // bReserved
 ];
 
-static STRING_MANUFACTURER: &[u8] = b"CherryUSB\0";
-static STRING_PRODUCT: &[u8] = b"CherryUSB CDC DEMO\0";
+static STRING_MANUFACTURER: &[u8] = b"BLEPlugin\0";
+static STRING_PRODUCT: &[u8] = b"BLEPlugin device\0";
 static STRING_SERIAL: &[u8] = b"2022123456\0";
 static STRING_LANGID: &[u8] = b"\x09\x04\0";
 
 // https://github.com/orangecms/RV-Debugger-BL702/blob/05739699b50a9235f8906bd80b4b8f7dd0c37e62/components/usb_stack/common/usb_def.h#L473
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn device_descriptor_callback(_speed: u8) -> *const u8 {
     DEVICE_DESCRIPTOR.as_ptr() as *const u8
 }
 
 // https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L72
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn device_quality_descriptor_callback(_speed: u8) -> *const u8 {
     DEVICE_QUALITY_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn config_descriptor_callback(_speed: u8) -> *const u8 {
     CONFIG_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn other_speed_descriptor_callback(_speed: u8) -> *const u8 {
     DEVICE_QUALITY_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const u8 {
     match index {
         0 => STRING_LANGID.as_ptr() as *const u8,
@@ -146,24 +149,18 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
-    let res = usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), nbytes);
+    (&mut INPUT[0..nbytes as usize]).copy_from_slice(&READ_BUFFER.data[..nbytes as usize]);
 
-    match res {
-        x if x < 0 => {
-            return;
-        }
-        _ => {}
-    }
+    RING_BUFFER.push(INPUT);
 
     NEW_DATA.store(true, std::sync::atomic::Ordering::Relaxed);
+    usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32);
 }
 
 #[unsafe(no_mangle)]
 #[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
-    // log::info!("Outgoing");
     let ep_mps = usbd_get_ep_mps(busid, ep) as u32;
     match (nbytes % ep_mps) == 0 && nbytes > 0 {
         true => {
@@ -174,9 +171,8 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
-    #[allow(non_upper_case_globals, non_snake_case)]
+    #[allow(non_upper_case_globals)]
     match event as u32 {
         usbd_event_type_USBD_EVENT_RESET
         | usbd_event_type_USBD_EVENT_CONNECTED
@@ -259,26 +255,27 @@ impl CdcAcmDevice<PREINIT> {
     }
 
     /// initialize the device
-    pub unsafe fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDevice<POSTINIT>> {
+    pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDevice<POSTINIT>> {
         match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
             true => {
                 return Err(Error::CustomError("Already initialized"));
             }
             false => {}
         }
-        usbd_desc_register(busid, self.descriptor);
-        usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0)); // 0
-        usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1)); // 1
-        usbd_add_endpoint(busid, self.cdc_out_ep);
-        usbd_add_endpoint(busid, self.cdc_in_ep);
+        unsafe {
+            usbd_desc_register(busid, self.descriptor);
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0)); // 0
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1)); // 1
+            usbd_add_endpoint(busid, self.cdc_out_ep);
+            usbd_add_endpoint(busid, self.cdc_in_ep);
 
-        match usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler)) {
-            x if x < 0 => {
-                return Err(Error::CustomError("Failed to initialize the usb device"));
+            match usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler)) {
+                x if x < 0 => {
+                    return Err(Error::CustomError("Failed to initialize the usb device"));
+                }
+                _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
             }
-            _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
         }
-
         ::log::info!("Usb device initialized");
 
         Ok(CdcAcmDevice {
@@ -332,7 +329,7 @@ impl CdcAcmDevice<POSTINIT> {
                 continue;
             }
 
-            match from_usb.0.try_send(unsafe { READ_BUFFER.data }) {
+            match from_usb.0.try_send(unsafe { INPUT }) {
                 Ok(_) => {
                     NEW_DATA.store(false, std::sync::atomic::Ordering::Relaxed);
                 }
@@ -346,9 +343,11 @@ impl CdcAcmDevice<POSTINIT> {
     }
 
     /// Set the dtr of the usb cdc device
-    pub fn set_dtr(&self, busid: u8, intf: u8, dtr: bool) {
+    pub fn set_dtr(self, busid: u8, intf: u8, dtr: bool) -> Self {
         unsafe {
             usbd_cdc_acm_set_dtr(busid, intf, dtr);
         }
+
+        self
     }
 }

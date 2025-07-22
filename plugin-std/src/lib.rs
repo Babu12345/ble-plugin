@@ -37,7 +37,7 @@ macro_rules! concat_n_arrays {
 }
 
 // 4-byte aligned buffer wrapper
-#[repr(align(4))]
+#[repr(C, align(4))]
 struct AlignedBuffer<const N: usize> {
     data: [u8; N],
 }
