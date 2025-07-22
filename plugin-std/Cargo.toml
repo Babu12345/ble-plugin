@@ -34,6 +34,7 @@ static_cell = "2"
 heapless = "0.8.0"
 embassy-futures = "0.1.1"
 ringbuffer = {version = "0.15.0", default-features = false}
+embassy-sync = "0.7.0"
 # esp-println = {version = "0.12.0", features = ["esp32s3","jtag-serial"], default-features = false}
 
 [build-dependencies]

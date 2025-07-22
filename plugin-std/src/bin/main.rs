@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use device_cherry::CdcAcmDevice;
 use esp32_nimble::{
     enums::{AuthReq, SecurityIOCap},
     BLEDevice,
@@ -7,7 +8,6 @@ use esp32_nimble::{
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
 use heapless::{String, Vec};
 use lib_utils::MatchSliceLengths;
-use plugin_std::usb_device::CdcAcmDevice;
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() {
     esp_idf_svc::sys::link_patches();
@@ -27,8 +27,8 @@ fn main() {
         let device = CdcAcmDevice::new()
             .init(0, ESP_USBD_BASE)
             .unwrap()
-            .set_dtr(0, 0, true);
-        let processors = device.processors(0, scope, 20).unwrap();
+            .set_dtr(0, true);
+        let processors = device.processors(scope, 20).unwrap();
 
         scope.spawn(move || loop {
             let data = processors.1.recv().unwrap();

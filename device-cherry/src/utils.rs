@@ -10,9 +10,11 @@ use esp_idf_sys::cherry_device::{
     USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
 };
 
+/// Max size for the CDC
 pub const CDC_MAX_MPS: u32 = 64;
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L628
+/// Device descriptor
 pub fn device_descriptor_init(
     bcd_usb: u32,
     b_device_class: u32,
@@ -47,6 +49,7 @@ pub fn device_descriptor_init(
 }
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L644
+/// Device configuration descriptor
 pub fn config_descriptor_init(
     w_total_length: u32,
     b_num_interfaces: u32,
@@ -69,6 +72,7 @@ pub fn config_descriptor_init(
 }
 
 // https://github.com/telehua/DAP_GD32F407/blob/d6e9db5b7bf8972bfb22bb8b8ed0b06a3f7c4801/source/cherry_usb/common/usb_def.h#L692
+/// Other speed device descriptors
 #[allow(unused)]
 pub fn other_speed_descriptor_init(
     w_total_length: u32,
@@ -92,6 +96,7 @@ pub fn other_speed_descriptor_init(
 }
 
 // https://github.com/wdfk-prog/RT-Thread-Study/blob/919ba18009f95ddc74f3d6fd54ac7f7ef81139c0/42%20USB.md?plain=1#L1654
+/// CDC ACM device descriptor
 pub fn cdc_acm_descriptor_init(
     b_first_interface: u32,
     int_ep: u32,
@@ -204,31 +209,24 @@ macro_rules! concat_n_arrays {
     };
 }
 
-// 4-byte aligned buffer wrapper
-#[repr(align(4))]
+/// 4-byte aligned buffer wrapper
+#[repr(C, align(4))]
 pub struct AlignedBuffer<const N: usize> {
     data: [u8; N],
 }
 
 impl<const N: usize> AlignedBuffer<N> {
+    /// Construct a new AlignedBuffer
     pub const fn new() -> Self {
         Self { data: [0; N] }
     }
 
-    #[allow(unused)]
-    fn as_ptr(&self) -> *const u8 {
-        self.data.as_ptr()
-    }
-
+    /// Covert to a mutable pointer
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.data.as_mut_ptr()
     }
 
-    #[allow(unused)]
-    fn len(&self) -> usize {
-        self.data.len()
-    }
-
+    /// Get the raw data
     pub fn get_data(&self) -> [u8; N] {
         self.data
     }

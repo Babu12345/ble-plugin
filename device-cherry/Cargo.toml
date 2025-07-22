@@ -20,6 +20,10 @@ log = {version = "0.4.27", default-features = false}
 esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
 static_cell = "2"
+embassy-futures = "0.1.1"
+ringbuffer = {version = "0.15.0", default-features = false}
+embassy-sync = "0.7.0"
+esp-idf-svc = { version = "0.51", default-features = false }
 
 [[package.metadata.esp-idf-sys.extra_components]]
 component_dirs = "components/cherryusb"

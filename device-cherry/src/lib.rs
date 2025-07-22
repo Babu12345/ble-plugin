@@ -1,5 +1,5 @@
 //! USB host implementation library of cherry usb
-#[deny(missing_docs)]
+#![deny(missing_docs)]
 mod constants;
 mod processors;
 mod utils;

@@ -2,11 +2,16 @@
 //! Taking example for https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/usb_serial.rs for the final product of
 //! how this will be called and referenced in code.
 #![allow(static_mut_refs)]
+use std::cmp::min;
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread::Scope;
-use std::time::Duration;
+
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::signal::Signal;
+
+use esp_idf_svc::hal::task::block_on;
 
 use esp_idf_sys::cherry_device::{
     CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
@@ -19,11 +24,10 @@ use esp_idf_sys::cherry_device::{
     usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
 
-use crate::{AlignedBuffer, concat_n_arrays, mk_static};
-
 use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
 };
+use crate::{AlignedBuffer, concat_n_arrays, mk_static};
 
 use std::ptr;
 use std::sync::LazyLock;
@@ -37,12 +41,13 @@ const USBD_MAX_POWER: u32 = 100; // 2mA * 100 = 100 mA
 const SIZE: usize = CDC_MAX_MPS as usize;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
-static NEW_DATA: AtomicBool = AtomicBool::new(false);
 
 static mut READ_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
+static mut INPUT: [u8; SIZE] = [0; SIZE];
 
 /// Sending and receiving type
 pub type TSendAndReceive = [u8; 64];
+static SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 
 /// Class error type
 #[derive(Debug)]
@@ -102,39 +107,34 @@ static DEVICE_QUALITY_DESCRIPTOR: [u8; 10] = [
     0x00, // bReserved
 ];
 
-static STRING_MANUFACTURER: &[u8] = b"CherryUSB\0";
-static STRING_PRODUCT: &[u8] = b"CherryUSB CDC DEMO\0";
+static STRING_MANUFACTURER: &[u8] = b"BLEPlugin\0";
+static STRING_PRODUCT: &[u8] = b"BLEPlugin device\0";
 static STRING_SERIAL: &[u8] = b"2022123456\0";
 static STRING_LANGID: &[u8] = b"\x09\x04\0";
 
 // https://github.com/orangecms/RV-Debugger-BL702/blob/05739699b50a9235f8906bd80b4b8f7dd0c37e62/components/usb_stack/common/usb_def.h#L473
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn device_descriptor_callback(_speed: u8) -> *const u8 {
     DEVICE_DESCRIPTOR.as_ptr() as *const u8
 }
 
 // https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L72
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn device_quality_descriptor_callback(_speed: u8) -> *const u8 {
     DEVICE_QUALITY_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn config_descriptor_callback(_speed: u8) -> *const u8 {
     CONFIG_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn other_speed_descriptor_callback(_speed: u8) -> *const u8 {
     DEVICE_QUALITY_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const u8 {
     match index {
         0 => STRING_LANGID.as_ptr() as *const u8,
@@ -146,25 +146,21 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
-    let res = unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), nbytes) };
-
-    match res {
-        x if x < 0 => {
-            return;
-        }
-        _ => {}
+    unsafe {
+        INPUT = [0; SIZE];
+        (&mut INPUT[0..nbytes as usize])
+            .copy_from_slice(&READ_BUFFER.get_data()[..nbytes as usize]);
     }
 
-    NEW_DATA.store(true, std::sync::atomic::Ordering::Relaxed);
+    SIGNAL.signal(true);
+    unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32) };
 }
 
 #[unsafe(no_mangle)]
 #[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
-    // log::info!("Outgoing");
-    let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) } as u32;
+    let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) as u32 };
     match (nbytes % ep_mps) == 0 && nbytes > 0 {
         true => {
             unsafe { usbd_ep_start_write(busid, ep, ptr::null(), 0) };
@@ -174,7 +170,6 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
     #[allow(non_upper_case_globals, non_snake_case)]
     match event as u32 {
@@ -207,6 +202,7 @@ pub struct CdcAcmDevice<STATE> {
     cdc_in_ep: &'static mut usbd_endpoint,
     intf0: &'static mut usbd_interface,
     intf1: &'static mut usbd_interface,
+    busid: Option<u8>,
     _state: PhantomData<STATE>,
 }
 
@@ -256,12 +252,13 @@ impl CdcAcmDevice<PREINIT> {
             intf0,
             intf1,
             descriptor,
+            busid: None,
             _state: PhantomData::<PREINIT>,
         }
     }
 
     /// initialize the device
-    pub unsafe fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDevice<POSTINIT>> {
+    pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDevice<POSTINIT>> {
         match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
             true => {
                 return Err(Error::CustomError("Already initialized"));
@@ -282,7 +279,6 @@ impl CdcAcmDevice<PREINIT> {
                 _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
             }
         }
-
         ::log::info!("Usb device initialized");
 
         Ok(CdcAcmDevice {
@@ -291,6 +287,7 @@ impl CdcAcmDevice<PREINIT> {
             intf0: self.intf0,
             intf1: self.intf1,
             descriptor: self.descriptor,
+            busid: Some(busid),
             _state: PhantomData::<POSTINIT>,
         })
     }
@@ -300,7 +297,6 @@ impl CdcAcmDevice<POSTINIT> {
     /// Input and output to process data to and from the usb peripheral
     pub fn processors<'a, 'b>(
         self,
-        busid: u8,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
     ) -> Result<(SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>)> {
@@ -308,6 +304,7 @@ impl CdcAcmDevice<POSTINIT> {
             sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
+        let busid = self.busid.unwrap();
         // Writing to the usb endpoint
         scope.spawn(move || {
             loop {
@@ -318,7 +315,7 @@ impl CdcAcmDevice<POSTINIT> {
                                 busid,
                                 CDC_IN_EP as u8,
                                 data.as_mut_ptr(),
-                                SIZE as u32,
+                                min(data.len() as u32, SIZE as u32),
                             )
                         } {
                             x if x < 0 => ::log::error!("Failed to send via usb device"),
@@ -330,18 +327,13 @@ impl CdcAcmDevice<POSTINIT> {
             }
         });
 
-        // TODO: Improve the performance of reads. Preferably by moving the send to the read callback
+        // Reading from the usb endpoint
         scope.spawn(move || {
             loop {
-                if !NEW_DATA.load(std::sync::atomic::Ordering::Relaxed) {
-                    std::thread::sleep(Duration::from_millis(10));
-                    continue;
-                }
+                block_on(async { SIGNAL.wait().await });
 
-                match from_usb.0.try_send(unsafe { READ_BUFFER.get_data() }) {
-                    Ok(_) => {
-                        NEW_DATA.store(false, std::sync::atomic::Ordering::Relaxed);
-                    }
+                match from_usb.0.try_send(unsafe { INPUT }) {
+                    Ok(_) => {}
                     Err(e) => {
                         ::log::error!("Unable to send data: {e}");
                     }
@@ -353,9 +345,12 @@ impl CdcAcmDevice<POSTINIT> {
     }
 
     /// Set the dtr of the usb cdc device
-    pub fn set_dtr(&self, busid: u8, intf: u8, dtr: bool) {
+    pub fn set_dtr(self, intf: u8, dtr: bool) -> Self {
+        let busid = self.busid.unwrap();
         unsafe {
             usbd_cdc_acm_set_dtr(busid, intf, dtr);
         }
+
+        self
     }
 }
