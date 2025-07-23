@@ -26,7 +26,13 @@ cargo espmonitor <SERIAL_DEVICE_PATH>
 
 ### Generate new esp-idf binary project (you can also just copy and paste from an existing project)
 <!-- https://docs.espressif.com/projects/rust/book/writing-your-own-application/generate-project/index.html#esp-idf-template -->
-cargo generate <test_project>
+cargo generate esp-rs/esp-idf-template cargo (then you can configure the name and everything else from the template)
+
+Make sure you add 
+# https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_tools_install_dir-esp_idf_tools_install_dir
+ESP_IDF_TOOLS_INSTALL_DIR = { value = "global" }
+
+to the [env] section of the config.toml file
 
 ### Upload esp code to a board. Usually only needs to be done once. You can then make sure to source permanently by adding a line to the source file
 espup install

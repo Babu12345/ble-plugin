@@ -34,8 +34,8 @@ pub fn usb_device_config<'class>(
 
     // Create embassy-usb Config
     let mut config = embassy_usb::Config::new(0x303A, 0x3001);
-    config.manufacturer = Some("Espressif");
-    config.product = Some("USB-serial example");
+    config.manufacturer = Some("Wanyeki Technologies LLC");
+    config.product = Some("BLEPlugin");
     config.serial_number = Some("2101");
 
     // Required for windows compatibility.
