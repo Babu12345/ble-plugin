@@ -144,8 +144,10 @@ pub trait THostIO<'a>: Serialize + Deserialize<'a> + Sized {
 
 #[cfg(test)]
 mod tests {
+    use core::str::FromStr;
+
     use super::*;
-    use crate::MAX_TRANSFER_SIZE;
+    use crate::{types::HostCommandConfigurePeripheral, MAX_TRANSFER_SIZE};
     use heapless::String;
     use uuid::Uuid;
 
