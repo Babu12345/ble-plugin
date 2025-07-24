@@ -157,7 +157,6 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
 }
 
 #[unsafe(no_mangle)]
-#[allow(non_upper_case_globals, non_snake_case)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
     let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) as u32 };
     match (nbytes % ep_mps) == 0 && nbytes > 0 {
