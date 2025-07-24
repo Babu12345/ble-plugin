@@ -47,7 +47,7 @@ static mut INPUT: [u8; SIZE] = [0; SIZE];
 
 /// Sending and receiving type
 pub type TSendAndReceive = [u8; 64];
-static SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
+static SIGNAL: Signal<CriticalSectionRawMutex, TSendAndReceive> = Signal::new();
 
 /// Class error type
 #[derive(Debug)]
@@ -109,7 +109,7 @@ static DEVICE_QUALITY_DESCRIPTOR: [u8; 10] = [
 
 static STRING_MANUFACTURER: &[u8] = b"Wanyeki Technologies LLC\0";
 static STRING_PRODUCT: &[u8] = b"BLEPlugin\0";
-static STRING_SERIAL: &[u8] = b"2022123456\0";
+static STRING_SERIAL: &[u8] = b"1999\0";
 static STRING_LANGID: &[u8] = b"\x09\x04\0";
 
 // https://github.com/orangecms/RV-Debugger-BL702/blob/05739699b50a9235f8906bd80b4b8f7dd0c37e62/components/usb_stack/common/usb_def.h#L473
@@ -149,11 +149,10 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
     unsafe {
         INPUT = [0; SIZE];
-        (&mut INPUT[0..nbytes as usize])
-            .copy_from_slice(&READ_BUFFER.get_data()[..nbytes as usize]);
+        (&mut INPUT[..nbytes as usize]).copy_from_slice(&READ_BUFFER.get_data()[..nbytes as usize]);
     }
 
-    SIGNAL.signal(true);
+    SIGNAL.signal(unsafe { INPUT });
     unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32) };
 }
 
@@ -330,9 +329,9 @@ impl CdcAcmDevice<POSTINIT> {
         // Reading from the usb endpoint
         scope.spawn(move || {
             loop {
-                block_on(async { SIGNAL.wait().await });
+                let data = block_on(SIGNAL.wait());
 
-                match from_usb.0.try_send(unsafe { INPUT }) {
+                match from_usb.0.try_send(data) {
                     Ok(_) => {}
                     Err(e) => {
                         ::log::error!("Unable to send data: {e}");
