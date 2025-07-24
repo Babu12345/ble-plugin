@@ -14,3 +14,6 @@ then add these lines to pytest.ini
 [pytest]
 pythonpath = .
 ```
+
+# Running tests
+pytest <DIRECTORY_OF_TESTS>
