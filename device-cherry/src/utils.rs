@@ -5,9 +5,8 @@ use esp_idf_sys::cherry_device::{
     CDC_DATA_INTERFACE_CLASS, CDC_FUNC_DESC_ABSTRACT_CONTROL_MANAGEMENT,
     CDC_FUNC_DESC_CALL_MANAGEMENT, CDC_FUNC_DESC_HEADER, CDC_FUNC_DESC_UNION, CDC_V1_10,
     USB_DESCRIPTOR_TYPE_CONFIGURATION, USB_DESCRIPTOR_TYPE_DEVICE, USB_DESCRIPTOR_TYPE_ENDPOINT,
-    USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION,
-    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DEVICE_CLASS_CDC, USB_STRING_MFC_INDEX,
-    USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
+    USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION, USB_DEVICE_CLASS_CDC,
+    USB_STRING_MFC_INDEX, USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
 };
 
 /// Max size for the CDC
@@ -67,30 +66,6 @@ pub fn config_descriptor_init(
         0x00,                              /* iConfiguration */
         bm_attributes,                     /* bmAttributes */
         b_max_power / 2,                   /* bMaxPower */
-    ]
-    .map(|x| x as u8)
-}
-
-// https://github.com/telehua/DAP_GD32F407/blob/d6e9db5b7bf8972bfb22bb8b8ed0b06a3f7c4801/source/cherry_usb/common/usb_def.h#L692
-/// Other speed device descriptors
-#[allow(unused)]
-pub fn other_speed_descriptor_init(
-    w_total_length: u32,
-    b_num_interfaces: u32,
-    b_configuration_value: u32,
-    bm_attributes: u32,
-    b_max_power: u32,
-) -> [u8; 9] {
-    [
-        0x09,                            /* bLength */
-        USB_DESCRIPTOR_TYPE_OTHER_SPEED, /* bDescriptorType */
-        w_total_length & 0xff,           /* wTotalLength */
-        (w_total_length >> 8) & 0xFF,    /* wTotalLength */
-        b_num_interfaces,                /* bNumInterfaces */
-        b_configuration_value,           /* bConfigurationValue */
-        0x00,                            /* iConfiguration */
-        bm_attributes,                   /* bmAttributes */
-        b_max_power / 2,                 /* bMaxPower */
     ]
     .map(|x| x as u8)
 }

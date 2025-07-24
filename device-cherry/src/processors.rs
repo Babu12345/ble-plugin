@@ -130,11 +130,6 @@ unsafe extern "C" fn config_descriptor_callback(_speed: u8) -> *const u8 {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn other_speed_descriptor_callback(_speed: u8) -> *const u8 {
-    DEVICE_QUALITY_DESCRIPTOR.as_ptr()
-}
-
-#[unsafe(no_mangle)]
 unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const u8 {
     match index {
         0 => STRING_LANGID.as_ptr() as *const u8,
@@ -220,7 +215,6 @@ impl CdcAcmDevice<PREINIT> {
                 device_descriptor_callback: Some(device_descriptor_callback),
                 config_descriptor_callback: Some(config_descriptor_callback),
                 device_quality_descriptor_callback: Some(device_quality_descriptor_callback),
-                other_speed_descriptor_callback: Some(other_speed_descriptor_callback),
                 string_descriptor_callback: Some(string_descriptor_callback),
                 ..Default::default()
             }
