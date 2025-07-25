@@ -1,9 +1,12 @@
 //! USB host implementation library of cherry usb
 #![deny(missing_docs)]
 mod constants;
+mod errors;
 mod processors;
 mod types;
 mod utils;
+
+pub use errors::*;
 pub use processors::*;
 pub use types::*;
 pub use utils::*;

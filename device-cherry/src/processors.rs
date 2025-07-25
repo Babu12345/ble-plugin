@@ -28,6 +28,7 @@ use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
 };
 use crate::{AlignedBuffer, concat_n_arrays, mk_static};
+use crate::{Error, Result};
 
 use std::ptr;
 use std::sync::LazyLock;
@@ -48,16 +49,6 @@ static mut INPUT: [u8; SIZE] = [0; SIZE];
 /// Sending and receiving type
 pub type TSendAndReceive = [u8; 64];
 static SIGNAL: Signal<CriticalSectionRawMutex, TSendAndReceive> = Signal::new();
-
-/// Class error type
-#[derive(Debug)]
-pub enum Error {
-    /// Custom error type
-    CustomError(&'static str),
-}
-
-/// Result type with the custom error
-pub type Result<T> = core::result::Result<T, Error>;
 
 // https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L19
 static DEVICE_DESCRIPTOR: LazyLock<[u8; 18]> = LazyLock::new(|| {
@@ -253,7 +244,7 @@ impl CdcAcmDevice<PREINIT> {
     pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDevice<POSTINIT>> {
         match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
             true => {
-                return Err(Error::CustomError("Already initialized"));
+                return Err(Error::DeviceAlreadyInitialized);
             }
             false => {}
         }
@@ -266,7 +257,7 @@ impl CdcAcmDevice<PREINIT> {
 
             match usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler)) {
                 x if x < 0 => {
-                    return Err(Error::CustomError("Failed to initialize the usb device"));
+                    return Err(Error::InitializationFailure);
                 }
                 _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
             }
