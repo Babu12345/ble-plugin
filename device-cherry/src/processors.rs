@@ -282,7 +282,7 @@ impl CdcAcmDevice<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-    ) -> Result<(SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>)> {
+    ) -> (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) {
         let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
             sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
@@ -324,7 +324,7 @@ impl CdcAcmDevice<POSTINIT> {
             }
         });
 
-        Ok((to_usb.0, from_usb.1))
+        (to_usb.0, from_usb.1)
     }
 
     /// Set the dtr of the usb cdc device

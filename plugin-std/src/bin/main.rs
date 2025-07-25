@@ -28,7 +28,7 @@ fn main() {
             .init(0, ESP_USBD_BASE)
             .unwrap()
             .set_dtr(0, true);
-        let processors = device.processors(scope, 20).unwrap();
+        let processors = device.processors(scope, 20);
 
         scope.spawn(move || loop {
             let data = processors.1.recv().unwrap();
