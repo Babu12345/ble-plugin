@@ -283,12 +283,12 @@ impl CdcAcmDevice<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-    ) -> (PluginSender<SIZE>, PluginReceiver<SIZE>) {
+    ) -> Result<(PluginSender<SIZE>, PluginReceiver<SIZE>)> {
         let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
             sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
-        let busid = self.busid.unwrap();
+        let busid = self.busid.ok_or(Error::BusidUndefined)?;
         // Writing to the usb endpoint
         scope.spawn(move || {
             loop {
@@ -325,7 +325,7 @@ impl CdcAcmDevice<POSTINIT> {
             }
         });
 
-        (PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1))
+        Ok((PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1)))
     }
 
     /// Set the dtr of the usb cdc device

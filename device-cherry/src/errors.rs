@@ -16,6 +16,9 @@ pub enum Error {
     /// Device initialization failed
     #[error("Device failed to initialize")]
     InitializationFailure,
+    /// The busid isn't defined
+    #[error("The busid wasn't defined during initialization. Please do so.")]
+    BusidUndefined,
 }
 
 /// Result type with the custom error
