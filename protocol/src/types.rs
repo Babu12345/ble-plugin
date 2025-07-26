@@ -94,7 +94,7 @@ pub mod host {
     use uuid::Uuid;
 
     /// Host specific input and output types
-    pub trait THostIO<'a>: IO<'a> {}
+    pub trait HostIO<'a>: IO<'a> {}
 
     /// Securely stores received data
     pub struct HostReceivedData<const N: usize>([u8; N]);
@@ -106,7 +106,7 @@ pub mod host {
         }
 
         /// Decode the data to the type
-        pub fn decode<T: TPluginIO<'a>>(&'a self) -> Result<T> {
+        pub fn decode<T: PluginIO<'a>>(&'a self) -> Result<T> {
             T::from_bytes(&self.0)
         }
     }
@@ -127,8 +127,8 @@ pub mod host {
     impl<'a> IO<'a> for HostCommandConfigurePeripheral {}
     impl<'a> IO<'a> for HostCommandConfigureService {}
 
-    impl<'a> THostIO<'a> for HostCommandConfigurePeripheral {}
-    impl<'a> THostIO<'a> for HostCommandConfigureService {}
+    impl<'a> HostIO<'a> for HostCommandConfigurePeripheral {}
+    impl<'a> HostIO<'a> for HostCommandConfigureService {}
 }
 
 /// Plugin types
@@ -148,13 +148,13 @@ pub mod plugin {
         }
 
         /// Decode the data to the type
-        pub fn decode<T: THostIO<'a>>(&'a self) -> Result<T> {
+        pub fn decode<T: HostIO<'a>>(&'a self) -> Result<T> {
             T::from_bytes(&self.0)
         }
     }
 
     /// Plugin specific input and output types
-    pub trait TPluginIO<'a>: IO<'a> {}
+    pub trait PluginIO<'a>: IO<'a> {}
 
     /// Represents the send type of the data. Was it due to a
     /// write event (central -> peripheral), notify event (peripheral -> client),
@@ -184,5 +184,5 @@ pub mod plugin {
 
     impl<'a> IO<'a> for PluginData<'a> {}
 
-    impl<'a> TPluginIO<'a> for PluginData<'a> {}
+    impl<'a> PluginIO<'a> for PluginData<'a> {}
 }

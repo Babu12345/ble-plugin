@@ -96,7 +96,7 @@ pub mod async_plugin {
 pub mod plugin {
     use crate::{
         errors::{self, Result},
-        types::{PluginReceivedData, TPluginIO},
+        types::{PluginIO, PluginReceivedData},
     };
     use std::sync::mpsc::{Receiver, SyncSender};
     /// Sender
@@ -112,7 +112,7 @@ pub mod plugin {
         }
 
         /// Send the data
-        pub fn send<T: TPluginIO<'a>>(&self, input: T) -> Result<()> {
+        pub fn send<T: PluginIO<'a>>(&self, input: T) -> Result<()> {
             self.0
                 .send(input.to_bytes()?)
                 .map_err(|_| crate::errors::Error::SendError)

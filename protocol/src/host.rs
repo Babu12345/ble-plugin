@@ -8,7 +8,7 @@ pub use self::host_std::*;
 mod host_std {
     use crate::{
         errors::{self, Result},
-        types::{PluginReceivedData, THostIO},
+        types::{HostIO, PluginReceivedData},
     };
     use std::sync::mpsc::{Receiver, SyncSender};
     /// Sender
@@ -24,7 +24,7 @@ mod host_std {
         }
 
         /// Send the data
-        pub fn send<T: THostIO<'a>>(&self, input: T) -> Result<()> {
+        pub fn send<T: HostIO<'a>>(&self, input: T) -> Result<()> {
             self.0
                 .send(input.to_bytes()?)
                 .map_err(|_| crate::errors::Error::SendError)
