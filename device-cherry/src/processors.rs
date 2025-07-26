@@ -1,7 +1,6 @@
 //! USB device class for the esp-idf hal interace
 //! Taking example for https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/usb_serial.rs for the final product of
 //! how this will be called and referenced in code.
-#![allow(static_mut_refs)]
 use std::cmp::min;
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicBool;
@@ -134,6 +133,7 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
+    #![allow(static_mut_refs)]
     unsafe {
         INPUT = [0; SIZE];
         (&mut INPUT[..nbytes as usize]).copy_from_slice(&READ_BUFFER.get_data()[..nbytes as usize]);
@@ -156,7 +156,7 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
-    #[allow(non_upper_case_globals, non_snake_case)]
+    #[allow(non_upper_case_globals, non_snake_case, static_mut_refs)]
     match event as u32 {
         usbd_event_type_USBD_EVENT_RESET
         | usbd_event_type_USBD_EVENT_CONNECTED
