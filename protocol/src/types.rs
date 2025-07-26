@@ -90,6 +90,7 @@ pub mod host {
     use super::*;
     use crate::MAX_NAME_SIZE;
     use heapless::String;
+    use protocol_io::HostIO;
     use serde::{Deserialize, Serialize};
     use uuid::Uuid;
 
@@ -112,7 +113,7 @@ pub mod host {
     }
 
     /// Host command. Configure peripheral
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandConfigurePeripheral {
         /// Peripheral name
         pub name: String<MAX_NAME_SIZE>,
@@ -121,18 +122,13 @@ pub mod host {
     }
 
     /// Host command. Configure peripheral
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandConfigureService {}
-
-    impl<'a> IO<'a> for HostCommandConfigurePeripheral {}
-    impl<'a> IO<'a> for HostCommandConfigureService {}
-
-    impl<'a> HostIO<'a> for HostCommandConfigurePeripheral {}
-    impl<'a> HostIO<'a> for HostCommandConfigureService {}
 }
 
 /// Plugin types
 pub mod plugin {
+    use protocol_io::PluginIO;
     use uuid::Uuid;
 
     use super::*;
@@ -171,8 +167,8 @@ pub mod plugin {
         Write,
     }
 
-    /// Host data
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    /// Plugin data
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
     pub struct PluginData<'a> {
         /// Source peripheral id that this data is orginating from.
         pub src_id: Uuid,
@@ -181,8 +177,4 @@ pub mod plugin {
         /// Actual command type
         pub data: &'a [u8],
     }
-
-    impl<'a> IO<'a> for PluginData<'a> {}
-
-    impl<'a> PluginIO<'a> for PluginData<'a> {}
 }
