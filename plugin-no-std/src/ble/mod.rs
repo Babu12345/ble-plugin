@@ -5,7 +5,7 @@ use crate::tasks::{BUFFER_SIZE, CHANNEL_SIZE};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use esp_wifi::ble::controller::BleConnector;
 use log::{error, info};
-use protocol::plugin::{PluginReceiver, PluginSender};
+use protocol::plugin::{AsyncPluginReceiver, AsyncPluginSender};
 use trouble_host::{
     BleHostError, Controller,
     gatt::GattConnection,
@@ -35,8 +35,8 @@ where
 pub async fn processor(
     server: Server<'_>,
     mut peripheral: Peripheral<'static, TController<BleConnector<'static>>>,
-    _receiver: &PluginReceiver<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
-    _sender: &PluginSender<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
+    _receiver: &AsyncPluginReceiver<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
+    _sender: &AsyncPluginSender<'static, CriticalSectionRawMutex, BUFFER_SIZE, CHANNEL_SIZE>,
 ) {
     loop {
         match advertise(BLE_ADVERTISEMENT_NAME, &mut peripheral, &server).await {

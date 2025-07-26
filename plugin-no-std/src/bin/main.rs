@@ -15,7 +15,7 @@ use plugin_no_std::{
     mk_static,
     tasks::{ble_processor, ble_runner, usb_device_runner, usb_processor},
 };
-use protocol::plugin::{PluginReceiver, PluginSender};
+use protocol::plugin::{AsyncPluginReceiver, AsyncPluginSender};
 use trouble_host::{Host, Stack};
 // BLE no-std example: https://github.com/embassy-rs/trouble/blob/main/examples/apps/src/ble_bas_peripheral_sec.rs
 // USB device example: https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/embassy_usb_serial.rs
@@ -69,11 +69,11 @@ async fn main(spawner: Spawner) {
     let ble_to_usb =
         mk_static!(Channel<CriticalSectionRawMutex, TChannel, CHANNEL_SIZE>, Channel::new());
 
-    let usb_to_ble_receiver = PluginReceiver::new(usb_to_ble.receiver());
-    let usb_to_ble_sender = PluginSender::new(usb_to_ble.sender());
+    let usb_to_ble_receiver = AsyncPluginReceiver::new(usb_to_ble.receiver());
+    let usb_to_ble_sender = AsyncPluginSender::new(usb_to_ble.sender());
 
-    let ble_to_usb_receiver = PluginReceiver::new(ble_to_usb.receiver());
-    let ble_to_usb_sender = PluginSender::new(ble_to_usb.sender());
+    let ble_to_usb_receiver = AsyncPluginReceiver::new(ble_to_usb.receiver());
+    let ble_to_usb_sender = AsyncPluginSender::new(ble_to_usb.sender());
 
     spawner.must_spawn(usb_device_runner(device));
     spawner.must_spawn(ble_runner(runner));

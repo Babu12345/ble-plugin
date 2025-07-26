@@ -11,8 +11,7 @@ use esp_idf_svc::hal::{
 };
 use heapless::String;
 use host_cherry::cherry_usb_host;
-use host_esp::usb_host;
-use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService, HostData};
+use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService};
 
 /**
  * General protocal is as follows:
@@ -85,7 +84,7 @@ fn main() -> anyhow::Result<()> {
                 log::info!("{:?}", cmd)
             }
 
-            let bulk_data: Option<HostData> = data.decode().ok();
+            let bulk_data: Option<HostCommandConfigureService> = data.decode().ok();
             if let Some(data) = bulk_data {
                 log::info!("{:?}", data)
             }

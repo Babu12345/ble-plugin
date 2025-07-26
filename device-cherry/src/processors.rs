@@ -23,6 +23,7 @@ use esp_idf_sys::cherry_device::{
     usbd_event_type_USBD_EVENT_RESUME, usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP,
     usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
+use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 
 use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
@@ -47,7 +48,7 @@ static mut READ_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
 static mut INPUT: [u8; SIZE] = [0; SIZE];
 
 /// Sending and receiving type
-pub type TSendAndReceive = [u8; 64];
+pub type TSendAndReceive = [u8; SIZE];
 static SIGNAL: Signal<CriticalSectionRawMutex, TSendAndReceive> = Signal::new();
 
 // https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L19
@@ -282,7 +283,7 @@ impl CdcAcmDevice<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-    ) -> (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) {
+    ) -> (PluginSender<SIZE>, PluginReceiver<SIZE>) {
         let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
             sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
@@ -324,7 +325,7 @@ impl CdcAcmDevice<POSTINIT> {
             }
         });
 
-        (to_usb.0, from_usb.1)
+        (PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1))
     }
 
     /// Set the dtr of the usb cdc device

@@ -7,7 +7,9 @@ use esp32_nimble::{
 use heapless::String;
 use host_cherry::cherry_usb_host;
 use plugin_host_std::utils::random_uuid;
-use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService, HostData};
+use protocol::types::{
+    HostCommandConfigurePeripheral, HostCommandConfigureService, HostReceivedData, PluginData,
+};
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -47,7 +49,7 @@ fn main() -> anyhow::Result<()> {
                 log::info!("{:?}", cmd)
             }
 
-            let bulk_data: Option<HostData> = data.decode().ok();
+            let bulk_data: Option<HostCommandConfigureService> = data.decode().ok();
             if let Some(data) = bulk_data {
                 log::info!("{:?}", data)
             }

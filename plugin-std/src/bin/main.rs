@@ -6,8 +6,8 @@ use esp32_nimble::{
     BLEDevice,
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
-use heapless::{String, Vec};
-use lib_utils::MatchSliceLengths;
+use protocol::types::{HostCommandConfigurePeripheral, PluginData};
+use uuid::{self, Uuid};
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() {
     esp_idf_svc::sys::link_patches();
@@ -31,14 +31,20 @@ fn main() {
         let processors = device.processors(scope, 20);
 
         scope.spawn(move || loop {
-            let data = processors.1.recv().unwrap();
-            log::info!(
-                "Data aquired: {:?}",
-                String::from_utf8(Vec::<u8, 64>::from_slice(&data).unwrap())
-            );
+            let received_data = processors.1.receive().unwrap();
+            let data: Option<HostCommandConfigurePeripheral> = received_data.decode().ok();
+
+            log::info!("Data aquired: {:?}", data);
         });
         scope.spawn(move || loop {
-            processors.0.send(b"Hello\n".match_size(0)).ok();
+            processors
+                .0
+                .send(PluginData {
+                    src_id: Uuid::from_u128(0x01),
+                    send_type: protocol::types::PluginDataSendType::Notify,
+                    data: b"Hello\n",
+                })
+                .ok();
             std::thread::sleep(Duration::from_secs(1));
         });
     });
