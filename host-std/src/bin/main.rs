@@ -42,21 +42,10 @@ fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
+    // use host_esp::usb_host;
     // std::thread::scope(|scope| {
     //     scope.spawn(move || {
     //         let io = unsafe { usb_host(scope, 100) };
-    //         loop {
-    //             io.0.send(BulkHostCommand {
-    //                 commands: vec![HostCommand {
-    //                     id: Uuid::from_u128(0x00),
-    //                     cmd: ConfigPeripheral(
-    //                         String::from_str("Default").unwrap(),
-    //                         Uuid::from_u128(0xff),
-    //                     ),
-    //                 }],
-    //             })
-    //             .ok();
-    //         }
     //     });
     // });
 

@@ -7,9 +7,7 @@ use esp32_nimble::{
 use heapless::String;
 use host_cherry::cherry_usb_host;
 use plugin_host_std::utils::random_uuid;
-use protocol::types::{
-    HostCommandConfigurePeripheral, HostCommandConfigureService, HostReceivedData, PluginData,
-};
+use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService};
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
