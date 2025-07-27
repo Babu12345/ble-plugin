@@ -8,7 +8,7 @@ pub use self::host_std::*;
 mod host_std {
     use crate::{
         errors::{self, Result},
-        types::{HostIO, PluginReceivedData},
+        types::{HostIO, HostReceivedData},
     };
     use std::sync::mpsc::{Receiver, SyncSender};
     /// Sender
@@ -38,9 +38,9 @@ mod host_std {
         }
 
         /// Receive the data
-        pub fn receive(&self) -> Result<PluginReceivedData<N>> {
+        pub fn receive(&self) -> Result<HostReceivedData<N>> {
             let input = self.0.recv().map_err(|_| errors::Error::ReceiveError)?;
-            Ok(PluginReceivedData::new(input))
+            Ok(HostReceivedData::new(input))
         }
     }
 }

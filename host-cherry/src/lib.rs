@@ -4,7 +4,10 @@ mod constants;
 mod processors;
 mod utils;
 use processors::*;
-use protocol::host::{HostReceiver, HostSender};
+use protocol::{
+    host::{HostReceiver, HostSender},
+    plugin::plugin::{PluginReceiver, PluginSender},
+};
 
 use std::{sync::mpsc::sync_channel, thread::Scope};
 
@@ -31,4 +34,20 @@ pub unsafe fn cherry_usb_host<'a, 'b>(
     scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
 
     (HostSender::new(to_usb.0), HostReceiver::new(from_usb.1))
+}
+
+/// Initialize the usb host and send out receivers and senders to process and send information to the connected usb device via the cdc acm driver class.
+pub unsafe fn cherry_usb_host_for_plugin<'a, 'b>(
+    scope: &'a Scope<'a, 'b>,
+    channel_buffer_size: usize,
+) -> (PluginSender<256>, PluginReceiver<256>) {
+    let to_usb = sync_channel(channel_buffer_size);
+    let from_usb = sync_channel(channel_buffer_size);
+
+    unsafe { usbh_initialize(0, ESP_USBH_BASE as usize) };
+
+    scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
+    scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
+
+    (PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1))
 }

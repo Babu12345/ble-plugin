@@ -4,10 +4,10 @@ use esp32_nimble::{
     enums::{AuthReq, SecurityIOCap},
     BLEDevice,
 };
-use heapless::String;
-use host_cherry::cherry_usb_host;
+
+use host_cherry::cherry_usb_host_for_plugin;
 use plugin_host_std::utils::random_uuid;
-use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService};
+use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -24,15 +24,15 @@ fn main() -> anyhow::Result<()> {
         .resolve_rpa();
 
     std::thread::scope(|scope| {
-        let io = unsafe { cherry_usb_host(scope, 200) };
+        let io = unsafe { cherry_usb_host_for_plugin(scope, 200) };
 
         scope.spawn(move || loop {
-            io.0.send(HostCommandConfigurePeripheral {
-                uuid: unsafe { random_uuid() },
-                name: String::from_str("Portrait").unwrap(),
+            io.0.send(PluginData {
+                src_id: unsafe { random_uuid() },
+                send_type: protocol::types::PluginDataSendType::Notify,
+                data: b"Data incoming\0",
             })
             .ok();
-            io.0.send(HostCommandConfigureService {}).ok();
 
             std::thread::sleep(Duration::from_millis(20));
         });
@@ -42,14 +42,14 @@ fn main() -> anyhow::Result<()> {
 
             let data = io.1.receive().unwrap();
 
-            let bulk_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
-            if let Some(cmd) = bulk_cmd {
+            let host_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
+            if let Some(cmd) = host_cmd {
                 log::info!("{:?}", cmd)
             }
 
-            let bulk_data: Option<HostCommandConfigureService> = data.decode().ok();
-            if let Some(data) = bulk_data {
-                log::info!("{:?}", data)
+            let host_cmd: Option<HostCommandConfigureService> = data.decode().ok();
+            if let Some(cmd) = host_cmd {
+                log::info!("{:?}", cmd)
             }
         });
     });
