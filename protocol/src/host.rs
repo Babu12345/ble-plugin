@@ -2,13 +2,35 @@
 
 #[cfg(feature = "std")]
 pub use self::host_std::*;
+pub use common::*;
+
+/// Common types and traits
+mod common {
+    use crate::{errors::Result, PluginIO};
+
+    /// Securely stores received data
+    pub struct HostReceivedData<const N: usize>([u8; N]);
+
+    impl<'a, const N: usize> HostReceivedData<N> {
+        /// Create a new ReceivedData struct that can be used for decoding
+        pub fn new(input: [u8; N]) -> Self {
+            Self(input)
+        }
+
+        /// Decode the data to the type
+        pub fn decode<T: PluginIO<'a>>(&'a self) -> Result<T> {
+            T::from_bytes(&self.0)
+        }
+    }
+}
 
 /// Std sync send and receive
 #[cfg(feature = "std")]
 mod host_std {
+    use super::*;
     use crate::{
         errors::{self, Result},
-        types::{HostIO, HostReceivedData},
+        HostIO,
     };
     use std::sync::mpsc::{Receiver, SyncSender};
     /// Sender
@@ -49,7 +71,8 @@ mod host_std {
 mod tests {
     use core::str::FromStr;
 
-    use crate::types::{PluginReceivedData, IO};
+    use crate::plugin::PluginReceivedData;
+    use crate::IO;
     use crate::{types::HostCommandConfigurePeripheral, MAX_TRANSFER_SIZE};
     use heapless::String;
     use uuid::Uuid;

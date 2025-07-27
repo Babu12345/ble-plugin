@@ -9,16 +9,36 @@ use embassy_sync::{
     channel::{Receiver, Sender},
 };
 
-use crate::{
-    errors::{self, Result},
-    types::HostReceivedData,
-};
+use crate::errors::{self, Result};
 
-use crate::types::IO;
+use crate::IO;
 pub use async_plugin::*;
+pub use common::*;
+
+/// Common types and traits
+mod common {
+    use crate::{errors::Result, HostIO};
+
+    /// Securely stores received data
+    pub struct PluginReceivedData<const N: usize>([u8; N]);
+
+    impl<'a, const N: usize> PluginReceivedData<N> {
+        /// Create a new ReceivedData struct that can be used for decoding
+        pub fn new(input: [u8; N]) -> Self {
+            Self(input)
+        }
+
+        /// Decode the data to the type
+        pub fn decode<T: HostIO<'a>>(&'a self) -> Result<T> {
+            T::from_bytes(&self.0)
+        }
+    }
+}
 
 /// Async implementation
 pub mod async_plugin {
+    use crate::host::HostReceivedData;
+
     use super::*;
 
     /// Async sender
@@ -94,9 +114,10 @@ pub mod async_plugin {
 /// Standard non-async version of the plugin implementation
 #[cfg(feature = "std")]
 pub mod plugin {
+    use super::*;
     use crate::{
         errors::{self, Result},
-        types::{PluginIO, PluginReceivedData},
+        PluginIO,
     };
     use std::sync::mpsc::{Receiver, SyncSender};
     /// Sender
@@ -136,7 +157,9 @@ pub mod plugin {
 #[cfg(test)]
 mod tests {
 
-    use crate::types::{HostReceivedData, PluginData, IO};
+    use crate::host::HostReceivedData;
+    use crate::types::PluginData;
+    use crate::IO;
     use crate::MAX_TRANSFER_SIZE;
 
     use uuid::Uuid;

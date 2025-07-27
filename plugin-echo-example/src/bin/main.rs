@@ -21,7 +21,7 @@ use esp_hal::{
 use log::info;
 
 use esp_hal_embassy::main;
-use protocol::{types::HostCommandConfigurePeripheral, types::PluginReceivedData};
+use protocol::{plugin::PluginReceivedData, types::HostCommandConfigurePeripheral};
 
 const BUFFER_SIZE: u8 = 64;
 #[main]

@@ -9,8 +9,10 @@
 
 pub mod errors;
 pub mod host;
+mod io;
 pub mod plugin;
 pub mod types;
+use io::*;
 
 const MAX_NAME_SIZE: usize = 30;
 const MAX_TRANSFER_SIZE: usize = 512;

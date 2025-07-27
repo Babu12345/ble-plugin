@@ -17,14 +17,14 @@ class HostCommandConfigurePeripheral:
 class HostCommandConfigureService:
     pass
 
-class HostDataSendType(Enum):
+class PluginDataSendType(Enum):
     Notify: attrs2bin.U8 = 0
     Write: attrs2bin.U8 = 1
     Read: attrs2bin.U8 = 2
     
 
 @attr.s(auto_attribs=True)
-class HostData:
+class PluginData:
     src_id: str
-    send_type: HostDataSendType
+    send_type: PluginDataSendType
     data: bytes
