@@ -15,6 +15,7 @@ use esp_idf_sys::{
     },
 };
 use lib_utils::MatchSliceLengths;
+use protocol::DEFAULT_TRANSFER_SIZE;
 
 use std::{
     ffi::c_void,
@@ -33,7 +34,7 @@ use crate::constants::*;
 
 // TODO: Return a custom struct to control how data is being channeled to and from the usb interface.
 // This should help to facilitate the defined API.
-pub type T = [u8; 512];
+pub type T = [u8; DEFAULT_TRANSFER_SIZE];
 
 pub static FROM_USB_SENDER: OnceLock<SyncSender<T>> = OnceLock::new();
 

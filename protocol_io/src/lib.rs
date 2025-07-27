@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![no_std]
 
 //! Protocol types for easy use and deriving
 

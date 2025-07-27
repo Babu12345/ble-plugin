@@ -19,7 +19,7 @@ def test_type_serialization() -> None:
     deserialized = attrs2bin.deserialize(serialized, PluginDataSendType)    
     assert enum is deserialized, "Host data send type enum deserialization"
 
-    cmd = PluginData(src_id="123",data=bytes([0,1,2]), send_type=PluginDataSendType.Notify)
-    serialized = attrs2bin.serialize(cmd)
+    data = PluginData(src_id="123",data=bytes([0,1,2]), send_type=PluginDataSendType.Notify)
+    serialized = attrs2bin.serialize(data)
     deserialized = attrs2bin.deserialize(serialized, PluginData)
-    assert cmd == deserialized, "Host data transmission"
+    assert data == deserialized, "Host data transmission"

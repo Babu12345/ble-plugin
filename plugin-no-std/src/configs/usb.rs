@@ -11,7 +11,7 @@ use esp_hal::otg_fs::{
 };
 use log::info;
 
-/// Control buffer size
+/// Buffer size. Note that this implementation of a usb device can only handle up to 64 bytes per packet
 pub const BUFFER_SIZE: usize = 64;
 const DESCRIPTOR_BUFFER_SIZE: usize = 256;
 

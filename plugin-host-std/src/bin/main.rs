@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::time::Duration;
 
 use esp32_nimble::{
     enums::{AuthReq, SecurityIOCap},

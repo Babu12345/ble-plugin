@@ -159,8 +159,8 @@ mod tests {
 
     use crate::host::HostReceivedData;
     use crate::types::PluginData;
+    use crate::DEFAULT_TRANSFER_SIZE;
     use crate::IO;
-    use crate::MAX_TRANSFER_SIZE;
 
     use uuid::Uuid;
 
@@ -172,7 +172,7 @@ mod tests {
             data: b"Cool test\0",
         };
 
-        let data: [u8; MAX_TRANSFER_SIZE] = cmd.to_bytes().unwrap();
+        let data: [u8; DEFAULT_TRANSFER_SIZE] = cmd.to_bytes().unwrap();
         let received_data = HostReceivedData::new(data);
         let decoded_cmd: PluginData = received_data.decode().unwrap();
 
@@ -190,7 +190,7 @@ mod tests {
             data: b"Another one\0",
         };
 
-        let mut buffer = [0u8; MAX_TRANSFER_SIZE];
+        let mut buffer = [0u8; DEFAULT_TRANSFER_SIZE];
         cmd.to_bytes_in_slice(&mut buffer).unwrap();
         let received_data = HostReceivedData::new(buffer);
         let decoded_cmd: PluginData = received_data.decode().unwrap();

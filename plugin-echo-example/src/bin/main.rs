@@ -21,8 +21,11 @@ use esp_hal::{
 use log::info;
 
 use esp_hal_embassy::main;
-use protocol::{plugin::PluginReceivedData, types::HostCommandConfigurePeripheral};
+use protocol::{
+    plugin::PluginReceivedData, types::HostCommandConfigurePeripheral, DEFAULT_TRANSFER_SIZE,
+};
 
+// Note that this implementation of a usb device can only handle a max of 64 bytes for the packet size
 const BUFFER_SIZE: u8 = 64;
 #[main]
 async fn main(_spawner: Spawner) {
@@ -105,7 +108,7 @@ async fn main(_spawner: Spawner) {
 }
 
 async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconnected> {
-    let mut buf = [0; 512];
+    let mut buf = [0; DEFAULT_TRANSFER_SIZE];
     loop {
         let n = class.read_packet(&mut buf).await?;
         let decoded_cmd: Option<HostCommandConfigurePeripheral> =

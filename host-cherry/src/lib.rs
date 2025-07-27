@@ -9,9 +9,9 @@ use protocol::{
     plugin::plugin::{PluginReceiver, PluginSender},
 };
 
-use std::{sync::mpsc::sync_channel, thread::Scope};
-
 use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
+use protocol::DEFAULT_TRANSFER_SIZE;
+use std::{sync::mpsc::sync_channel, thread::Scope};
 
 // Initialization
 // https://github.com/zleihao/CherryUSB-CDC-MSC/blob/50095e0b63bbdf6f2d5597e71edfa45dd8be6c1d/cdc_msc/middlewares/CherryUSB-1.4.0/class/cdc/usbh_cdc_acm.c#L170
@@ -24,7 +24,10 @@ use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
 pub unsafe fn cherry_usb_host<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
-) -> (HostSender<256>, HostReceiver<256>) {
+) -> (
+    HostSender<DEFAULT_TRANSFER_SIZE>,
+    HostReceiver<DEFAULT_TRANSFER_SIZE>,
+) {
     let to_usb = sync_channel(channel_buffer_size);
     let from_usb = sync_channel(channel_buffer_size);
 
@@ -40,7 +43,10 @@ pub unsafe fn cherry_usb_host<'a, 'b>(
 pub unsafe fn cherry_usb_host_for_plugin<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
-) -> (PluginSender<256>, PluginReceiver<256>) {
+) -> (
+    PluginSender<DEFAULT_TRANSFER_SIZE>,
+    PluginReceiver<DEFAULT_TRANSFER_SIZE>,
+) {
     let to_usb = sync_channel(channel_buffer_size);
     let from_usb = sync_channel(channel_buffer_size);
 
