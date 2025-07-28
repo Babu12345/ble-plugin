@@ -19,7 +19,7 @@ pub enum Error {
     /// Unable to serialize to bincode
     UnableToSerializeToBincode,
     /// Unable to deserialize from bincode
-    UnableToDeserializeFromBincode,
+    UnableToDeserializeFromBincode(&'static str),
     // Transfers
     /// Send error
     ReceiveError,

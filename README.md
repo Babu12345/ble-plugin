@@ -42,6 +42,10 @@ espup install
 source ~/.zprofile
 
 
+### Print in rust tests
+cargo test -- --nocapture
+
+
 ## python (also in the pc/python readme)
 
 ### Create a virtual environment

@@ -4,18 +4,19 @@ use crate::{
     errors::{Error, Result},
     DEFAULT_PACKET_SIZE,
 };
+use heapless::Vec;
 use serde::{Deserialize, Serialize};
+
+/// The size in bytes of the length of the sent and received serialized
+/// packet
+const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 
 /// Communication input and output types
 pub trait IO<'a>: Serialize + Deserialize<'a> + Sized {
-    /// The size in bytes of the length of the sent and received serialized
-    /// packet
-    const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
-
     /// Serialize the host command to a Vec using bincode
     #[inline(always)]
     #[cfg(feature = "std")]
-    fn serialize_bytes(&self) -> Result<Vec<u8>> {
+    fn serialize_bytes(&self) -> Result<std::vec::Vec<u8>> {
         bincode::serde::encode_to_vec(self, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode)
     }
@@ -30,18 +31,20 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized {
     /// Convert from bytes
     #[inline(always)]
     fn from_bytes(input: &'a [u8]) -> Result<Self> {
-        let length_lsb = input[0] as u16;
-        let length_msb = input[1] as u16;
-        let length = (((length_msb << 8) & 0xFF00) + (length_lsb & 0x00FF)) as usize;
+        let length: usize = (0..DATA_BYTES_LENGTH_IN_BYTES)
+            .map(|i| ((input[i] as usize) << (i * 8)))
+            .sum();
         if length > DEFAULT_PACKET_SIZE {
-            return Err(Error::UnableToDeserializeFromBincode);
+            return Err(Error::UnableToDeserializeFromBincode(
+                "Packet size exceeds the allowable limit",
+            ));
         }
 
         let res: Self = bincode::serde::borrow_decode_from_slice(
-            &input[2..(2 + length)],
+            &input[DATA_BYTES_LENGTH_IN_BYTES..(DATA_BYTES_LENGTH_IN_BYTES + length)],
             bincode::config::standard(),
         )
-        .map_err(|_| Error::UnableToDeserializeFromBincode)?
+        .map_err(|_| Error::UnableToDeserializeFromBincode(""))?
         .0;
 
         Ok(res)
@@ -54,9 +57,9 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized {
         use lib_utils::MatchSliceLengths;
 
         let mut serialized_bytes = self.serialize_bytes()?;
-        let length = serialized_bytes.len() as u16;
+        let length = serialized_bytes.len() as usize;
 
-        let mut length_data: Vec<u8> = (0..Self::DATA_BYTES_LENGTH_IN_BYTES)
+        let mut length_data: std::vec::Vec<u8> = (0..DATA_BYTES_LENGTH_IN_BYTES)
             .map(|x| ((length >> (x * 8)) & 0xFF) as u8)
             .collect();
 
@@ -71,9 +74,13 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized {
     /// Serialize to bytes
     #[inline(always)]
     fn to_bytes_in_slice<const N: usize>(&self, buffer: &'a mut [u8; N]) -> Result<()> {
-        let (left, right) = buffer.split_at_mut(Self::DATA_BYTES_LENGTH_IN_BYTES);
-        let length = self.serialize_bytes_in_slice(right)? as u16;
-        let length_data = [(length & 0xFF) as u8, ((length >> 8) & 0xFF) as u8];
+        let (left, right) = buffer.split_at_mut(DATA_BYTES_LENGTH_IN_BYTES);
+        let length = self.serialize_bytes_in_slice(right)? as usize;
+
+        let length_data: Vec<u8, DATA_BYTES_LENGTH_IN_BYTES> = (0..DATA_BYTES_LENGTH_IN_BYTES)
+            .map(|x| ((length >> (8 * x)) & 0xFF) as u8)
+            .collect();
+
         left.copy_from_slice(&length_data);
         if length_data.len() > N {
             return Err(Error::SerializationBufferOverflow);
