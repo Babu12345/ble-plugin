@@ -10,9 +10,10 @@ use esp_hal::otg_fs::{
     asynch::{Config, Driver},
 };
 use log::info;
+use protocol::DEFAULT_PACKET_SIZE;
 
-/// Buffer size. Note that this implementation of a usb device can only handle up to 64 bytes per packet
-pub const BUFFER_SIZE: usize = 64;
+/// Buffer size
+pub const BUFFER_SIZE: usize = DEFAULT_PACKET_SIZE;
 const DESCRIPTOR_BUFFER_SIZE: usize = 256;
 
 /// Function to start the usb device. Returns the CDC class handler and the device

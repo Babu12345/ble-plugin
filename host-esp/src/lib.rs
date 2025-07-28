@@ -5,7 +5,7 @@ mod processors;
 use processors::{FROM_USB_SENDER, T, process_usb_cdc_host, start_usb_host};
 use protocol::host::{HostReceiver, HostSender};
 
-use protocol::DEFAULT_TRANSFER_SIZE;
+use protocol::DEFAULT_PACKET_SIZE;
 use std::{
     sync::mpsc::{self, Receiver, SyncSender},
     thread::Scope,
@@ -20,8 +20,8 @@ pub unsafe fn usb_host<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
 ) -> (
-    HostSender<DEFAULT_TRANSFER_SIZE>,
-    HostReceiver<DEFAULT_TRANSFER_SIZE>,
+    HostSender<DEFAULT_PACKET_SIZE>,
+    HostReceiver<DEFAULT_PACKET_SIZE>,
 ) {
     let to_usb = mpsc::sync_channel(channel_buffer_size);
     let from_usb = {

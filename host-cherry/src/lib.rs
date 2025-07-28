@@ -10,7 +10,7 @@ use protocol::{
 };
 
 use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
-use protocol::DEFAULT_TRANSFER_SIZE;
+use protocol::DEFAULT_PACKET_SIZE;
 use std::{sync::mpsc::sync_channel, thread::Scope};
 
 // Initialization
@@ -25,8 +25,8 @@ pub unsafe fn cherry_usb_host<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
 ) -> (
-    HostSender<DEFAULT_TRANSFER_SIZE>,
-    HostReceiver<DEFAULT_TRANSFER_SIZE>,
+    HostSender<DEFAULT_PACKET_SIZE>,
+    HostReceiver<DEFAULT_PACKET_SIZE>,
 ) {
     let to_usb = sync_channel(channel_buffer_size);
     let from_usb = sync_channel(channel_buffer_size);
@@ -44,8 +44,8 @@ pub unsafe fn cherry_usb_host_for_plugin<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
 ) -> (
-    PluginSender<DEFAULT_TRANSFER_SIZE>,
-    PluginReceiver<DEFAULT_TRANSFER_SIZE>,
+    PluginSender<DEFAULT_PACKET_SIZE>,
+    PluginReceiver<DEFAULT_PACKET_SIZE>,
 ) {
     let to_usb = sync_channel(channel_buffer_size);
     let from_usb = sync_channel(channel_buffer_size);

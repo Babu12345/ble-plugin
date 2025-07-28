@@ -22,7 +22,7 @@ use esp_idf_sys::cherry_device::{
     usbd_event_type_USBD_EVENT_RESUME, usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP,
     usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
-use protocol::DEFAULT_TRANSFER_SIZE;
+use protocol::DEFAULT_PACKET_SIZE;
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 
 use crate::utils::{
@@ -40,7 +40,7 @@ const USB_CONFIG_SIZE: u32 = 9 + CDC_ACM_DESCRIPTOR_LEN;
 const USBD_VID: u16 = 0xFFFF;
 const USBD_PID: u16 = 0xFFFF;
 const USBD_MAX_POWER: u32 = 100; // 2mA * 100 = 100 mA
-const SIZE: usize = DEFAULT_TRANSFER_SIZE;
+const SIZE: usize = DEFAULT_PACKET_SIZE;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 

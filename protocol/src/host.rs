@@ -73,7 +73,7 @@ mod tests {
 
     use crate::plugin::PluginReceivedData;
     use crate::IO;
-    use crate::{types::HostCommandConfigurePeripheral, DEFAULT_TRANSFER_SIZE};
+    use crate::{types::HostCommandConfigurePeripheral, DEFAULT_PACKET_SIZE};
     use heapless::String;
     use uuid::Uuid;
 
@@ -83,7 +83,7 @@ mod tests {
             name: String::from_str("Hello").unwrap(),
             uuid: Uuid::from_u128(0x01),
         };
-        let data: [u8; DEFAULT_TRANSFER_SIZE] = cmd.to_bytes().unwrap();
+        let data: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
         let decoded_cmd: HostCommandConfigurePeripheral =
             PluginReceivedData::new(data).decode().unwrap();
 
@@ -99,7 +99,7 @@ mod tests {
             name: String::from_str("Hello").unwrap(),
             uuid: Uuid::from_u128(0x01),
         };
-        let mut buffer = [0u8; DEFAULT_TRANSFER_SIZE];
+        let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
         cmd.to_bytes_in_slice(&mut buffer).unwrap();
         let decoded_cmd: HostCommandConfigurePeripheral =
             PluginReceivedData::new(buffer).decode().unwrap();

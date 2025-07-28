@@ -22,11 +22,11 @@ use log::info;
 
 use esp_hal_embassy::main;
 use protocol::{
-    plugin::PluginReceivedData, types::HostCommandConfigurePeripheral, DEFAULT_TRANSFER_SIZE,
+    plugin::PluginReceivedData, types::HostCommandConfigurePeripheral, DEFAULT_PACKET_SIZE,
 };
 
-// Note that this implementation of a usb device can only handle a max of 64 bytes for the packet size
-const BUFFER_SIZE: u8 = 64;
+const CONTROL_EP_BUFFER_SIZE: u8 = 64;
+const DESCRIPTOR_SIZE: usize = 256;
 #[main]
 async fn main(_spawner: Spawner) {
     let peripherals = esp_hal::init({
@@ -66,13 +66,13 @@ async fn main(_spawner: Spawner) {
     config.composite_with_iads = true;
 
     config.max_power = 100;
-    config.max_packet_size_0 = BUFFER_SIZE;
+    config.max_packet_size_0 = CONTROL_EP_BUFFER_SIZE;
 
     // Create embassy-usb DeviceBuilder using the driver and config.
     // It needs some buffers for building the descriptors.
-    let mut config_descriptor = [0; 256];
-    let mut bos_descriptor = [0; 256];
-    let mut control_buf = [0; BUFFER_SIZE as usize];
+    let mut config_descriptor = [0; DESCRIPTOR_SIZE];
+    let mut bos_descriptor = [0; DESCRIPTOR_SIZE];
+    let mut control_buf = [0; CONTROL_EP_BUFFER_SIZE as usize];
 
     let mut state = State::new();
 
@@ -86,7 +86,7 @@ async fn main(_spawner: Spawner) {
     );
 
     // Create classes on the builder.
-    let mut class = CdcAcmClass::new(&mut builder, &mut state, BUFFER_SIZE as u16);
+    let mut class = CdcAcmClass::new(&mut builder, &mut state, DEFAULT_PACKET_SIZE as u16);
 
     // Build the builder.
     let mut usb = builder.build();
@@ -108,7 +108,7 @@ async fn main(_spawner: Spawner) {
 }
 
 async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconnected> {
-    let mut buf = [0; DEFAULT_TRANSFER_SIZE];
+    let mut buf = [0; DEFAULT_PACKET_SIZE as usize];
     loop {
         let n = class.read_packet(&mut buf).await?;
         let decoded_cmd: Option<HostCommandConfigurePeripheral> =

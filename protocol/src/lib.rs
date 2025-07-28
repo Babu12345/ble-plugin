@@ -15,17 +15,17 @@ pub mod types;
 use io::*;
 
 const MAX_NAME_SIZE: usize = 30;
-/// Represents the transfer size
-pub const DEFAULT_TRANSFER_SIZE: usize = 256;
+/// Represents the default transfer size. For FS it's 8, 16, 32, or 64 bytes. For HS the max is 512 bytes
+pub const DEFAULT_PACKET_SIZE: usize = 256;
 
 #[cfg(test)]
 mod tests {
-    use crate::DEFAULT_TRANSFER_SIZE;
+    use crate::DEFAULT_PACKET_SIZE;
 
     #[test]
     fn test_max_transfer_size() {
         assert!(
-            DEFAULT_TRANSFER_SIZE <= 512,
+            DEFAULT_PACKET_SIZE <= 512,
             "The max transfer size is 512 for high speed usb"
         )
     }

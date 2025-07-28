@@ -2,7 +2,7 @@
 
 use crate::{
     errors::{Error, Result},
-    DEFAULT_TRANSFER_SIZE,
+    DEFAULT_PACKET_SIZE,
 };
 use serde::{Deserialize, Serialize};
 
@@ -33,7 +33,7 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized {
         let length_lsb = input[0] as u16;
         let length_msb = input[1] as u16;
         let length = (((length_msb << 8) & 0xFF00) + (length_lsb & 0x00FF)) as usize;
-        if length > DEFAULT_TRANSFER_SIZE {
+        if length > DEFAULT_PACKET_SIZE {
             return Err(Error::UnableToDeserializeFromBincode);
         }
 

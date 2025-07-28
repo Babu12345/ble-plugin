@@ -9,10 +9,10 @@ use std::{
 use esp_idf_sys::cherry_host::{
     usbh_cdc_acm, usbh_cdc_acm_bulk_in_transfer, usbh_cdc_acm_bulk_out_transfer,
 };
-use protocol::DEFAULT_TRANSFER_SIZE;
+use protocol::DEFAULT_PACKET_SIZE;
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
-pub type T = [u8; DEFAULT_TRANSFER_SIZE];
+pub type T = [u8; DEFAULT_PACKET_SIZE];
 
 #[derive(Debug)]
 struct ThreadSafeCDCWrapper(*mut usbh_cdc_acm);
