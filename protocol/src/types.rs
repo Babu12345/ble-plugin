@@ -39,8 +39,8 @@ pub mod plugin {
     use crate::IO;
 
     /// Represents the send type of the data. Was it due to a
-    /// write event (central -> peripheral), notify event (peripheral -> client),
-    /// or read attempt (central -> peripheral). Depending on which a response
+    /// write event (central -> peripheral), notify event (peripheral -> central),
+    /// or read attempt (central -> peripheral). Depending on which, a response
     /// might be expected or sent
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[repr(u8)]

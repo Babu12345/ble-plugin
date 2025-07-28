@@ -1,2 +1,2 @@
-import types
-import comms
+from .types import *
+from .comms import *
