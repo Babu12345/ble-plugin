@@ -10,8 +10,8 @@
 pub mod errors;
 pub mod host;
 mod io;
+pub mod io_types;
 pub mod plugin;
-pub mod types;
 use io::*;
 
 const MAX_NAME_SIZE: usize = 30;

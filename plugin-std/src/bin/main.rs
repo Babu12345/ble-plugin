@@ -7,7 +7,7 @@ use esp32_nimble::{
     BLEAdvertisementData, BLEDevice, NimbleProperties,
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
-use protocol::types::{HostCommandConfigurePeripheral, PluginData};
+use protocol::io_types::{HostCommandConfigurePeripheral, PluginData};
 use uuid::{self, Uuid};
 
 fn get_device(name: &'static str) -> &'static mut BLEDevice {
@@ -98,7 +98,7 @@ fn main() {
                 .0
                 .send(PluginData {
                     src_id: Uuid::from_u128(0x01),
-                    send_type: protocol::types::PluginDataSendType::Notify,
+                    send_type: protocol::io_types::PluginDataSendType::Notify,
                     data: b"Hello\n",
                 })
                 .ok();

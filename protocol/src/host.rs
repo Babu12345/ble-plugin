@@ -73,7 +73,7 @@ mod tests {
 
     use crate::plugin::PluginReceivedData;
     use crate::IO;
-    use crate::{types::HostCommandConfigurePeripheral, DEFAULT_PACKET_SIZE};
+    use crate::{io_types::HostCommandConfigurePeripheral, DEFAULT_PACKET_SIZE};
     use heapless::String;
     use uuid::Uuid;
 

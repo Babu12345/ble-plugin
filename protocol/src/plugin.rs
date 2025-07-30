@@ -158,7 +158,7 @@ pub mod plugin {
 mod tests {
 
     use crate::host::HostReceivedData;
-    use crate::types::PluginData;
+    use crate::io_types::PluginData;
     use crate::DEFAULT_PACKET_SIZE;
     use crate::IO;
 
@@ -168,7 +168,7 @@ mod tests {
     fn test_std_encoding_and_decoding() {
         let cmd = PluginData {
             src_id: Uuid::from_u128(0x01),
-            send_type: crate::types::PluginDataSendType::Notify,
+            send_type: crate::io_types::PluginDataSendType::Notify,
             data: b"Cool test\0",
         };
 
@@ -186,7 +186,7 @@ mod tests {
     fn test_no_std_encoding_and_decoding() {
         let cmd = PluginData {
             src_id: Uuid::from_u128(0x01),
-            send_type: crate::types::PluginDataSendType::Notify,
+            send_type: crate::io_types::PluginDataSendType::Notify,
             data: b"Another one\0",
         };
 

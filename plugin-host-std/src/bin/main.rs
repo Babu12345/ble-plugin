@@ -7,7 +7,7 @@ use esp32_nimble::{
 
 use host_cherry::cherry_usb_host_for_plugin;
 use plugin_host_std::utils::random_uuid;
-use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
+use protocol::io_types::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
         scope.spawn(move || loop {
             io.0.send(PluginData {
                 src_id: unsafe { random_uuid() },
-                send_type: protocol::types::PluginDataSendType::Notify,
+                send_type: protocol::io_types::PluginDataSendType::Notify,
                 data: b"Data incoming\0",
             })
             .ok();

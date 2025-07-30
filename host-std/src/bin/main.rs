@@ -11,7 +11,7 @@ use esp_idf_svc::hal::{
 };
 use heapless::String;
 use host_cherry::cherry_usb_host;
-use protocol::types::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
+use protocol::io_types::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
 
 /**
  * General protocal is as follows:
