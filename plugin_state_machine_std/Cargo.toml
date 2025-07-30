@@ -10,3 +10,4 @@ protocol = { path = "../protocol" }
 esp32-nimble = { version = "0.11.0", default-features = false, features = [
     "no_std",
 ] }
+log = "0.4"
