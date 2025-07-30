@@ -22,10 +22,11 @@ opt-level = "z"
 default = []
 
 [dependencies]
-## Files in shared directory
+## Custom
 lib_utils = {path = "../lib_utils"}
 protocol = {path = "../protocol", default-features = true}
 host-cherry = {path = "../host-cherry"}
+plugin_state_machine_std = { path = "../plugin_state_machine_std" }
 ## Crates
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }

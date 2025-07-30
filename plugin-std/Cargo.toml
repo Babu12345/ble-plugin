@@ -19,15 +19,15 @@ debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [dependencies]
-## Files in shared directory
+## Custom
 lib_utils = {path = "../lib_utils"}
 protocol = {path = "../protocol"}
 device-cherry = {path = "../device-cherry"}
+plugin_state_machine_std = { path = "../plugin_state_machine_std" }
 ## Crates
 esp32-nimble ={version =  "0.11.0", default-features = false, features = ["no_std"]}
 log = {version = "0.4.27", default-features = false}
 esp-idf-sys = { version = "0.36.1", default-features = false }
-# esp-idf-svc = { version = "0.51", features = ["alloc","embassy-sync"], default-features = false }
 esp-idf-svc = { version = "0.51", features = ["binstart", "embassy-sync"], default-features = false }
 
 static_cell = "2"
@@ -35,7 +35,6 @@ heapless = "0.8.0"
 embassy-futures = "0.1.1"
 ringbuffer = {version = "0.15.0", default-features = false}
 embassy-sync = "0.7.0"
-# esp-println = {version = "0.12.0", features = ["esp32s3","jtag-serial"], default-features = false}
 uuid = { version = "1.17.0", default-features = false, features = ["serde"] }
 
 [build-dependencies]
