@@ -21,3 +21,34 @@ impl<const N: usize> MatchSliceLengths<N> for &[u8] {
         buffer
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::MatchSliceLengths;
+
+    #[test]
+    fn test_match_size() {
+        let buffer = &[1u8, 2u8, 3u8];
+
+        let fixed_buffer: [u8; 5] = buffer.match_size(0x00);
+        assert_eq!(
+            fixed_buffer,
+            [1u8, 2u8, 3u8, 0u8, 0u8],
+            "Fixed buffer should equal the normal buffer except for some 0 padding"
+        );
+
+        let fixed_buffer: [u8; 5] = buffer.match_size(0xff);
+        assert_eq!(
+            fixed_buffer,
+            [1u8, 2u8, 3u8, 0xff, 0xff],
+            "Fixed buffer should equal the normal buffer except for some 0xff padding"
+        );
+
+        let fixed_buffer: [u8; 2] = buffer.match_size(0xff);
+        assert_eq!(
+            fixed_buffer,
+            [1u8, 2u8],
+            "Fixed buffer should reduce the size of the normal buffer"
+        );
+    }
+}
