@@ -55,14 +55,15 @@ fn get_device(name: &'static str) -> &'static mut BLEDevice {
         .lock()
         .set_value("secure_characteristic".as_bytes());
 
-    let uuid = service.lock().uuid();
+    let service_uuid = service.lock().uuid();
     let service2_uuid = service2.lock().uuid();
+
     ble_advertising
         .lock()
         .set_data(
             BLEAdvertisementData::new()
                 .name(name)
-                .add_service_uuid(uuid)
+                .add_service_uuid(service_uuid)
                 .add_service_uuid(service2_uuid),
         )
         .unwrap();

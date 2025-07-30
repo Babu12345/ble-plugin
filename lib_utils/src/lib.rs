@@ -9,6 +9,7 @@ pub trait MatchSliceLengths<const N: usize> {
 }
 
 impl<const N: usize> MatchSliceLengths<N> for &[u8] {
+    #[inline(always)]
     fn match_size(self, padding: u8) -> [u8; N] {
         let mut buffer = [padding; N];
         let array_size = self.len();
