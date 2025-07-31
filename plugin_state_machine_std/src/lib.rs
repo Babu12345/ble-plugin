@@ -2,17 +2,20 @@
 //! This library is used to to contain the complete processing logic and state machine to facilitate data/command transfer from BLE
 //! to usb and visa versa.
 
+use std::sync::Mutex;
 use std::time::Duration;
 
-use esp32_nimble::BLEDevice;
+use esp32_nimble::{BLEDevice, BLEServer};
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::io_types::{HostCommandConfigurePeripheral, HostCommandConfigureService};
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
+
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
 pub struct PluginStateMachine {
     usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
     usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
-    ble_device: BLEDevice,
+    ble_device: &'static mut BLEDevice,
+    server: Mutex<Option<BLEServer>>,
 }
 
 /// There will be 2 runners the first will be processing
@@ -23,20 +26,27 @@ impl PluginStateMachine {
     pub fn new(
         usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
         usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
-        ble_device: BLEDevice,
+        ble_device: &'static mut BLEDevice,
     ) -> Self {
         Self {
             usb_sender,
             usb_receiver,
             ble_device,
+            server: Mutex::new(None),
         }
     }
 
-    /// This runner will process the USB data and send it to BLE.
-    /// This should usually be run in a thread to not block the main thread.
-    /// TODO: Make sure that you can only serialize one possibly command per data as to not cause
-    /// incorrect deserialization
-    pub fn usb_to_ble_runner(&mut self) {
+    /// USB-BLE bridge runner that processes bidirectional data transfer in a separate thread.
+    ///
+    /// Responsibilities:
+    /// - Forwards USB commands/data to BLE device and vice versa
+    /// - Configures BLE services, characteristics, and plugin settings based on USB commands
+    /// - Handles BLE authentication and security requirements
+    /// - Sets up BLE callback functions for BLE -> USB communication
+    /// - Runs concurrently to avoid blocking the main thread
+    ///
+    /// TODO: Be smarter about decoding the usb data and sure that there are no collisions (meaning that the received data can be represented as > 1 commands)
+    pub fn runner(&mut self) {
         loop {
             match self.usb_receiver.receive() {
                 Ok(data) => {
@@ -49,6 +59,7 @@ impl PluginStateMachine {
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
                     }
+                    *self.server.lock().unwrap() = None;
                 }
                 Err(_) => {
                     // Handle error, possibly log or retry
@@ -59,13 +70,6 @@ impl PluginStateMachine {
                 }
             }
         }
-    }
-
-    /// This runner will process the BLE data and send it to USB.
-    /// Processing should only happen once the BLE device has been setup and connected
-    /// This should usually be run in a thread to as to not block the main thread
-    pub fn ble_to_usb_runner(&mut self) {
-        loop {}
     }
 }
 

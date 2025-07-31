@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use device_cherry::CdcAcmDevice;
 use esp32_nimble::{
     enums::{AuthReq, SecurityIOCap},
@@ -7,9 +5,9 @@ use esp32_nimble::{
     BLEAdvertisementData, BLEDevice, NimbleProperties,
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
-use protocol::io_types::{HostCommandConfigurePeripheral, PluginData};
-use uuid::{self, Uuid};
+use plugin_state_machine_std::PluginStateMachine;
 
+#[allow(dead_code)]
 fn get_device(name: &'static str) -> &'static mut BLEDevice {
     let device = BLEDevice::take();
     let ble_advertising = device.get_advertising();
@@ -77,8 +75,6 @@ fn main() {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    let _device = get_device("ESP32-GATT-Server");
-
     let usb_device = CdcAcmDevice::new()
         .init(0, ESP_USBD_BASE)
         .unwrap()
@@ -87,22 +83,10 @@ fn main() {
     std::thread::scope(|scope| {
         let usb_processors = usb_device.processors(scope, 20).unwrap();
 
-        scope.spawn(move || loop {
-            let received_data = usb_processors.1.receive().unwrap();
-            let data: Option<HostCommandConfigurePeripheral> = received_data.decode().ok();
-
-            log::info!("Data aquired: {:?}", data);
-        });
-        scope.spawn(move || loop {
-            usb_processors
-                .0
-                .send(PluginData {
-                    src_id: Uuid::from_u128(0x01),
-                    send_type: protocol::io_types::PluginDataSendType::Notify,
-                    data: b"Hello\n",
-                })
-                .ok();
-            std::thread::sleep(Duration::from_secs(1));
+        scope.spawn(move || {
+            let mut statemachine =
+                PluginStateMachine::new(usb_processors.0, usb_processors.1, BLEDevice::take());
+            statemachine.runner();
         });
     });
 }
