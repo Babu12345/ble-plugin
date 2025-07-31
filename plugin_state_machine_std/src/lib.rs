@@ -33,6 +33,9 @@ impl PluginStateMachine {
     }
 
     /// This runner will process the USB data and send it to BLE.
+    /// This should usually be run in a thread to not block the main thread.
+    /// TODO: Make sure that you can only serialize one possibly command per data as to not cause
+    /// incorrect deserialization
     pub fn usb_to_ble_runner(&mut self) {
         loop {
             match self.usb_receiver.receive() {
@@ -60,6 +63,7 @@ impl PluginStateMachine {
 
     /// This runner will process the BLE data and send it to USB.
     /// Processing should only happen once the BLE device has been setup and connected
+    /// This should usually be run in a thread to as to not block the main thread
     pub fn ble_to_usb_runner(&mut self) {
         loop {}
     }
