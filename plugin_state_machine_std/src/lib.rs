@@ -35,7 +35,7 @@ pub struct PluginStateMachine {
     usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
     usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
     ble_device: &'static mut BLEDevice,
-    server: Mutex<Option<&'static mut BLEServer>>,
+    server: Option<&'static mut BLEServer>,
     metadata: PluginStateMachineMetadata,
 }
 
@@ -53,7 +53,7 @@ impl PluginStateMachine {
             usb_sender,
             usb_receiver,
             ble_device,
-            server: Mutex::new(None),
+            server: None,
             metadata: Default::default(),
         }
     }
@@ -84,51 +84,64 @@ impl PluginStateMachine {
                             .resolve_rpa();
 
                         self.metadata.ble_name = Some(cmd.name);
-                        *self.server.lock().unwrap() = Some(self.ble_device.get_server());
+                        self.server = Some(self.ble_device.get_server());
+
+                        continue;
                     }
 
                     let maybe_cmd: Option<HostCommandConfigureService> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        continue;
                     }
 
                     let maybe_cmd: Option<HostCommandConfigureCharacteristic> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        continue;
                     }
 
                     let maybe_cmd: Option<HostCommandGetServiceInfo> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        continue;
                     }
 
                     let maybe_cmd: Option<HostCommandGetCharacteristicInfo> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        continue;
                     }
 
                     let maybe_cmd: Option<HostCommandStartAdvertisement> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         let advertisement = self.ble_device.get_advertising();
 
-                        if let Some(name) = self.metadata.ble_name.clone() {
-                            advertisement
-                                .lock()
-                                .set_data(
-                                    esp32_nimble::BLEAdvertisementData::new().name(name.as_str()),
-                                )
-                                .unwrap();
-                        } else {
-                            log::error!(
-                                "Error: Received advertisement command without peripheral configuration"
-                            );
-                            self.usb_sender.send(PluginConfigurationError::AdvertisementWithoutPeripheralConfiguration)
-                                .ok();
+                        match self.metadata.ble_name.clone() {
+                            Some(name) => {
+                                advertisement
+                                    .lock()
+                                    .set_data(
+                                        esp32_nimble::BLEAdvertisementData::new()
+                                            .name(name.as_str()),
+                                    )
+                                    .unwrap();
+                                advertisement.lock().start().unwrap();
+                                log::info!("Started BLE advertisement with name: {}", name);
+                            }
+                            None => {
+                                log::error!(
+                                    "Error: Received advertisement command without peripheral configuration"
+                                );
+                                self.usb_sender
+                                    .send(PluginConfigurationError::AdvertisementWithoutPeripheralConfiguration)
+                                    .ok();
+                            }
                         }
-                        log::info!("Received USB command: {:?}", cmd);
-                    }
 
-                    *self.server.lock().unwrap() = None;
+                        log::info!("Received USB command: {:?}", cmd);
+                        continue;
+                    }
                 }
                 Err(_) => {
                     // Handle error, possibly log or retry
