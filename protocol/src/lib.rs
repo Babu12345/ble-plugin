@@ -14,7 +14,8 @@ pub mod io_types;
 pub mod plugin;
 use io::*;
 
-const MAX_NAME_SIZE: usize = 30;
+/// This is the maximum size of the name of the peripheral
+pub const MAX_NAME_SIZE: usize = 30;
 /// Represents the default transfer size. For FS it's 8, 16, 32, or 64 bytes. For HS the max is 512 bytes
 pub const DEFAULT_PACKET_SIZE: usize = 256;
 

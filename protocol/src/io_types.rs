@@ -24,9 +24,25 @@ pub mod host {
         pub uuid: Uuid,
     }
 
-    /// Host command. Configure peripheral
+    /// Host command. Configure service
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandConfigureService {}
+
+    /// Host command. Configure characteristic
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    pub struct HostCommandConfigureCharacteristic {}
+
+    /// Host command. Get service info
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    pub struct HostCommandGetServiceInfo {}
+
+    /// Host command. Get characteristic info
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    pub struct HostCommandGetCharacteristicInfo {}
+
+    /// Host command. Get characteristic info
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    pub struct HostCommandStartAdvertisement {}
 }
 
 /// Plugin types
@@ -62,5 +78,21 @@ pub mod plugin {
         pub send_type: PluginDataSendType,
         /// Actual command type
         pub data: &'a [u8],
+    }
+
+    /// Represents the error that can occur during plugin configuration
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    #[repr(u8)]
+    pub enum PluginConfigurationError {
+        /// The peripheral name is too long
+        PeripheralNameTooLong,
+        /// The peripheral UUID is invalid
+        InvalidPeripheralUuid,
+        /// The service UUID is invalid
+        InvalidServiceUuid,
+        /// The characteristic UUID is invalid
+        InvalidCharacteristicUuid,
+        /// Advertisement without proper peripheral configuration
+        AdvertisementWithoutPeripheralConfiguration,
     }
 }
