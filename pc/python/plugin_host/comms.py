@@ -211,3 +211,244 @@ def usb_send_and_receive(device: USBDevice, command: Any, response_type: type) -
     """
     usb_send_command(device, command)
     return usb_receive_response(device, response_type)
+
+
+class USBHostDevice:
+    """
+    High-level USB Host Device class that automatically handles serialization/deserialization
+    of protocol commands and responses for communication with BLE plugin devices.
+    
+    This class provides a convenient interface for sending host commands and receiving
+    plugin responses with automatic protocol handling.
+    """
+    
+    def __init__(self, vendor_id: int = USB_VENDOR_ID, product_id: int = USB_PRODUCT_ID):
+        """
+        Initialize the USB Host Device
+        
+        Args:
+            vendor_id: USB vendor ID of the plugin device
+            product_id: USB product ID of the plugin device
+        """
+        self.usb_device = USBDevice(vendor_id, product_id)
+        self._connected = False
+    
+    def connect(self) -> bool:
+        """
+        Connect to the USB plugin device
+        
+        Returns:
+            bool: True if connection successful
+            
+        Raises:
+            USBCommunicationError: If connection fails
+        """
+        result = self.usb_device.connect()
+        self._connected = result
+        return result
+    
+    def disconnect(self) -> None:
+        """Disconnect from the USB plugin device"""
+        self.usb_device.disconnect()
+        self._connected = False
+    
+    def is_connected(self) -> bool:
+        """Check if device is connected"""
+        return self._connected
+    
+    # Host Command Methods
+    
+    def configure_peripheral(self, name: str, uuid: str) -> None:
+        """
+        Configure a peripheral device
+        
+        Args:
+            name: Peripheral name (max 32 characters)
+            uuid: Peripheral UUID as string
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandConfigurePeripheral(name=name, uuid=uuid)
+        usb_send_command(self.usb_device, cmd)
+    
+    def configure_service(self, uuid: str) -> None:
+        """
+        Configure a service
+        
+        Args:
+            uuid: Service UUID as string
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandConfigureService(uuid=uuid)
+        usb_send_command(self.usb_device, cmd)
+    
+    def configure_characteristic(self, uuid: str, service_uuid: str, properties: list) -> None:
+        """
+        Configure a characteristic
+        
+        Args:
+            uuid: Characteristic UUID as string
+            service_uuid: Service UUID this characteristic belongs to
+            properties: List of BLE properties
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandConfigureCharacteristic(
+            uuid=uuid,
+            service_uuid=service_uuid,
+            properties=properties
+        )
+        usb_send_command(self.usb_device, cmd)
+    
+    def configure_characteristic_read(self, uuid: str, service_uuid: str, value: bytes) -> None:
+        """
+        Configure characteristic read operation
+        
+        Args:
+            uuid: Characteristic UUID as string
+            service_uuid: Service UUID this characteristic belongs to
+            value: Read value as bytes (max 32 bytes)
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandConfigureCharacteristicRead(
+            uuid=uuid,
+            service_uuid=service_uuid,
+            value=value
+        )
+        usb_send_command(self.usb_device, cmd)
+    
+    def get_service_info(self, uuid: str) -> PluginServiceInfoResponse:
+        """
+        Get service information
+        
+        Args:
+            uuid: Service UUID as string
+            
+        Returns:
+            PluginServiceInfoResponse: Service information response
+            
+        Raises:
+            USBCommunicationError: If communication fails
+        """
+        cmd = HostCommandGetServiceInfo(uuid=uuid)
+        return usb_send_and_receive(self.usb_device, cmd, PluginServiceInfoResponse)
+    
+    def get_characteristic_info(self, characteristic_uuid: str, service_uuid: str) -> PluginCharacteristicInfoResponse:
+        """
+        Get characteristic information
+        
+        Args:
+            characteristic_uuid: Characteristic UUID as string
+            service_uuid: Service UUID this characteristic belongs to
+            
+        Returns:
+            PluginCharacteristicInfoResponse: Characteristic information response
+            
+        Raises:
+            USBCommunicationError: If communication fails
+        """
+        cmd = HostCommandGetCharacteristicInfo(
+            characteristic_uuid=characteristic_uuid,
+            service_uuid=service_uuid
+        )
+        return usb_send_and_receive(self.usb_device, cmd, PluginCharacteristicInfoResponse)
+    
+    def start_advertisement(self, allow_multi_connect: bool = False) -> None:
+        """
+        Start advertisement
+        
+        Args:
+            allow_multi_connect: Allow multiple central connections
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandStartAdvertisement(allow_multi_connect=allow_multi_connect)
+        usb_send_command(self.usb_device, cmd)
+    
+    def notify_characteristic_value(self, address: bytes, address_type: BluetoothAddressType, 
+                                  characteristic_uuid: str, service_uuid: str, value: bytes) -> None:
+        """
+        Notify characteristic value
+        
+        Args:
+            address: Device Address as 6-byte array
+            address_type: Address type
+            characteristic_uuid: Characteristic UUID as string
+            service_uuid: Service UUID this characteristic belongs to
+            value: Value to notify as bytes (max 32 bytes)
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandNotifyCharacteristicValue(
+            address=address,
+            address_type=address_type,
+            characteristic_uuid=characteristic_uuid,
+            service_uuid=service_uuid,
+            value=value
+        )
+        usb_send_command(self.usb_device, cmd)
+    
+    # Generic sending and receiving methods
+    
+    def send_command(self, command: Any) -> None:
+        """
+        Send any protocol command with automatic serialization
+        
+        Args:
+            command: Protocol command object
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        usb_send_command(self.usb_device, command)
+    
+    def receive_response(self, response_type: type) -> Any:
+        """
+        Receive and deserialize a protocol response
+        
+        Args:
+            response_type: Expected response type class
+            
+        Returns:
+            Any: Deserialized response object
+            
+        Raises:
+            USBCommunicationError: If receiving fails
+        """
+        return usb_receive_response(self.usb_device, response_type)
+    
+    def send_and_receive(self, command: Any, response_type: type) -> Any:
+        """
+        Send a command and receive response with automatic serialization/deserialization
+        
+        Args:
+            command: Protocol command object to send
+            response_type: Expected response type class
+            
+        Returns:
+            Any: Deserialized response object
+            
+        Raises:
+            USBCommunicationError: If communication fails
+        """
+        return usb_send_and_receive(self.usb_device, command, response_type)
+    
+    # Context manager support
+    
+    def __enter__(self):
+        """Context manager entry - automatically connect"""
+        self.connect()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - automatically disconnect"""
+        self.disconnect()
+        return False  # Don't suppress exceptions
