@@ -32,6 +32,25 @@ pub mod host {
         pub uuid: Uuid,
     }
 
+    /// Properties enumeration for BLE characteristics
+    #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+    #[repr(u8)]
+    pub enum BLEProperties {
+        /// Read property
+        READ= 0,
+        /// Write property
+        WRITE = 1,
+        /// Write without response property
+        WriteNoRsp = 2,
+        /// Notify property
+        NOTIFY = 3,
+        /// Indicate property
+        INDICATE = 4,
+    }
+
+    /// Maximum size for characteristic properties
+    pub const MAX_PROPERTIES: usize = 4;
+
     /// Host command. Configure characteristic
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandConfigureCharacteristic {
@@ -40,7 +59,7 @@ pub mod host {
         /// Service UUID this characteristic belongs to
         pub service_uuid: Uuid,
         /// Properties of the characteristic (read, write, notify, etc.)
-        pub properties: u8, // Use an enum for better clarity if needed
+        pub properties: heapless::Vec<BLEProperties, MAX_PROPERTIES>, // Assuming max 4 properties per characteristic
     }
 
     /// Host command. Configure characteristic read
@@ -63,7 +82,12 @@ pub mod host {
 
     /// Host command. Get characteristic info
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
-    pub struct HostCommandGetCharacteristicInfo {}
+    pub struct HostCommandGetCharacteristicInfo {
+        /// Characteristic UUID
+        pub characteristic_uuid: Uuid,
+        /// Service UUID this characteristic belongs to
+        pub service_uuid: Uuid,
+    }
 
     /// Host command. Get characteristic info
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
@@ -157,14 +181,30 @@ pub mod plugin {
         CharacteristicWithoutServiceConfiguration,
     }
 
+    /// Maximum characteritics per service
+    pub const MAX_CHARACTERISTICS_PER_SERVICE: usize = 16;
+
     /// Service information response
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
     pub struct PluginServiceInfoResponse {
         /// Service UUID
         pub service_uuid: Uuid,
         /// List of characteristic UUIDs in this service
-        pub characteristic_uuids: heapless::Vec<Uuid, 16>, // Assuming max 16 characteristics per service
+        pub characteristic_uuids: heapless::Vec<Uuid, MAX_CHARACTERISTICS_PER_SERVICE>, // Assuming max 16 characteristics per service
         /// Whether the service exists
+        pub exists: bool,
+    }
+
+    /// Characteristic information response
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    pub struct PluginCharacteristicInfoResponse {
+        /// Characteristic UUID
+        pub characteristic_uuid: Uuid,
+        /// Service UUID this characteristic belongs to
+        pub service_uuid: Uuid,
+        /// Properties of the characteristic (read, write, notify, etc.)
+        pub properties: heapless::Vec<BLEProperties, 4>,
+        /// Whether the characteristic exists
         pub exists: bool,
     }
 }

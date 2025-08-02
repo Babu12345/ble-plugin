@@ -10,7 +10,7 @@ pub enum Error {
     CustomError(&'static str),
     /// Reinitialization is attempted
     #[error(
-        "The usb device is already initialized. Please deinitialize or call once of the processors"
+        "The usb device is already initialized. Please deinitialize or call one of the processors"
     )]
     DeviceAlreadyInitialized,
     /// Device initialization failed

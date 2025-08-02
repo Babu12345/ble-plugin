@@ -9,6 +9,7 @@ use errors::StateMachineError;
 use esp_idf_svc::hal::task::block_on;
 use esp32_nimble::BLEAddress;
 use esp32_nimble::BLEAddressType;
+use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
 use protocol::io_types::HostCommandNotifyCharacteristicValue;
 use protocol::io_types::PluginData;
@@ -25,17 +26,19 @@ use heapless::String;
 use protocol::io_types::{
     HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
     HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
-    HostCommandStartAdvertisement, PluginConfigurationError, PluginServiceInfoResponse,
+    HostCommandStartAdvertisement, PluginCharacteristicInfoResponse, PluginConfigurationError, PluginServiceInfoResponse,
+    MAX_PROPERTIES, MAX_CHARACTERISTICS_PER_SERVICE,
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
+
 use std::sync::Arc;
 use uuid::Uuid;
 // This is used to store the metadata of the plugin state machine
 #[derive(Default)]
 struct PluginStateMachineMetadata {
     ble_name: Option<String<MAX_NAME_SIZE>>,
-    service_to_characteristic_uuids: HashMap<Uuid, heapless::Vec<Uuid, 16>>,
+    service_to_characteristic_uuids: HashMap<Uuid, heapless::Vec<(Uuid, heapless::Vec<BLEProperties, MAX_PROPERTIES>), MAX_CHARACTERISTICS_PER_SERVICE>>, // (UUID, properties)
 }
 
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
@@ -458,9 +461,10 @@ impl PluginStateMachine {
         cmd: HostCommandConfigureCharacteristic,
     ) -> Result<()> {
         log::info!(
-            "Configuring BLE characteristic with UUID: {} for service: {}",
+            "Configuring BLE characteristic with UUID: {} for service: {} with properties: {:?}",
             cmd.uuid,
-            cmd.service_uuid
+            cmd.service_uuid,
+            cmd.properties
         );
 
         // Get the service that this characteristic belongs to
@@ -483,19 +487,19 @@ impl PluginStateMachine {
 
         // Convert properties from u8 to NimbleProperties
         let mut nimble_properties = NimbleProperties::empty();
-        if cmd.properties & 0x02 != 0 {
+        if cmd.properties.contains(&BLEProperties::READ) {
             nimble_properties |= NimbleProperties::READ;
         }
-        if cmd.properties & 0x08 != 0 {
+        if cmd.properties.contains(&BLEProperties::WRITE) {
             nimble_properties |= NimbleProperties::WRITE;
         }
-        if cmd.properties & 0x04 != 0 {
+        if cmd.properties.contains(&BLEProperties::WriteNoRsp) {
             nimble_properties |= NimbleProperties::WRITE_NO_RSP;
         }
-        if cmd.properties & 0x10 != 0 {
+        if cmd.properties.contains(&BLEProperties::NOTIFY) {
             nimble_properties |= NimbleProperties::NOTIFY;
         }
-        if cmd.properties & 0x20 != 0 {
+        if cmd.properties.contains(&BLEProperties::INDICATE) {
             nimble_properties |= NimbleProperties::INDICATE;
         }
 
@@ -508,7 +512,7 @@ impl PluginStateMachine {
             .service_to_characteristic_uuids
             .entry(cmd.service_uuid)
             .or_default()
-            .push(cmd.uuid)
+            .push((cmd.uuid, cmd.properties))
             .map_err(|_| {
                 log::error!("Failed to store characteristic UUID: {}", cmd.uuid);
                 StateMachineError::CharacteristicUuidStorageError
@@ -571,9 +575,9 @@ impl PluginStateMachine {
         };
 
         log::info!(
-            "Successfully configured characteristic (UUID: {}) with properties: 0x{:02x}",
+            "Successfully configured BLE characteristic with UUID: {} for service: {}",
             cmd.uuid,
-            cmd.properties
+            cmd.service_uuid
         );
 
         Ok(())
@@ -586,7 +590,13 @@ impl PluginStateMachine {
             .metadata
             .service_to_characteristic_uuids
             .get(&cmd.uuid)
-            .cloned()
+            .map(|chars| {
+                let mut uuids = heapless::Vec::new();
+                for (uuid, _properties) in chars {
+                    uuids.push(*uuid).ok();
+                }
+                uuids
+            })
             .unwrap_or_else(|| {
                 log::warn!("No characteristics found for service {}", cmd.uuid);
                 heapless::Vec::new()
@@ -615,8 +625,54 @@ impl PluginStateMachine {
         &mut self,
         cmd: HostCommandGetCharacteristicInfo,
     ) -> Result<()> {
-        log::info!("Processing get characteristic info command: {:?}", cmd);
-        log::warn!("Get characteristic info not yet implemented");
+        log::info!(
+            "Processing get characteristic info command for characteristic {} in service {}",
+            cmd.characteristic_uuid,
+            cmd.service_uuid
+        );
+
+        // Look for the characteristic in the specified service
+        let (exists, properties) = self
+            .metadata
+            .service_to_characteristic_uuids
+            .get(&cmd.service_uuid)
+            .and_then(|chars| {
+                chars.iter().find_map(|(uuid, properties)| {
+                    if *uuid == cmd.characteristic_uuid {
+                        Some((true, properties.clone()))
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| {
+                log::warn!(
+                    "Characteristic {} not found in service {}",
+                    cmd.characteristic_uuid,
+                    cmd.service_uuid
+                );
+
+                (false, heapless::Vec::new())
+            });
+
+        let response = PluginCharacteristicInfoResponse {
+            characteristic_uuid: cmd.characteristic_uuid,
+            service_uuid: cmd.service_uuid,
+            properties,
+            exists,
+        };
+
+        // Send the response to USB
+        self.usb_sender.send(response).map_err(|_| {
+            log::error!("Failed to send characteristic info response to USB");
+            StateMachineError::UsbSendError
+        })?;
+
+        log::info!(
+            "Successfully sent characteristic info response for characteristic {} in service {}",
+            cmd.characteristic_uuid,
+            cmd.service_uuid
+        );
         Ok(())
     }
 
