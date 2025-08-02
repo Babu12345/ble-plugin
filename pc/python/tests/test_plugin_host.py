@@ -1,4 +1,4 @@
-import attrs2bin;
+import attrs2bin
 from enum import Enum
 from collections import namedtuple
 from plugin_host.types import *

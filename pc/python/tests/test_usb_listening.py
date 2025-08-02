@@ -22,26 +22,26 @@ from plugin_host.types import (
 class TestMessageDecoder:
     """Test suite for MessageDecoder class"""
     
-    # def test_decode_plugin_data(self) -> None:
-    #     """Test decoding PluginData messages"""
-    #     # Create a test PluginData message
-    #     original_message = PluginData(
-    #         src_id="test-peripheral",
-    #         data=b"test_data",
-    #         send_type=PluginDataSendType.Notify
-    #     )
-    #     
-    #     # Serialize it
-    #     serialized = serialize_command(original_message)
-    #     
-    #     # Decode it
-    #     decoded = MessageDecoder.decode_message(serialized)
-    #     
-    #     assert decoded is not None
-    #     assert isinstance(decoded, PluginData)
-    #     assert decoded.src_id == original_message.src_id
-    #     assert decoded.data == original_message.data
-    #     assert decoded.send_type == original_message.send_type
+    def test_decode_plugin_data(self) -> None:
+        """Test decoding PluginData messages"""
+        # Create a test PluginData message
+        original_message = PluginData(
+            src_id="test-peripheral",
+            data=b"test_data",
+            send_type=PluginDataSendType.Notify
+        )
+        
+        # Serialize it
+        serialized = serialize_command(original_message)
+        
+        # Decode it
+        decoded = MessageDecoder.decode_message(serialized)
+        
+        assert decoded is not None
+        assert isinstance(decoded, PluginData)
+        assert decoded.src_id == original_message.src_id
+        assert decoded.data == original_message.data
+        assert decoded.send_type == original_message.send_type
     
     def test_decode_service_info_response(self) -> None:
         """Test decoding PluginServiceInfoResponse messages"""
@@ -199,42 +199,42 @@ class TestUSBDataListener:
         
         assert stats_after_reset == initial_stats
     
-    # @patch('time.sleep')  # Speed up the test
-    # def test_listen_loop_with_valid_message(self, mock_sleep) -> None:
-    #     """Test the listening loop with valid messages"""
-    #     # Create a valid message
-    #     test_message = PluginData(
-    #         src_id="test",
-    #         data=b"test",
-    #         send_type=PluginDataSendType.Notify
-    #     )
-    #     serialized = serialize_command(test_message)
-    #     
-    #     # Mock USB device to return the message once, then timeout
-    #     self.mock_host.usb_device.receive_data.side_effect = [
-    #         serialized,  # First call returns valid data
-    #         USBCommunicationError("timeout")  # Second call times out
-    #     ]
-    #     
-    #     # Start listener
-    #     self.listener.start_listening()
-    #     
-    #     # Wait a bit for message processing
-    #     time.sleep(0.1)
-    #     
-    #     # Stop listener
-    #     self.listener.stop_listening()
-    #     
-    #     # Check that message was processed
-    #     stats = self.listener.get_stats()
-    #     assert stats['messages_received'] == 1
-    #     assert stats['decode_successes'] == 1
-    #     
-    #     # Check that message is in queue
-    #     assert self.listener.has_messages()
-    #     message_info = self.listener.get_message_nowait()
-    #     assert message_info['decoded'] is True
-    #     assert isinstance(message_info['message'], PluginData)
+    @patch('time.sleep')  # Speed up the test
+    def test_listen_loop_with_valid_message(self, mock_sleep) -> None:
+        """Test the listening loop with valid messages"""
+        # Create a valid message
+        test_message = PluginData(
+            src_id="test",
+            data=b"test",
+            send_type=PluginDataSendType.Notify
+        )
+        serialized = serialize_command(test_message)
+        
+        # Mock USB device to return the message once, then timeout
+        self.mock_host.usb_device.receive_data.side_effect = [
+            serialized,  # First call returns valid data
+            USBCommunicationError("timeout")  # Second call times out
+        ]
+        
+        # Start listener
+        self.listener.start_listening()
+        
+        # Wait a bit for message processing
+        time.sleep(0.1)
+        
+        # Stop listener
+        self.listener.stop_listening()
+        
+        # Check that message was processed
+        stats = self.listener.get_stats()
+        assert stats['messages_received'] == 1
+        assert stats['decode_successes'] == 1
+        
+        # Check that message is in queue
+        assert self.listener.has_messages()
+        message_info = self.listener.get_message_nowait()
+        assert message_info['decoded'] is True
+        assert isinstance(message_info['message'], PluginData)
 
 
 class TestUSBMessageHandler:
