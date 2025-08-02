@@ -83,10 +83,9 @@ fn main() {
     std::thread::scope(|scope| {
         let usb_processors = usb_device.processors(scope, 20).unwrap();
 
-        scope.spawn(move || {
-            let mut statemachine =
-                PluginStateMachine::new(usb_processors.0, usb_processors.1, BLEDevice::take());
-            statemachine.runner();
-        });
+        scope.spawn(
+            PluginStateMachine::new(usb_processors.0, usb_processors.1, BLEDevice::take())
+                .runner_fn(),
+        );
     });
 }

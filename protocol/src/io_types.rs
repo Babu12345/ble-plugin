@@ -11,6 +11,7 @@ pub mod host {
     use crate::IO;
     use crate::MAX_NAME_SIZE;
     use heapless::String;
+    use heapless::Vec;
     use protocol_io::HostIO;
     use serde::{Deserialize, Serialize};
     use uuid::Uuid;
@@ -50,7 +51,7 @@ pub mod host {
         /// Service UUID this characteristic belongs to
         pub service_uuid: Uuid,
         /// Read value
-        pub value: String<MAX_NAME_SIZE>,
+        pub value: Vec<u8, MAX_NAME_SIZE>,
     }
 
     /// Host command. Get service info
@@ -69,6 +70,35 @@ pub mod host {
     pub struct HostCommandStartAdvertisement {
         /// Allow multiple central connections
         pub allow_multi_connect: bool,
+    }
+
+    /// Bluetooth Device address type
+    #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq)]
+    #[repr(u8)]
+    pub enum BluetoothAddressType {
+        /// Public address
+        Public = 0,
+        /// Random address
+        Random = 1,
+        /// Public ID address
+        PublicID = 2,
+        /// Random ID address
+        RandomID = 3,
+    }
+
+    /// Host command. Notify characteristic value
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    pub struct HostCommandNotifyCharacteristicValue {
+        /// Device Address.
+        pub address: [u8; 6],
+        /// Address type
+        pub address_type: BluetoothAddressType,
+        /// Characteristic UUID
+        pub characteristic_uuid: Uuid,
+        /// Service UUID this characteristic belongs to
+        pub service_uuid: Uuid,
+        /// Value to notify
+        pub value: Vec<u8, MAX_NAME_SIZE>,
     }
 }
 

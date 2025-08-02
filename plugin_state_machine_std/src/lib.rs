@@ -7,12 +7,16 @@ pub mod errors;
 use errors::Result;
 use errors::StateMachineError;
 use esp_idf_svc::hal::task::block_on;
+use esp32_nimble::BLEAddress;
+use esp32_nimble::BLEAddressType;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
+use protocol::io_types::HostCommandNotifyCharacteristicValue;
 use protocol::io_types::PluginData;
 
 use std::str::FromStr;
 use std::time::Duration;
 
+use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
 use esp32_nimble::utilities::BleUuid;
 use esp32_nimble::{BLEDevice, BLEServer, BLEService, NimbleProperties};
@@ -24,9 +28,8 @@ use protocol::io_types::{
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
-
+use std::sync::Arc;
 use uuid::Uuid;
-
 // This is used to store the metadata of the plugin state machine
 #[derive(Default)]
 struct PluginStateMachineMetadata {
@@ -35,7 +38,7 @@ struct PluginStateMachineMetadata {
 
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
 pub struct PluginStateMachine {
-    usb_sender: std::sync::Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
+    usb_sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
     usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
     ble_device: &'static mut BLEDevice,
     server: Option<&'static mut BLEServer>,
@@ -53,11 +56,18 @@ impl PluginStateMachine {
         ble_device: &'static mut BLEDevice,
     ) -> Self {
         Self {
-            usb_sender: std::sync::Arc::new(usb_sender),
+            usb_sender: Arc::new(usb_sender),
             usb_receiver,
             ble_device,
             server: None,
             metadata: Default::default(),
+        }
+    }
+
+    /// Returns a closure that can be used to run the state machine in a separate thread.
+    pub fn runner_fn(mut self) -> impl FnMut() {
+        move || {
+            self.runner();
         }
     }
 
@@ -71,7 +81,7 @@ impl PluginStateMachine {
     /// - Runs concurrently to avoid blocking the main thread
     ///
     /// TODO: Be smarter about decoding the usb data and sure that there are no collisions (meaning that the received data can be represented as > 1 commands)
-    pub fn runner(&mut self) {
+    fn runner(&mut self) {
         log::info!("Starting USB-BLE bridge runner");
         loop {
             match self.usb_receiver.receive() {
@@ -114,6 +124,19 @@ impl PluginStateMachine {
                         if let Err(e) = self.handle_configure_characteristic_read(cmd) {
                             log::error!(
                                 "Failed to handle configure characteristic command: {:?}",
+                                e
+                            );
+                        }
+                        continue;
+                    }
+
+                    let maybe_cmd: Option<HostCommandNotifyCharacteristicValue> =
+                        data.decode().ok();
+                    if let Some(cmd) = maybe_cmd {
+                        log::info!("Received USB command: {:?}", cmd);
+                        if let Err(e) = self.handle_notify_characteristic_value(cmd) {
+                            log::error!(
+                                "Failed to handle notify characteristic value command: {:?}",
                                 e
                             );
                         }
@@ -222,9 +245,9 @@ impl PluginStateMachine {
             Some(server) => {
                 server.on_connect(move |server, desc| {
                     log::info!("Client connected: {:?}", desc);
+
                     if cmd.allow_multi_connect
-                        && server.connected_count()
-                            < (esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS as _)
+                        && server.connected_count() < (CONFIG_BT_NIMBLE_MAX_CONNECTIONS as usize)
                     {
                         log::info!("Multi-connect support: start advertising");
                         if let Err(e) = advertisement.lock().start() {
@@ -235,7 +258,8 @@ impl PluginStateMachine {
                         }
                     }
                 });
-                server.on_disconnect(|_desc, reason| {
+
+                server.on_disconnect(move |_desc, reason| {
                     log::info!("Client disconnected ({:?})", reason);
                 });
                 log::info!("Successfully configured BLE server callbacks");
@@ -280,7 +304,7 @@ impl PluginStateMachine {
     pub fn get_service(
         &self,
         service_uuid: Uuid,
-    ) -> Option<&std::sync::Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>> {
+    ) -> Option<&Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>> {
         match self.server.as_ref() {
             Some(server) => block_on(
                 server.get_service(BleUuid::from_uuid128_string(&service_uuid.to_string()).ok()?),
@@ -289,12 +313,110 @@ impl PluginStateMachine {
         }
     }
 
+    fn handle_notify_characteristic_value(
+        &mut self,
+        cmd: HostCommandNotifyCharacteristicValue,
+    ) -> Result<()> {
+        log::info!(
+            "Notifying characteristic {} in service {} with {} bytes",
+            cmd.characteristic_uuid,
+            cmd.service_uuid,
+            cmd.value.len()
+        );
+
+        // Get the service that this characteristic belongs to
+        let service = self
+            .get_service(cmd.service_uuid)
+            .ok_or_else(|| {
+                log::error!(
+                    "Service with UUID {} not found - service must be configured first",
+                    cmd.service_uuid
+                );
+                self.usb_sender
+                    .send(PluginConfigurationError::CharacteristicWithoutServiceConfiguration)
+                    .ok();
+                StateMachineError::InvalidBleConfiguration
+            })?
+            .lock();
+
+        // Get the characteristic
+        let characteristic = block_on(service.get_characteristic(
+            BleUuid::from_uuid128_string(&cmd.characteristic_uuid.to_string()).map_err(|e| {
+                log::error!("Failed to convert characteristic UUID to BleUuid: {:?}", e);
+                self.usb_sender
+                    .send(PluginConfigurationError::InvalidCharacteristicUuid)
+                    .ok();
+                StateMachineError::InvalidBleConfiguration
+            })?,
+        ))
+        .ok_or_else(|| {
+            log::error!(
+                "Characteristic with UUID {} not found in service {}",
+                cmd.characteristic_uuid,
+                cmd.service_uuid
+            );
+            StateMachineError::InvalidBleConfiguration
+        })?;
+
+        // Get the characteristic
+        let characteristic_lock = characteristic.lock();
+
+        match self.server.as_ref() {
+            Some(server) => {
+                let conn = server
+                    .connections()
+                    .find(|desc| {
+                        desc.address()
+                            == BLEAddress::from_be_bytes(
+                                cmd.address,
+                                Self::bluetooth_address_type_to_ble_address_type(cmd.address_type),
+                            )
+                    })
+                    .ok_or_else(|| {
+                        log::error!(
+                            "Connection with address {:?} and type {:?} not found",
+                            cmd.address,
+                            cmd.address_type
+                        );
+                        StateMachineError::InvalidBleConfiguration
+                    })?;
+
+                characteristic_lock
+                    .notify_with(cmd.value.as_slice(), conn.conn_handle())
+                    .map_err(|e| {
+                        log::error!(
+                            "Failed to notify characteristic {} in service {}: {:?}",
+                            cmd.characteristic_uuid,
+                            cmd.service_uuid,
+                            e
+                        );
+                        StateMachineError::CharacteristicNotificationError
+                    })?;
+            }
+            None => {
+                log::error!("BLE server not initialized - peripheral must be configured first");
+                self.usb_sender
+                    .send(PluginConfigurationError::ServiceWithoutPeripheralConfiguration)
+                    .map_err(|_| StateMachineError::UsbSendError)?;
+                return Err(StateMachineError::ServerNotInitialized);
+            }
+        }
+
+        log::info!(
+            "Successfully notified characteristic {} with value: {:?}",
+            cmd.characteristic_uuid,
+            cmd.value.as_slice()
+        );
+
+        Ok(())
+    }
+
     fn handle_configure_characteristic_read(
         &mut self,
         cmd: HostCommandConfigureCharacteristicRead,
     ) -> Result<()> {
         log::info!(
-            "Configuring BLE characteristic with UUID: {} for service: {} with read value: {}",
+            "Configuring BLE characteristic with UUID: {} for service: {} with read value: {:?}",
             cmd.uuid,
             cmd.service_uuid,
             cmd.value
@@ -326,7 +448,7 @@ impl PluginStateMachine {
         ))
         .ok_or_else(|| StateMachineError::InvalidBleConfiguration)?;
 
-        characteristic.lock().set_value(cmd.value.as_bytes());
+        characteristic.lock().set_value(cmd.value.as_slice());
         Ok(())
     }
 
@@ -385,7 +507,7 @@ impl PluginStateMachine {
             true => {
                 let char_uuid_write = cmd.uuid;
                 let service_uuid_write = cmd.service_uuid;
-                let usb_sender = std::sync::Arc::clone(&self.usb_sender);
+                let usb_sender = Arc::clone(&self.usb_sender);
                 characteristic.lock().on_write(move |args| {
                     log::info!(
                         "BLE write received for characteristic {} in service {}: {:?} bytes",
@@ -413,7 +535,7 @@ impl PluginStateMachine {
 
         match nimble_properties.contains(NimbleProperties::READ) {
             true => {
-                let usb_sender = std::sync::Arc::clone(&self.usb_sender);
+                let usb_sender = Arc::clone(&self.usb_sender);
                 characteristic.lock().on_read(move |characteristics, _| {
                     log::info!(
                         "BLE read requested for characteristic {} in service {}",
@@ -459,5 +581,16 @@ impl PluginStateMachine {
         log::info!("Processing get characteristic info command: {:?}", cmd);
         log::warn!("Get characteristic info not yet implemented");
         Ok(())
+    }
+
+    fn bluetooth_address_type_to_ble_address_type(
+        address_type: protocol::io_types::BluetoothAddressType,
+    ) -> BLEAddressType {
+        match address_type {
+            protocol::io_types::BluetoothAddressType::Public => BLEAddressType::Public,
+            protocol::io_types::BluetoothAddressType::Random => BLEAddressType::Random,
+            protocol::io_types::BluetoothAddressType::PublicID => BLEAddressType::PublicID,
+            protocol::io_types::BluetoothAddressType::RandomID => BLEAddressType::RandomID,
+        }
     }
 }

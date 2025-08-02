@@ -13,6 +13,8 @@ pub enum StateMachineError {
     UsbSendError,
     /// Error related to USB processing.
     DataProcessingError(&'static str),
+    /// Error related to BLE notification
+    CharacteristicNotificationError,
 }
 
 /// Result type for the plugin state machine operations.
