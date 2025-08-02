@@ -58,7 +58,11 @@ fn main() -> anyhow::Result<()> {
                 name: String::from_str("Portrait").unwrap(),
             })
             .ok();
-            io.0.send(HostCommandConfigureService {}).ok();
+            io.0.send(HostCommandConfigureService {
+                uuid: unsafe { random_uuid() },
+                name: String::from_str("Portrait Service").unwrap(),
+            })
+            .ok();
 
             std::thread::sleep(Duration::from_millis(20));
         });

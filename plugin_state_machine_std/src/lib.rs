@@ -10,7 +10,8 @@ use errors::StateMachineError;
 use std::time::Duration;
 
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
-use esp32_nimble::{BLEDevice, BLEServer};
+use esp32_nimble::utilities::BleUuid;
+use esp32_nimble::{BLEDevice, BLEServer, BLEService};
 use heapless::String;
 use protocol::io_types::{
     HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
@@ -19,11 +20,14 @@ use protocol::io_types::{
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 // This is used to store the metadata of the plugin state machine
 #[derive(Default)]
 struct PluginStateMachineMetadata {
     ble_name: Option<String<MAX_NAME_SIZE>>,
+    services: HashMap<Uuid, std::sync::Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>>,
 }
 
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
@@ -172,7 +176,7 @@ impl PluginStateMachine {
             cmd.allow_multi_connect
         );
 
-        match self.metadata.ble_name.take() {
+        match self.metadata.ble_name.as_ref() {
             Some(name) => {
                 advertisement
                     .lock()
@@ -198,7 +202,7 @@ impl PluginStateMachine {
             }
         }
 
-        match self.server.take() {
+        match self.server.as_mut() {
             Some(server) => {
                 server.on_connect(move |server, desc| {
                     log::info!("Client connected: {:?}", desc);
@@ -229,9 +233,50 @@ impl PluginStateMachine {
     }
 
     fn handle_configure_service(&mut self, cmd: HostCommandConfigureService) -> Result<()> {
-        log::info!("Processing configure service command: {:?}", cmd);
-        log::warn!("Service configuration not yet implemented");
+        log::info!(
+            "Configuring BLE service with UUID: {} and name: '{}'",
+            cmd.uuid,
+            cmd.name
+        );
+
+        let server = match self.server.as_mut() {
+            Some(server) => server,
+            None => {
+                log::error!("BLE server not initialized - peripheral must be configured first");
+                self.usb_sender
+                    .send(PluginConfigurationError::ServiceWithoutPeripheralConfiguration)
+                    .map_err(|_| StateMachineError::UsbSendError)?;
+                return Err(StateMachineError::ServerNotInitialized);
+            }
+        };
+
+        // Convert UUID to BleUuid
+        let ble_uuid = BleUuid::from_uuid128_string(&cmd.uuid.to_string()).map_err(|e| {
+            log::error!("Failed to convert UUID to BleUuid: {:?}", e);
+            StateMachineError::InvalidBleConfiguration
+        })?;
+
+        // Create the BLE service
+        let service = server.create_service(ble_uuid);
+
+        // Store the service for later characteristic creation
+        self.metadata.services.insert(cmd.uuid, service);
+
+        log::info!(
+            "Successfully created BLE service '{}' with UUID: {}",
+            cmd.name,
+            cmd.uuid
+        );
+
         Ok(())
+    }
+
+    /// Get a stored BLE service by UUID for characteristic creation
+    pub fn get_service(
+        &self,
+        service_uuid: &Uuid,
+    ) -> Option<&std::sync::Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>> {
+        self.metadata.services.get(service_uuid)
     }
 
     fn handle_configure_characteristic(

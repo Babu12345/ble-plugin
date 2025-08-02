@@ -26,7 +26,12 @@ pub mod host {
 
     /// Host command. Configure service
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
-    pub struct HostCommandConfigureService {}
+    pub struct HostCommandConfigureService {
+        /// Service UUID
+        pub uuid: Uuid,
+        /// Service name for identification
+        pub name: String<MAX_NAME_SIZE>,
+    }
 
     /// Host command. Configure characteristic
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
@@ -100,5 +105,9 @@ pub mod plugin {
         InvalidCharacteristicUuid,
         /// Advertisement without proper peripheral configuration
         AdvertisementWithoutPeripheralConfiguration,
+        /// Service without proper peripheral configuration
+        ServiceWithoutPeripheralConfiguration,
+        /// Characteristic without proper service configuration
+        CharacteristicWithoutServiceConfiguration,
     }
 }
