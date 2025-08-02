@@ -284,7 +284,53 @@ impl PluginStateMachine {
         cmd: HostCommandConfigureCharacteristic,
     ) -> Result<()> {
         log::info!("Processing configure characteristic command: {:?}", cmd);
-        log::warn!("Characteristic configuration not yet implemented");
+        
+        // Note: The current HostCommandConfigureCharacteristic struct is empty.
+        // This implementation assumes it will be extended with required fields:
+        // - characteristic_uuid: Uuid
+        // - service_uuid: Uuid  
+        // - properties: characteristic properties (read, write, notify, etc.)
+        // - name: optional name for identification
+        
+        // For now, we'll create a placeholder implementation that demonstrates
+        // the callback pattern for sending data to USB
+        
+        log::warn!("HostCommandConfigureCharacteristic struct is currently empty - this is a placeholder implementation");
+        log::info!("Characteristic callbacks will send data to USB when characteristic operations occur");
+        
+        // TODO: Once HostCommandConfigureCharacteristic is properly defined with fields:
+        // 1. Get the service using cmd.service_uuid and self.get_service()
+        // 2. Create characteristic with cmd.characteristic_uuid and properties
+        // 3. Set up read/write/notify callbacks that use self.usb_sender
+        // 4. Store characteristic reference for later use
+        
+        // Example of how callbacks should work (pseudo-code for when struct has fields):
+        /*
+        let service = self.get_service(&cmd.service_uuid)
+            .ok_or(StateMachineError::InvalidBleConfiguration)?;
+            
+        let ble_uuid = BleUuid::from_uuid128_string(&cmd.characteristic_uuid.to_string())
+            .map_err(|_| StateMachineError::InvalidBleConfiguration)?;
+            
+        let characteristic = service.lock().create_characteristic(ble_uuid, properties);
+        
+        // Set up callbacks that send data to USB
+        let usb_sender = self.usb_sender.clone();
+        characteristic.on_read(move |_| {
+            // Send read event to USB
+            if let Err(e) = usb_sender.send(read_event_data) {
+                log::error!("Failed to send read event to USB: {:?}", e);
+            }
+        });
+        
+        characteristic.on_write(move |data| {
+            // Send write event to USB  
+            if let Err(e) = usb_sender.send(write_event_data) {
+                log::error!("Failed to send write event to USB: {:?}", e);
+            }
+        });
+        */
+        
         Ok(())
     }
 
