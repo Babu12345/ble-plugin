@@ -165,8 +165,8 @@ class PluginData:
         data: Actual command data as bytes
     """
     src_id: str
-    send_type: PluginDataSendType
     data: bytes
+    send_type: PluginDataSendType
 
 class PluginConfigurationError(Enum):
     """Represents errors that can occur during plugin configuration.

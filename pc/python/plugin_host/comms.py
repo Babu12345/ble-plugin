@@ -2,7 +2,10 @@ import attrs2bin
 import usb.core
 import usb.util
 import struct
-from typing import Any
+import threading
+import time
+import queue
+from typing import Any, Optional
 from plugin_host.types import *
 
 # Communicate between the host (PC) and the usb plugin
@@ -452,3 +455,331 @@ class USBHostDevice:
         """Context manager exit - automatically disconnect"""
         self.disconnect()
         return False  # Don't suppress exceptions
+
+
+class MessageDecoder:
+    """Utility class to decode incoming plugin messages by trying different message types"""
+    
+    # List of possible plugin response/data types to try when decoding
+    # Order matters - more specific types first
+    PLUGIN_MESSAGE_TYPES = [
+        PluginServiceInfoResponse,
+        PluginCharacteristicInfoResponse,
+        PluginConfigurationError,
+        PluginData,  # Most generic, try last
+    ]
+    
+    @classmethod
+    def decode_message(cls, raw_data: bytes) -> Optional[Any]:
+        """
+        Try to decode raw bytes as different plugin message types
+        
+        Args:
+            raw_data: Raw bytes received from USB device
+            
+        Returns:
+            Decoded message object or None if decoding failed
+        """
+        for message_type in cls.PLUGIN_MESSAGE_TYPES:
+            try:
+                decoded = deserialize_response(raw_data, message_type)
+                return decoded
+            except Exception:
+                # Try next message type
+                continue
+        
+        return None
+    
+    @classmethod
+    def get_message_type_name(cls, message: Any) -> str:
+        """Get human-readable name for message type"""
+        return type(message).__name__
+
+
+class USBDataListener:
+    """
+    Thread-safe USB data listener that continuously monitors for incoming data
+    
+    This class runs a background thread that listens for incoming USB data,
+    automatically decodes message types, and queues them for processing.
+    """
+    
+    def __init__(self, host_device: USBHostDevice, receive_timeout_ms: int = 500):
+        """
+        Initialize the USB data listener
+        
+        Args:
+            host_device: Connected USBHostDevice instance
+            receive_timeout_ms: Timeout for USB receive operations in milliseconds
+        """
+        self.host_device = host_device
+        self.receive_timeout_ms = receive_timeout_ms
+        self.message_queue = queue.Queue()
+        self.running = False
+        self.listener_thread = None
+        self.decoder = MessageDecoder()
+        self._stats = {
+            'messages_received': 0,
+            'decode_successes': 0,
+            'decode_failures': 0,
+            'usb_errors': 0
+        }
+    
+    def start_listening(self) -> bool:
+        """
+        Start the listener thread
+        
+        Returns:
+            bool: True if started successfully, False if already running
+        """
+        if self.running:
+            return False
+        
+        if not self.host_device.is_connected():
+            raise USBCommunicationError("Host device must be connected before starting listener")
+        
+        self.running = True
+        self.listener_thread = threading.Thread(target=self._listen_loop, daemon=True)
+        self.listener_thread.start()
+        return True
+    
+    def stop_listening(self) -> bool:
+        """
+        Stop the listener thread
+        
+        Returns:
+            bool: True if stopped successfully
+        """
+        if not self.running:
+            return False
+        
+        self.running = False
+        if self.listener_thread:
+            self.listener_thread.join(timeout=2.0)
+            self.listener_thread = None
+        return True
+    
+    def is_listening(self) -> bool:
+        """Check if the listener is currently running"""
+        return self.running and self.listener_thread is not None
+    
+    def _listen_loop(self):
+        """Main listening loop (runs in separate thread)"""
+        while self.running:
+            try:
+                # Try to receive raw data (with timeout to allow thread exit)
+                raw_data = self.host_device.usb_device.receive_data(
+                    timeout=self.receive_timeout_ms
+                )
+                
+                if raw_data and len(raw_data) > 0:
+                    self._stats['messages_received'] += 1
+                    
+                    # Try to decode the message
+                    decoded_message = self.decoder.decode_message(raw_data)
+                    
+                    if decoded_message:
+                        self._stats['decode_successes'] += 1
+                        message_info = {
+                            'timestamp': time.time(),
+                            'message_type': self.decoder.get_message_type_name(decoded_message),
+                            'message': decoded_message,
+                            'raw_data': raw_data,
+                            'decoded': True
+                        }
+                    else:
+                        self._stats['decode_failures'] += 1
+                        message_info = {
+                            'timestamp': time.time(),
+                            'message_type': 'Unknown',
+                            'message': None,
+                            'raw_data': raw_data,
+                            'decoded': False
+                        }
+                    
+                    self.message_queue.put(message_info)
+                
+            except USBCommunicationError as e:
+                if "timeout" not in str(e).lower():
+                    self._stats['usb_errors'] += 1
+                # Continue listening even on timeouts and some errors
+                time.sleep(0.01)
+            except Exception as e:
+                self._stats['usb_errors'] += 1
+                # Log unexpected errors but continue
+                time.sleep(0.1)
+    
+    def get_message(self, timeout: Optional[float] = None) -> Optional[dict]:
+        """
+        Get next message from queue (blocking)
+        
+        Args:
+            timeout: Maximum time to wait for message (None = block indefinitely)
+            
+        Returns:
+            Message info dict or None if timeout
+        """
+        try:
+            return self.message_queue.get(timeout=timeout)
+        except queue.Empty:
+            return None
+    
+    def get_message_nowait(self) -> Optional[dict]:
+        """
+        Get next message from queue (non-blocking)
+        
+        Returns:
+            Message info dict or None if no messages available
+        """
+        try:
+            return self.message_queue.get_nowait()
+        except queue.Empty:
+            return None
+    
+    def has_messages(self) -> bool:
+        """Check if there are pending messages in the queue"""
+        return not self.message_queue.empty()
+    
+    def clear_messages(self) -> int:
+        """
+        Clear all pending messages from the queue
+        
+        Returns:
+            int: Number of messages cleared
+        """
+        count = 0
+        while not self.message_queue.empty():
+            try:
+                self.message_queue.get_nowait()
+                count += 1
+            except queue.Empty:
+                break
+        return count
+    
+    def get_stats(self) -> dict:
+        """
+        Get listener statistics
+        
+        Returns:
+            dict: Statistics including message counts and error rates
+        """
+        stats = self._stats.copy()
+        stats['queue_size'] = self.message_queue.qsize()
+        stats['is_listening'] = self.is_listening()
+        return stats
+    
+    def reset_stats(self):
+        """Reset all statistics counters"""
+        self._stats = {
+            'messages_received': 0,
+            'decode_successes': 0,
+            'decode_failures': 0,
+            'usb_errors': 0
+        }
+
+
+class USBMessageHandler:
+    """
+    Advanced message handler with callback support and filtering
+    
+    This class provides a framework for handling different types of USB messages
+    with custom callbacks, filtering, and statistics tracking.
+    """
+    
+    def __init__(self):
+        """Initialize the message handler"""
+        self.message_callbacks = {}
+        self.message_filters = {}
+        self.message_stats = {}
+        self.global_callback = None
+    
+    def register_callback(self, message_type: type, callback) -> None:
+        """
+        Register a callback for specific message type
+        
+        Args:
+            message_type: Type of message to handle (e.g., PluginData)
+            callback: Function to call when message is received
+                     Signature: callback(message, message_info)
+        """
+        self.message_callbacks[message_type] = callback
+    
+    def register_filter(self, message_type: type, filter_func) -> None:
+        """
+        Register a filter for specific message type
+        
+        Args:
+            message_type: Type of message to filter
+            filter_func: Function that returns True if message should be processed
+                        Signature: filter_func(message, message_info) -> bool
+        """
+        self.message_filters[message_type] = filter_func
+    
+    def set_global_callback(self, callback) -> None:
+        """
+        Set a global callback that receives all messages
+        
+        Args:
+            callback: Function to call for all messages
+                     Signature: callback(message, message_info)
+        """
+        self.global_callback = callback
+    
+    def handle_message(self, message_info: dict) -> bool:
+        """
+        Handle incoming message with callbacks and filters
+        
+        Args:
+            message_info: Message info dict from USBDataListener
+            
+        Returns:
+            bool: True if message was processed, False if filtered out
+        """
+        if not message_info.get('decoded', False):
+            # Handle unknown messages
+            if self.global_callback:
+                try:
+                    self.global_callback(None, message_info)
+                except Exception:
+                    pass
+            return False
+        
+        message = message_info['message']
+        message_type = type(message)
+        type_name = message_info['message_type']
+        
+        # Update statistics
+        self.message_stats[type_name] = self.message_stats.get(type_name, 0) + 1
+        
+        # Apply filter if registered
+        if message_type in self.message_filters:
+            try:
+                if not self.message_filters[message_type](message, message_info):
+                    return False  # Message filtered out
+            except Exception:
+                return False  # Filter error, skip message
+        
+        # Call global callback first
+        if self.global_callback:
+            try:
+                self.global_callback(message, message_info)
+            except Exception:
+                pass  # Don't let global callback errors stop specific handlers
+        
+        # Call specific callback if registered
+        if message_type in self.message_callbacks:
+            try:
+                self.message_callbacks[message_type](message, message_info)
+                return True
+            except Exception:
+                return False  # Callback error
+        
+        return True  # Message processed (even if no specific callback)
+    
+    def get_stats(self) -> dict:
+        """Get message processing statistics"""
+        return self.message_stats.copy()
+    
+    def reset_stats(self) -> None:
+        """Reset all statistics"""
+        self.message_stats.clear()
