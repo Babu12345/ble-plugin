@@ -29,8 +29,6 @@ pub mod host {
     pub struct HostCommandConfigureService {
         /// Service UUID
         pub uuid: Uuid,
-        /// Service name for identification
-        pub name: String<MAX_NAME_SIZE>,
     }
 
     /// Host command. Configure characteristic
@@ -42,8 +40,17 @@ pub mod host {
         pub service_uuid: Uuid,
         /// Properties of the characteristic (read, write, notify, etc.)
         pub properties: u8, // Use an enum for better clarity if needed
-        /// Optional name for identification
-        pub name: String<MAX_NAME_SIZE>,
+    }
+
+    /// Host command. Configure characteristic read
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    pub struct HostCommandConfigureCharacteristicRead {
+        /// Characteristic UUID
+        pub uuid: Uuid,
+        /// Service UUID this characteristic belongs to
+        pub service_uuid: Uuid,
+        /// Read value
+        pub value: String<MAX_NAME_SIZE>,
     }
 
     /// Host command. Get service info

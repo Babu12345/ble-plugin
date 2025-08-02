@@ -6,12 +6,16 @@ pub mod errors;
 
 use errors::Result;
 use errors::StateMachineError;
+use esp_idf_svc::hal::task::block_on;
+use protocol::io_types::HostCommandConfigureCharacteristicRead;
+use protocol::io_types::PluginData;
 
+use std::str::FromStr;
 use std::time::Duration;
 
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
 use esp32_nimble::utilities::BleUuid;
-use esp32_nimble::{BLEDevice, BLEServer, BLEService};
+use esp32_nimble::{BLEDevice, BLEServer, BLEService, NimbleProperties};
 use heapless::String;
 use protocol::io_types::{
     HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
@@ -20,19 +24,18 @@ use protocol::io_types::{
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
-use std::collections::HashMap;
+
 use uuid::Uuid;
 
 // This is used to store the metadata of the plugin state machine
 #[derive(Default)]
 struct PluginStateMachineMetadata {
     ble_name: Option<String<MAX_NAME_SIZE>>,
-    services: HashMap<Uuid, std::sync::Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>>,
 }
 
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
 pub struct PluginStateMachine {
-    usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
+    usb_sender: std::sync::Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
     usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
     ble_device: &'static mut BLEDevice,
     server: Option<&'static mut BLEServer>,
@@ -50,7 +53,7 @@ impl PluginStateMachine {
         ble_device: &'static mut BLEDevice,
     ) -> Self {
         Self {
-            usb_sender,
+            usb_sender: std::sync::Arc::new(usb_sender),
             usb_receiver,
             ble_device,
             server: None,
@@ -96,6 +99,19 @@ impl PluginStateMachine {
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
                         if let Err(e) = self.handle_configure_characteristic(cmd) {
+                            log::error!(
+                                "Failed to handle configure characteristic command: {:?}",
+                                e
+                            );
+                        }
+                        continue;
+                    }
+
+                    let maybe_cmd: Option<HostCommandConfigureCharacteristicRead> =
+                        data.decode().ok();
+                    if let Some(cmd) = maybe_cmd {
+                        log::info!("Received USB command: {:?}", cmd);
+                        if let Err(e) = self.handle_configure_characteristic_read(cmd) {
                             log::error!(
                                 "Failed to handle configure characteristic command: {:?}",
                                 e
@@ -233,11 +249,7 @@ impl PluginStateMachine {
     }
 
     fn handle_configure_service(&mut self, cmd: HostCommandConfigureService) -> Result<()> {
-        log::info!(
-            "Configuring BLE service with UUID: {} and name: '{}'",
-            cmd.uuid,
-            cmd.name
-        );
+        log::info!("Configuring BLE service with UUID: {}", cmd.uuid,);
 
         let server = match self.server.as_mut() {
             Some(server) => server,
@@ -257,16 +269,9 @@ impl PluginStateMachine {
         })?;
 
         // Create the BLE service
-        let service = server.create_service(ble_uuid);
+        server.create_service(ble_uuid).lock();
 
-        // Store the service for later characteristic creation
-        self.metadata.services.insert(cmd.uuid, service);
-
-        log::info!(
-            "Successfully created BLE service '{}' with UUID: {}",
-            cmd.name,
-            cmd.uuid
-        );
+        log::info!("Successfully created BLE service with UUID: {}", cmd.uuid);
 
         Ok(())
     }
@@ -274,63 +279,170 @@ impl PluginStateMachine {
     /// Get a stored BLE service by UUID for characteristic creation
     pub fn get_service(
         &self,
-        service_uuid: &Uuid,
+        service_uuid: Uuid,
     ) -> Option<&std::sync::Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>> {
-        self.metadata.services.get(service_uuid)
+        match self.server.as_ref() {
+            Some(server) => block_on(
+                server.get_service(BleUuid::from_uuid128_string(&service_uuid.to_string()).ok()?),
+            ),
+            None => None,
+        }
+    }
+
+    fn handle_configure_characteristic_read(
+        &mut self,
+        cmd: HostCommandConfigureCharacteristicRead,
+    ) -> Result<()> {
+        log::info!(
+            "Configuring BLE characteristic with UUID: {} for service: {} with read value: {}",
+            cmd.uuid,
+            cmd.service_uuid,
+            cmd.value
+        );
+
+        // Get the service that this characteristic belongs to
+        let service = self
+            .get_service(cmd.service_uuid)
+            .ok_or_else(|| {
+                log::error!(
+                    "Service with UUID {} not found - service must be configured first",
+                    cmd.service_uuid
+                );
+                self.usb_sender
+                    .send(PluginConfigurationError::CharacteristicWithoutServiceConfiguration)
+                    .ok();
+                StateMachineError::InvalidBleConfiguration
+            })?
+            .lock();
+
+        let characteristic = block_on(service.get_characteristic(
+            BleUuid::from_uuid128_string(&cmd.uuid.to_string()).map_err(|e| {
+                log::error!("Failed to convert characteristic UUID to BleUuid: {:?}", e);
+                self.usb_sender
+                    .send(PluginConfigurationError::InvalidCharacteristicUuid)
+                    .ok();
+                StateMachineError::InvalidBleConfiguration
+            })?,
+        ))
+        .ok_or_else(|| StateMachineError::InvalidBleConfiguration)?;
+
+        characteristic.lock().set_value(cmd.value.as_bytes());
+        Ok(())
     }
 
     fn handle_configure_characteristic(
         &mut self,
         cmd: HostCommandConfigureCharacteristic,
     ) -> Result<()> {
-        log::info!("Processing configure characteristic command: {:?}", cmd);
-        
-        // Note: The current HostCommandConfigureCharacteristic struct is empty.
-        // This implementation assumes it will be extended with required fields:
-        // - characteristic_uuid: Uuid
-        // - service_uuid: Uuid  
-        // - properties: characteristic properties (read, write, notify, etc.)
-        // - name: optional name for identification
-        
-        // For now, we'll create a placeholder implementation that demonstrates
-        // the callback pattern for sending data to USB
-        
-        log::warn!("HostCommandConfigureCharacteristic struct is currently empty - this is a placeholder implementation");
-        log::info!("Characteristic callbacks will send data to USB when characteristic operations occur");
-        
-        // TODO: Once HostCommandConfigureCharacteristic is properly defined with fields:
-        // 1. Get the service using cmd.service_uuid and self.get_service()
-        // 2. Create characteristic with cmd.characteristic_uuid and properties
-        // 3. Set up read/write/notify callbacks that use self.usb_sender
-        // 4. Store characteristic reference for later use
-        
-        // Example of how callbacks should work (pseudo-code for when struct has fields):
-        /*
-        let service = self.get_service(&cmd.service_uuid)
-            .ok_or(StateMachineError::InvalidBleConfiguration)?;
-            
-        let ble_uuid = BleUuid::from_uuid128_string(&cmd.characteristic_uuid.to_string())
-            .map_err(|_| StateMachineError::InvalidBleConfiguration)?;
-            
-        let characteristic = service.lock().create_characteristic(ble_uuid, properties);
-        
-        // Set up callbacks that send data to USB
-        let usb_sender = self.usb_sender.clone();
-        characteristic.on_read(move |_| {
-            // Send read event to USB
-            if let Err(e) = usb_sender.send(read_event_data) {
-                log::error!("Failed to send read event to USB: {:?}", e);
+        log::info!(
+            "Configuring BLE characteristic with UUID: {} for service: {}",
+            cmd.uuid,
+            cmd.service_uuid
+        );
+
+        // Get the service that this characteristic belongs to
+        let service = self.get_service(cmd.service_uuid).ok_or_else(|| {
+            log::error!(
+                "Service with UUID {} not found - service must be configured first",
+                cmd.service_uuid
+            );
+            self.usb_sender
+                .send(PluginConfigurationError::CharacteristicWithoutServiceConfiguration)
+                .ok();
+            StateMachineError::InvalidBleConfiguration
+        })?;
+
+        // Convert UUID to BleUuid
+        let ble_uuid = BleUuid::from_uuid128_string(&cmd.uuid.to_string()).map_err(|e| {
+            log::error!("Failed to convert characteristic UUID to BleUuid: {:?}", e);
+            StateMachineError::InvalidBleConfiguration
+        })?;
+
+        // Convert properties from u8 to NimbleProperties
+        let mut nimble_properties = NimbleProperties::empty();
+        if cmd.properties & 0x02 != 0 {
+            nimble_properties |= NimbleProperties::READ;
+        }
+        if cmd.properties & 0x08 != 0 {
+            nimble_properties |= NimbleProperties::WRITE;
+        }
+        if cmd.properties & 0x04 != 0 {
+            nimble_properties |= NimbleProperties::WRITE_NO_RSP;
+        }
+        if cmd.properties & 0x10 != 0 {
+            nimble_properties |= NimbleProperties::NOTIFY;
+        }
+        if cmd.properties & 0x20 != 0 {
+            nimble_properties |= NimbleProperties::INDICATE;
+        }
+
+        // Create the characteristic
+        let characteristic = service
+            .lock()
+            .create_characteristic(ble_uuid, nimble_properties);
+
+        match nimble_properties.contains(NimbleProperties::WRITE) {
+            true => {
+                let char_uuid_write = cmd.uuid;
+                let service_uuid_write = cmd.service_uuid;
+                let usb_sender = std::sync::Arc::clone(&self.usb_sender);
+                characteristic.lock().on_write(move |args| {
+                    log::info!(
+                        "BLE write received for characteristic {} in service {}: {:?} bytes",
+                        char_uuid_write,
+                        service_uuid_write,
+                        args.current_data()
+                    );
+                    usb_sender
+                        .send(PluginData {
+                            src_id: char_uuid_write, // This should be the peripheral ID
+                            send_type: protocol::io_types::PluginDataSendType::Write,
+                            data: args.current_data(),
+                        })
+                        .map_err(|_| StateMachineError::UsbSendError)
+                        .ok();
+                });
             }
-        });
-        
-        characteristic.on_write(move |data| {
-            // Send write event to USB  
-            if let Err(e) = usb_sender.send(write_event_data) {
-                log::error!("Failed to send write event to USB: {:?}", e);
+            false => {
+                log::warn!(
+                    "Characteristic {} does not support WRITE property",
+                    cmd.uuid
+                );
             }
-        });
-        */
-        
+        }
+
+        match nimble_properties.contains(NimbleProperties::READ) {
+            true => {
+                let usb_sender = std::sync::Arc::clone(&self.usb_sender);
+                characteristic.lock().on_read(move |characteristics, _| {
+                    log::info!(
+                        "BLE read requested for characteristic {} in service {}",
+                        cmd.uuid,
+                        cmd.service_uuid
+                    );
+
+                    usb_sender
+                        .send(PluginData {
+                            src_id: Uuid::from_str(characteristics.uuid().to_string().as_str())
+                                .unwrap_or(Uuid::nil()),
+                            send_type: protocol::io_types::PluginDataSendType::Read,
+                            data: &[],
+                        })
+                        .map_err(|_| StateMachineError::UsbSendError)
+                        .ok();
+                });
+            }
+            false => {
+                log::warn!("Characteristic {} does not support READ property", cmd.uuid);
+            }
+        };
+
+        log::info!(
+            "Successfully configured characteristic (UUID: {}) with properties: 0x{:02x}",
+            cmd.uuid,
+            cmd.properties
+        );
+
         Ok(())
     }
 

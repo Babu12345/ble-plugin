@@ -60,7 +60,6 @@ fn main() -> anyhow::Result<()> {
             .ok();
             io.0.send(HostCommandConfigureService {
                 uuid: unsafe { random_uuid() },
-                name: String::from_str("Portrait Service").unwrap(),
             })
             .ok();
 
