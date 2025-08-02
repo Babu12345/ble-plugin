@@ -9,7 +9,7 @@ def test_type_serialization() -> None:
     deserialized = attrs2bin.deserialize(serialized, HostCommandConfigurePeripheral)
     assert cmd == deserialized, "Peripheral configuration serialization"
 
-    cmd = HostCommandConfigureService()
+    cmd = HostCommandConfigureService(uuid="456")
     serialized = attrs2bin.serialize(cmd)
     deserialized = attrs2bin.deserialize(serialized, HostCommandConfigureService)
     assert cmd == deserialized, "Host service configuration deserialization"
@@ -19,7 +19,16 @@ def test_type_serialization() -> None:
     deserialized = attrs2bin.deserialize(serialized, PluginDataSendType)    
     assert enum is deserialized, "Host data send type enum deserialization"
 
-    data = PluginData(src_id="123",data=bytes([0,1,2]), send_type=PluginDataSendType.Notify)
+    data = PluginData(send_type=PluginDataSendType.Notify, src_id="123",data=bytes([0,1,2]))
     serialized = attrs2bin.serialize(data)
     deserialized = attrs2bin.deserialize(serialized, PluginData)
+    assert data == deserialized, "Host data transmission"
+
+    data = PluginServiceInfoResponse(
+        service_uuid="789",
+        exists=True,
+        characteristic_uuids= ["char1", "char2"],
+    )
+    serialized = attrs2bin.serialize(data)
+    deserialized = attrs2bin.deserialize(serialized, PluginServiceInfoResponse)
     assert data == deserialized, "Host data transmission"

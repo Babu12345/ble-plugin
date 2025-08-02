@@ -32,12 +32,12 @@ pub mod host {
         pub uuid: Uuid,
     }
 
-    /// Properties enumeration for BLE characteristics
+    /// Properties enumeration for BLE characteristics.
     #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
     #[repr(u8)]
     pub enum BLEProperties {
         /// Read property
-        READ= 0,
+        READ = 0,
         /// Write property
         WRITE = 1,
         /// Write without response property
