@@ -74,18 +74,7 @@ impl PluginStateMachine {
                 Ok(data) => {
                     let maybe_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
-                        log::info!("Received USB command: {:?}", cmd);
-
-                        self.ble_device
-                            .security()
-                            .set_auth(AuthReq::all())
-                            .set_passkey(123456)
-                            .set_io_cap(SecurityIOCap::DisplayOnly)
-                            .resolve_rpa();
-
-                        self.metadata.ble_name = Some(cmd.name);
-                        self.server = Some(self.ble_device.get_server());
-
+                        self.handle_configure_peripheral(cmd);
                         continue;
                     }
 
@@ -115,31 +104,7 @@ impl PluginStateMachine {
 
                     let maybe_cmd: Option<HostCommandStartAdvertisement> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
-                        let advertisement = self.ble_device.get_advertising();
-
-                        match self.metadata.ble_name.clone() {
-                            Some(name) => {
-                                advertisement
-                                    .lock()
-                                    .set_data(
-                                        esp32_nimble::BLEAdvertisementData::new()
-                                            .name(name.as_str()),
-                                    )
-                                    .unwrap();
-                                advertisement.lock().start().unwrap();
-                                log::info!("Started BLE advertisement with name: {}", name);
-                            }
-                            None => {
-                                log::error!(
-                                    "Error: Received advertisement command without peripheral configuration"
-                                );
-                                self.usb_sender
-                                    .send(PluginConfigurationError::AdvertisementWithoutPeripheralConfiguration)
-                                    .ok();
-                            }
-                        }
-
-                        log::info!("Received USB command: {:?}", cmd);
+                        self.handle_start_advertisement(cmd);
                         continue;
                     }
                 }
@@ -150,6 +115,66 @@ impl PluginStateMachine {
                     std::thread::sleep(Duration::from_millis(100));
                     continue;
                 }
+            }
+        }
+    }
+
+    fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) {
+        log::info!("Received USB command: {:?}", cmd);
+
+        self.ble_device
+            .security()
+            .set_auth(AuthReq::all())
+            .set_passkey(123456)
+            .set_io_cap(SecurityIOCap::DisplayOnly)
+            .resolve_rpa();
+
+        self.metadata.ble_name = Some(cmd.name);
+        let server = self.ble_device.get_server();
+        self.server = Some(server);
+    }
+
+    fn handle_start_advertisement(&mut self, cmd: HostCommandStartAdvertisement) {
+        let advertisement = self.ble_device.get_advertising();
+        log::info!("Received USB command: {:?}", cmd);
+
+        match self.metadata.ble_name.take() {
+            Some(name) => {
+                advertisement
+                    .lock()
+                    .set_data(esp32_nimble::BLEAdvertisementData::new().name(name.as_str()))
+                    .unwrap();
+                advertisement.lock().start().unwrap();
+                log::info!("Started BLE advertisement with name: {name}");
+            }
+            None => {
+                log::error!(
+                    "Error: Received advertisement command without peripheral configuration"
+                );
+                self.usb_sender
+                    .send(PluginConfigurationError::AdvertisementWithoutPeripheralConfiguration)
+                    .ok();
+            }
+        }
+
+        match self.server.take() {
+            Some(server) => {
+                server.on_connect(move |server, desc| {
+                    log::info!("Client connected: {:?}", desc);
+                    if cmd.allow_multi_connect
+                        && server.connected_count()
+                            < (esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS as _)
+                    {
+                        log::info!("Multi-connect support: start advertising");
+                        advertisement.lock().start().unwrap();
+                    }
+                });
+                server.on_disconnect(|_desc, reason| {
+                    log::info!("Client disconnected ({:?})", reason);
+                });
+            }
+            None => {
+                log::error!("Error: Server not initialized for BLE device");
             }
         }
     }

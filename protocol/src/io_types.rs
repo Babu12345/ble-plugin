@@ -34,7 +34,10 @@ pub mod host {
 
     /// Host command. Get service info
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
-    pub struct HostCommandGetServiceInfo {}
+    pub struct HostCommandGetServiceInfo {
+        /// Service UUID
+        pub uuid: Uuid,
+    }
 
     /// Host command. Get characteristic info
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
@@ -42,7 +45,10 @@ pub mod host {
 
     /// Host command. Get characteristic info
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
-    pub struct HostCommandStartAdvertisement {}
+    pub struct HostCommandStartAdvertisement {
+        /// Allow multiple central connections
+        pub allow_multi_connect: bool,
+    }
 }
 
 /// Plugin types
