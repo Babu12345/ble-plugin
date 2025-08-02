@@ -156,4 +156,15 @@ pub mod plugin {
         /// Characteristic without proper service configuration
         CharacteristicWithoutServiceConfiguration,
     }
+
+    /// Service information response
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    pub struct PluginServiceInfoResponse {
+        /// Service UUID
+        pub service_uuid: Uuid,
+        /// List of characteristic UUIDs in this service
+        pub characteristic_uuids: heapless::Vec<Uuid, 16>, // Assuming max 16 characteristics per service
+        /// Whether the service exists
+        pub exists: bool,
+    }
 }

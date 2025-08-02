@@ -13,6 +13,7 @@ use protocol::io_types::HostCommandConfigureCharacteristicRead;
 use protocol::io_types::HostCommandNotifyCharacteristicValue;
 use protocol::io_types::PluginData;
 
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -24,7 +25,7 @@ use heapless::String;
 use protocol::io_types::{
     HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
     HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
-    HostCommandStartAdvertisement, PluginConfigurationError,
+    HostCommandStartAdvertisement, PluginConfigurationError, PluginServiceInfoResponse,
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
@@ -34,6 +35,7 @@ use uuid::Uuid;
 #[derive(Default)]
 struct PluginStateMachineMetadata {
     ble_name: Option<String<MAX_NAME_SIZE>>,
+    service_to_characteristic_uuids: HashMap<Uuid, heapless::Vec<Uuid, 16>>,
 }
 
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
@@ -202,8 +204,7 @@ impl PluginStateMachine {
             .resolve_rpa();
 
         self.metadata.ble_name = Some(cmd.name.clone());
-        let server = self.ble_device.get_server();
-        self.server = Some(server);
+        self.server = Some(self.ble_device.get_server());
         log::info!("Successfully configured peripheral '{}'", cmd.name);
         Ok(())
     }
@@ -503,6 +504,16 @@ impl PluginStateMachine {
             .lock()
             .create_characteristic(ble_uuid, nimble_properties);
 
+        self.metadata
+            .service_to_characteristic_uuids
+            .entry(cmd.service_uuid)
+            .or_default()
+            .push(cmd.uuid)
+            .map_err(|_| {
+                log::error!("Failed to store characteristic UUID: {}", cmd.uuid);
+                StateMachineError::CharacteristicUuidStorageError
+            })?;
+
         match nimble_properties.contains(NimbleProperties::WRITE) {
             true => {
                 let char_uuid_write = cmd.uuid;
@@ -569,8 +580,34 @@ impl PluginStateMachine {
     }
 
     fn handle_get_service_info(&mut self, cmd: HostCommandGetServiceInfo) -> Result<()> {
-        log::info!("Processing get service info command: {:?}", cmd);
-        log::warn!("Get service info not yet implemented");
+        log::info!("Processing get service info command for UUID: {}", cmd.uuid);
+
+        let characteristic_uuids = self
+            .metadata
+            .service_to_characteristic_uuids
+            .get(&cmd.uuid)
+            .cloned()
+            .unwrap_or_else(|| {
+                log::warn!("No characteristics found for service {}", cmd.uuid);
+                heapless::Vec::new()
+            });
+
+        let response = PluginServiceInfoResponse {
+            service_uuid: cmd.uuid,
+            characteristic_uuids,
+            exists: self.get_service(cmd.uuid).is_some(),
+        };
+
+        // Send the response to USB
+        self.usb_sender.send(response).map_err(|_| {
+            log::error!("Failed to send service info response to USB");
+            StateMachineError::UsbSendError
+        })?;
+
+        log::info!(
+            "Successfully sent service info response for UUID: {}",
+            cmd.uuid
+        );
         Ok(())
     }
 

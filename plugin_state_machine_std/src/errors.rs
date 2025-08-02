@@ -15,6 +15,8 @@ pub enum StateMachineError {
     DataProcessingError(&'static str),
     /// Error related to BLE notification
     CharacteristicNotificationError,
+    /// Error related to BLE characteristic UUID storage.
+    CharacteristicUuidStorageError,
 }
 
 /// Result type for the plugin state machine operations.
