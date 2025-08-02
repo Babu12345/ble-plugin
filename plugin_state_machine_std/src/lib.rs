@@ -2,7 +2,11 @@
 //! This library is used to to contain the complete processing logic and state machine to facilitate data/command transfer from BLE
 //! to usb and visa versa.
 
-use std::sync::Mutex;
+pub mod errors;
+
+use errors::Result;
+use errors::StateMachineError;
+
 use std::time::Duration;
 
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
@@ -22,14 +26,6 @@ struct PluginStateMachineMetadata {
     ble_name: Option<String<MAX_NAME_SIZE>>,
 }
 
-impl PluginStateMachineMetadata {
-    /// Create a new instance of the metadata
-    pub fn new(ble_name: String<MAX_NAME_SIZE>) -> Self {
-        Self {
-            ble_name: Some(ble_name),
-        }
-    }
-}
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
 pub struct PluginStateMachine {
     usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
@@ -69,49 +65,77 @@ impl PluginStateMachine {
     ///
     /// TODO: Be smarter about decoding the usb data and sure that there are no collisions (meaning that the received data can be represented as > 1 commands)
     pub fn runner(&mut self) {
+        log::info!("Starting USB-BLE bridge runner");
         loop {
             match self.usb_receiver.receive() {
                 Ok(data) => {
+                    log::debug!("Received USB data: {} bytes", data.size());
+
                     let maybe_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
-                        self.handle_configure_peripheral(cmd);
+                        if let Err(e) = self.handle_configure_peripheral(cmd) {
+                            log::error!("Failed to handle configure peripheral command: {:?}", e);
+                        }
                         continue;
                     }
 
                     let maybe_cmd: Option<HostCommandConfigureService> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        if let Err(e) = self.handle_configure_service(cmd) {
+                            log::error!("Failed to handle configure service command: {:?}", e);
+                        }
                         continue;
                     }
 
                     let maybe_cmd: Option<HostCommandConfigureCharacteristic> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        if let Err(e) = self.handle_configure_characteristic(cmd) {
+                            log::error!(
+                                "Failed to handle configure characteristic command: {:?}",
+                                e
+                            );
+                        }
                         continue;
                     }
 
                     let maybe_cmd: Option<HostCommandGetServiceInfo> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        if let Err(e) = self.handle_get_service_info(cmd) {
+                            log::error!("Failed to handle get service info command: {:?}", e);
+                        }
                         continue;
                     }
 
                     let maybe_cmd: Option<HostCommandGetCharacteristicInfo> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
                         log::info!("Received USB command: {:?}", cmd);
+                        if let Err(e) = self.handle_get_characteristic_info(cmd) {
+                            log::error!(
+                                "Failed to handle get characteristic info command: {:?}",
+                                e
+                            );
+                        }
                         continue;
                     }
 
                     let maybe_cmd: Option<HostCommandStartAdvertisement> = data.decode().ok();
                     if let Some(cmd) = maybe_cmd {
-                        self.handle_start_advertisement(cmd);
+                        if let Err(e) = self.handle_start_advertisement(cmd) {
+                            log::error!("Failed to handle start advertisement command: {:?}", e);
+                        }
                         continue;
                     }
+
+                    log::warn!(
+                        "Received unrecognized command data from USB, raw data length: {} bytes",
+                        data.size()
+                    );
                 }
-                Err(_) => {
-                    // Handle error, possibly log or retry
-                    log::error!("Failed to receive data from USB");
-                    // Add in a sleep so to not take up too much CPU time if there are repeated errors
+                Err(e) => {
+                    log::error!("Failed to receive data from USB: {:?}", e);
                     std::thread::sleep(Duration::from_millis(100));
                     continue;
                 }
@@ -119,9 +143,14 @@ impl PluginStateMachine {
         }
     }
 
-    fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) {
-        log::info!("Received USB command: {:?}", cmd);
+    fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) -> Result<()> {
+        log::info!(
+            "Configuring peripheral with name: '{}', UUID: {}",
+            cmd.name,
+            cmd.uuid
+        );
 
+        log::debug!("Setting up BLE security configuration");
         self.ble_device
             .security()
             .set_auth(AuthReq::all())
@@ -129,22 +158,33 @@ impl PluginStateMachine {
             .set_io_cap(SecurityIOCap::DisplayOnly)
             .resolve_rpa();
 
-        self.metadata.ble_name = Some(cmd.name);
+        self.metadata.ble_name = Some(cmd.name.clone());
         let server = self.ble_device.get_server();
         self.server = Some(server);
+        log::info!("Successfully configured peripheral '{}'", cmd.name);
+        Ok(())
     }
 
-    fn handle_start_advertisement(&mut self, cmd: HostCommandStartAdvertisement) {
+    fn handle_start_advertisement(&mut self, cmd: HostCommandStartAdvertisement) -> Result<()> {
         let advertisement = self.ble_device.get_advertising();
-        log::info!("Received USB command: {:?}", cmd);
+        log::info!(
+            "Starting BLE advertisement, multi-connect: {}",
+            cmd.allow_multi_connect
+        );
 
         match self.metadata.ble_name.take() {
             Some(name) => {
                 advertisement
                     .lock()
                     .set_data(esp32_nimble::BLEAdvertisementData::new().name(name.as_str()))
-                    .unwrap();
-                advertisement.lock().start().unwrap();
+                    .map_err(|e| {
+                        log::error!("Failed to set advertisement data: {:?}", e);
+                        StateMachineError::AdvertisementError("Failed to start advertisement")
+                    })?;
+                advertisement.lock().start().map_err(|e| {
+                    log::error!("Failed to start advertisement: {:?}", e);
+                    StateMachineError::AdvertisementError("Failed to start advertisement")
+                })?;
                 log::info!("Started BLE advertisement with name: {name}");
             }
             None => {
@@ -153,7 +193,8 @@ impl PluginStateMachine {
                 );
                 self.usb_sender
                     .send(PluginConfigurationError::AdvertisementWithoutPeripheralConfiguration)
-                    .ok();
+                    .map_err(|_| StateMachineError::UsbSendError)?;
+                return Err(StateMachineError::InvalidBleConfiguration);
             }
         }
 
@@ -166,16 +207,54 @@ impl PluginStateMachine {
                             < (esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS as _)
                     {
                         log::info!("Multi-connect support: start advertising");
-                        advertisement.lock().start().unwrap();
+                        if let Err(e) = advertisement.lock().start() {
+                            log::error!(
+                                "Failed to restart advertisement for multi-connect: {:?}",
+                                e
+                            );
+                        }
                     }
                 });
                 server.on_disconnect(|_desc, reason| {
                     log::info!("Client disconnected ({:?})", reason);
                 });
+                log::info!("Successfully configured BLE server callbacks");
             }
             None => {
                 log::error!("Error: Server not initialized for BLE device");
+                return Err(StateMachineError::ServerNotInitialized);
             }
         }
+        Ok(())
+    }
+
+    fn handle_configure_service(&mut self, cmd: HostCommandConfigureService) -> Result<()> {
+        log::info!("Processing configure service command: {:?}", cmd);
+        log::warn!("Service configuration not yet implemented");
+        Ok(())
+    }
+
+    fn handle_configure_characteristic(
+        &mut self,
+        cmd: HostCommandConfigureCharacteristic,
+    ) -> Result<()> {
+        log::info!("Processing configure characteristic command: {:?}", cmd);
+        log::warn!("Characteristic configuration not yet implemented");
+        Ok(())
+    }
+
+    fn handle_get_service_info(&mut self, cmd: HostCommandGetServiceInfo) -> Result<()> {
+        log::info!("Processing get service info command: {:?}", cmd);
+        log::warn!("Get service info not yet implemented");
+        Ok(())
+    }
+
+    fn handle_get_characteristic_info(
+        &mut self,
+        cmd: HostCommandGetCharacteristicInfo,
+    ) -> Result<()> {
+        log::info!("Processing get characteristic info command: {:?}", cmd);
+        log::warn!("Get characteristic info not yet implemented");
+        Ok(())
     }
 }

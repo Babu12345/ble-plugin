@@ -32,6 +32,11 @@ mod common {
         pub fn decode<T: HostIO<'a>>(&'a self) -> Result<T> {
             T::from_bytes(&self.0)
         }
+
+        /// Get the size of the data
+        pub fn size(&self) -> usize {
+            self.0.len()
+        }
     }
 }
 
