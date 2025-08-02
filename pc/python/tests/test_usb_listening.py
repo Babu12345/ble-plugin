@@ -13,10 +13,7 @@ from plugin_host.comms import (
 from plugin_host.types import (
     PluginData,
     PluginServiceInfoResponse,
-    PluginCharacteristicInfoResponse,
-    PluginConfigurationError,
     PluginDataSendType,
-    BLEProperties
 )
 
 class TestMessageDecoder:
