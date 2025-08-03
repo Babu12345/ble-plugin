@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use askama::Template;
 use clap::Parser;
-use codegen::{ProtocolDef, ConstantDef, EnumDef, StructDef};
+use codegen::{ConstantDef, ProtocolDef};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -18,11 +18,11 @@ struct Args {
     /// Path to the protocol library source
     #[arg(short, long, default_value = "../protocol/src")]
     protocol_path: PathBuf,
-    
+
     /// Output directory for generated Python code
     #[arg(short, long, default_value = "../pc/python/plugin_host")]
     output_dir: PathBuf,
-    
+
     /// Validate existing Python code against Rust definitions
     #[arg(short, long)]
     validate: bool,
@@ -43,6 +43,7 @@ struct TemplateConstant {
     name: String,
     value: String,
     doc_comment: String,
+    #[allow(dead_code)]
     rust_type: String,
 }
 
@@ -60,6 +61,7 @@ struct TemplateEnum {
     name: String,
     variants: Vec<TemplateEnumVariant>,
     doc_comment: String,
+    #[allow(dead_code)]
     repr: String, // Always present, empty if None
     is_int_enum: bool, // True if enum has integer values (not string values)
 }
@@ -68,9 +70,11 @@ struct TemplateEnum {
 #[derive(Clone)]
 struct TemplateStructField {
     name: String,
+    #[allow(dead_code)]
     rust_type: String,
     python_type: String,
     doc_comment: String,
+    #[allow(dead_code)]
     is_optional: bool,
 }
 
@@ -111,16 +115,16 @@ fn parse_protocol_library(protocol_path: &PathBuf) -> Result<ProtocolDef> {
     let io_path = protocol_path.join("io.rs");
     let io_source = fs::read_to_string(&io_path)
         .with_context(|| format!("Failed to read {}", io_path.display()))?;
-    
+
     let io_def = codegen::parse_rust_source(&io_source)?;
     all_constants.extend(io_def.constants);
     all_enums.extend(io_def.enums);
 
     // Parse lib.rs for additional constants
-    let lib_path = protocol_path.join("lib.rs");  
+    let lib_path = protocol_path.join("lib.rs");
     let lib_source = fs::read_to_string(&lib_path)
         .with_context(|| format!("Failed to read {}", lib_path.display()))?;
-    
+
     let lib_def = codegen::parse_rust_source(&lib_source)?;
     all_constants.extend(lib_def.constants);
 
@@ -128,7 +132,7 @@ fn parse_protocol_library(protocol_path: &PathBuf) -> Result<ProtocolDef> {
     let io_types_path = protocol_path.join("io_types.rs");
     let io_types_source = fs::read_to_string(&io_types_path)
         .with_context(|| format!("Failed to read {}", io_types_path.display()))?;
-    
+
     let io_types_def = codegen::parse_rust_source(&io_types_source)?;
     all_enums.extend(io_types_def.enums);
     all_structs.extend(io_types_def.structs);
@@ -158,12 +162,18 @@ fn parse_protocol_library(protocol_path: &PathBuf) -> Result<ProtocolDef> {
 
     // Filter to only include relevant constants and remove duplicates
     let mut seen_names = std::collections::HashSet::new();
-    let filtered_constants: Vec<ConstantDef> = all_constants.into_iter()
+    let filtered_constants: Vec<ConstantDef> = all_constants
+        .into_iter()
         .filter(|c| {
-            let is_relevant = matches!(c.name.as_str(), 
-                "MESSAGE_MAGIC" | "MAX_NAME_SIZE" | "DEFAULT_PACKET_SIZE" | 
-                "MAX_PROPERTIES" | "MAX_CHARACTERISTICS_PER_SERVICE");
-            
+            let is_relevant = matches!(
+                c.name.as_str(),
+                "MESSAGE_MAGIC"
+                    | "MAX_NAME_SIZE"
+                    | "DEFAULT_PACKET_SIZE"
+                    | "MAX_PROPERTIES"
+                    | "MAX_CHARACTERISTICS_PER_SERVICE"
+            );
+
             let is_new = seen_names.insert(c.name.clone());
             is_relevant && is_new
         })
@@ -172,7 +182,9 @@ fn parse_protocol_library(protocol_path: &PathBuf) -> Result<ProtocolDef> {
     // Map MessageTypeId enum values to struct names for Python generation
     let mut enhanced_structs = all_structs;
     if let Some(message_type_enum) = all_enums.iter().find(|e| e.name == "MessageTypeId") {
-        let type_id_map: HashMap<String, String> = message_type_enum.variants.iter()
+        let type_id_map: HashMap<String, String> = message_type_enum
+            .variants
+            .iter()
             .map(|v| (v.name.clone(), v.name.clone()))
             .collect();
 
@@ -197,30 +209,39 @@ fn generate_python_code(output_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
         .with_context(|| format!("Failed to create output directory {}", output_dir.display()))?;
 
     // Convert to template-friendly structures
-    let template_constants: Vec<TemplateConstant> = protocol_def.constants.iter()
+    let template_constants: Vec<TemplateConstant> = protocol_def
+        .constants
+        .iter()
         .map(|c| TemplateConstant {
             name: c.name.clone(),
             value: c.value.clone(),
             doc_comment: c.doc_comment.clone(),
             rust_type: c.rust_type.clone(),
-        }).collect();
+        })
+        .collect();
 
-    let template_enums: Vec<TemplateEnum> = protocol_def.enums.iter()
+    let template_enums: Vec<TemplateEnum> = protocol_def
+        .enums
+        .iter()
         .map(|e| {
-            let variants: Vec<TemplateEnumVariant> = e.variants.iter().map(|v| TemplateEnumVariant {
-                name: v.name.clone(),
-                value: v.value.clone().unwrap_or_default(),
-                doc_comment: v.doc_comment.clone(),
-            }).collect();
-            
+            let variants: Vec<TemplateEnumVariant> = e
+                .variants
+                .iter()
+                .map(|v| TemplateEnumVariant {
+                    name: v.name.clone(),
+                    value: v.value.clone().unwrap_or_default(),
+                    doc_comment: v.doc_comment.clone(),
+                })
+                .collect();
+
             // Determine if this is an integer enum by checking if any variant has a numeric value
             let is_int_enum = variants.iter().any(|v| {
-                !v.value.is_empty() && 
-                !v.value.starts_with('"') && 
-                !v.value.starts_with('\'') &&
-                (v.value.parse::<i64>().is_ok() || v.value.starts_with("0x"))
+                !v.value.is_empty()
+                    && !v.value.starts_with('"')
+                    && !v.value.starts_with('\'')
+                    && (v.value.parse::<i64>().is_ok() || v.value.starts_with("0x"))
             });
-            
+
             TemplateEnum {
                 name: e.name.clone(),
                 variants,
@@ -228,21 +249,29 @@ fn generate_python_code(output_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
                 repr: e.repr.clone().unwrap_or_default(),
                 is_int_enum,
             }
-        }).collect();
+        })
+        .collect();
 
-    let template_structs: Vec<TemplateStruct> = protocol_def.structs.iter()
+    let template_structs: Vec<TemplateStruct> = protocol_def
+        .structs
+        .iter()
         .map(|s| TemplateStruct {
             name: s.name.clone(),
-            fields: s.fields.iter().map(|f| TemplateStructField {
-                name: f.name.clone(),
-                rust_type: f.rust_type.clone(),
-                python_type: f.python_type.clone(),
-                doc_comment: f.doc_comment.clone(),
-                is_optional: f.is_optional,
-            }).collect(),
+            fields: s
+                .fields
+                .iter()
+                .map(|f| TemplateStructField {
+                    name: f.name.clone(),
+                    rust_type: f.rust_type.clone(),
+                    python_type: f.python_type.clone(),
+                    doc_comment: f.doc_comment.clone(),
+                    is_optional: f.is_optional,
+                })
+                .collect(),
             doc_comment: s.doc_comment.clone(),
             message_type_id: s.message_type_id.clone().unwrap_or_default(),
-        }).collect();
+        })
+        .collect();
 
     // Generate types.py
     let template = PythonTypesTemplate {
@@ -251,7 +280,8 @@ fn generate_python_code(output_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
         structs: template_structs,
     };
 
-    let generated_code = template.render()
+    let generated_code = template
+        .render()
         .context("Failed to render Python template")?;
 
     let output_file = output_dir.join("generated_types.py");
@@ -289,15 +319,21 @@ the generated definitions into your existing code.
 
 Generated at: {}
 "#,
-        protocol_def.constants.iter()
+        protocol_def
+            .constants
+            .iter()
             .map(|c| format!("- {} = {} ({})", c.name, c.value, c.rust_type))
             .collect::<Vec<_>>()
             .join("\n"),
-        protocol_def.enums.iter()
+        protocol_def
+            .enums
+            .iter()
             .map(|e| format!("- {} ({} variants)", e.name, e.variants.len()))
             .collect::<Vec<_>>()
             .join("\n"),
-        protocol_def.structs.iter()
+        protocol_def
+            .structs
+            .iter()
             .map(|s| format!("- {} ({} fields)", s.name, s.fields.len()))
             .collect::<Vec<_>>()
             .join("\n"),
@@ -314,9 +350,12 @@ Generated at: {}
 /// Validate existing Python code against Rust definitions
 fn validate_python_code(python_dir: &PathBuf, protocol_def: &ProtocolDef) -> Result<()> {
     let types_file = python_dir.join("types.py");
-    
+
     if !types_file.exists() {
-        println!("⚠️  Python types.py file not found at {}", types_file.display());
+        println!(
+            "⚠️  Python types.py file not found at {}",
+            types_file.display()
+        );
         return Ok(());
     }
 
@@ -326,12 +365,19 @@ fn validate_python_code(python_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
     let mut issues = Vec::new();
 
     // Check MessageTypeId enum values
-    if let Some(message_type_enum) = protocol_def.enums.iter().find(|e| e.name == "MessageTypeId") {
+    if let Some(message_type_enum) = protocol_def
+        .enums
+        .iter()
+        .find(|e| e.name == "MessageTypeId")
+    {
         for variant in &message_type_enum.variants {
             if let Some(value) = &variant.value {
                 let expected_line = format!("{} = {}", variant.name, value);
                 if !python_content.contains(&expected_line) {
-                    issues.push(format!("Missing or incorrect MessageTypeId.{} = {}", variant.name, value));
+                    issues.push(format!(
+                        "Missing or incorrect MessageTypeId.{} = {}",
+                        variant.name, value
+                    ));
                 }
             }
         }
@@ -341,7 +387,10 @@ fn validate_python_code(python_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
     for constant in &protocol_def.constants {
         let expected_line = format!("{} = {}", constant.name, constant.value);
         if !python_content.contains(&expected_line) {
-            issues.push(format!("Missing or incorrect constant {} = {}", constant.name, constant.value));
+            issues.push(format!(
+                "Missing or incorrect constant {} = {}",
+                constant.name, constant.value
+            ));
         }
     }
 

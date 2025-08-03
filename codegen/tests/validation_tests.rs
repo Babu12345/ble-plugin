@@ -5,7 +5,6 @@
 use anyhow::Result;
 use codegen::parse_rust_source;
 use std::fs;
-use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
 
@@ -36,31 +35,31 @@ fn test_generated_python_syntax() -> Result<()> {
             pub data: Option<Vec<u8>>,
         }
     "#;
-    
+
     let protocol_def = parse_rust_source(source)?;
-    
+
     // Generate Python-like code manually to test syntax
     let temp_dir = TempDir::new()?;
     let python_file = temp_dir.path().join("test_generated.py");
-    
+
     let mut python_code = String::new();
     python_code.push_str("# Generated Python code\n");
     python_code.push_str("from enum import Enum\n");
     python_code.push_str("from typing import Optional, List\n\n");
-    
+
     // Add constants
     for constant in &protocol_def.constants {
         python_code.push_str(&format!("# {}\n", constant.doc_comment));
         python_code.push_str(&format!("{} = {}\n\n", constant.name, constant.value));
     }
-    
+
     // Add enums
     for enum_def in &protocol_def.enums {
         python_code.push_str(&format!("class {}(Enum):\n", enum_def.name));
         if !enum_def.doc_comment.is_empty() {
             python_code.push_str(&format!("    \"\"\"{}\"\"\"\n", enum_def.doc_comment));
         }
-        
+
         for variant in &enum_def.variants {
             if !variant.doc_comment.is_empty() {
                 python_code.push_str(&format!("    # {}\n", variant.doc_comment));
@@ -73,7 +72,7 @@ fn test_generated_python_syntax() -> Result<()> {
         }
         python_code.push_str("\n");
     }
-    
+
     // Add basic class structure for structs
     for struct_def in &protocol_def.structs {
         python_code.push_str(&format!("class {}:\n", struct_def.name));
@@ -82,14 +81,14 @@ fn test_generated_python_syntax() -> Result<()> {
         }
         python_code.push_str("    pass\n\n");
     }
-    
+
     fs::write(&python_file, python_code)?;
-    
+
     // Check Python syntax using python -m py_compile
     let output = Command::new("python3")
         .args(&["-m", "py_compile", python_file.to_str().unwrap()])
         .output();
-    
+
     match output {
         Ok(result) => {
             if !result.status.success() {
@@ -102,7 +101,7 @@ fn test_generated_python_syntax() -> Result<()> {
             println!("Python not available, skipping syntax validation");
         }
     }
-    
+
     Ok(())
 }
 
@@ -119,9 +118,9 @@ fn test_python_validation_logic() -> Result<()> {
             Control = 0x02,
         }
     "#;
-    
+
     let protocol_def = parse_rust_source(rust_source)?;
-    
+
     // Test that validation logic would correctly identify matches/mismatches
     let correct_python = r#"
 MESSAGE_MAGIC = 0xDEAD
@@ -131,7 +130,7 @@ class MessageType(Enum):
     Data = 0x01
     Control = 0x02
 "#;
-    
+
     let incorrect_python = r#"
 MESSAGE_MAGIC = 0xBEEF  # Wrong value
 PACKET_SIZE = 512       # Wrong value
@@ -140,29 +139,41 @@ class MessageType(Enum):
     Data = 0x10         # Wrong value
     Control = 0x20      # Wrong value
 "#;
-    
+
     // Check constants validation
     for constant in &protocol_def.constants {
         let expected_line = format!("{} = {}", constant.name, constant.value);
-        assert!(correct_python.contains(&expected_line), 
-               "Correct Python should contain: {}", expected_line);
-        assert!(!incorrect_python.contains(&expected_line), 
-               "Incorrect Python should not contain: {}", expected_line);
+        assert!(
+            correct_python.contains(&expected_line),
+            "Correct Python should contain: {}",
+            expected_line
+        );
+        assert!(
+            !incorrect_python.contains(&expected_line),
+            "Incorrect Python should not contain: {}",
+            expected_line
+        );
     }
-    
+
     // Check enum validation
     for enum_def in &protocol_def.enums {
         for variant in &enum_def.variants {
             if let Some(value) = &variant.value {
                 let expected_line = format!("{} = {}", variant.name, value);
-                assert!(correct_python.contains(&expected_line), 
-                       "Correct Python should contain: {}", expected_line);
-                assert!(!incorrect_python.contains(&expected_line), 
-                       "Incorrect Python should not contain: {}", expected_line);
+                assert!(
+                    correct_python.contains(&expected_line),
+                    "Correct Python should contain: {}",
+                    expected_line
+                );
+                assert!(
+                    !incorrect_python.contains(&expected_line),
+                    "Incorrect Python should not contain: {}",
+                    expected_line
+                );
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -180,17 +191,21 @@ fn test_message_type_id_ranges() -> Result<()> {
             PluginServiceInfoResponse = 0x82,
         }
     "#;
-    
+
     let protocol_def = parse_rust_source(source)?;
-    let message_enum = protocol_def.enums.iter()
+    let message_enum = protocol_def
+        .enums
+        .iter()
         .find(|e| e.name == "MessageTypeId")
         .expect("Should find MessageTypeId enum");
-    
+
     // Verify host commands are in 0x01-0x7F range
-    let host_commands: Vec<_> = message_enum.variants.iter()
+    let host_commands: Vec<_> = message_enum
+        .variants
+        .iter()
         .filter(|v| v.name.starts_with("HostCommand"))
         .collect();
-    
+
     for cmd in &host_commands {
         if let Some(value) = &cmd.value {
             let hex_value = if value.starts_with("0x") {
@@ -198,16 +213,22 @@ fn test_message_type_id_ranges() -> Result<()> {
             } else {
                 value.parse::<u8>().unwrap()
             };
-            assert!(hex_value >= 0x01 && hex_value <= 0x7F, 
-                   "Host command {} has value {} outside 0x01-0x7F range", cmd.name, value);
+            assert!(
+                hex_value >= 0x01 && hex_value <= 0x7F,
+                "Host command {} has value {} outside 0x01-0x7F range",
+                cmd.name,
+                value
+            );
         }
     }
-    
+
     // Verify plugin responses are in 0x80-0xFF range
-    let plugin_responses: Vec<_> = message_enum.variants.iter()
+    let plugin_responses: Vec<_> = message_enum
+        .variants
+        .iter()
         .filter(|v| v.name.starts_with("Plugin"))
         .collect();
-    
+
     for resp in &plugin_responses {
         if let Some(value) = &resp.value {
             let hex_value = if value.starts_with("0x") {
@@ -215,11 +236,15 @@ fn test_message_type_id_ranges() -> Result<()> {
             } else {
                 value.parse::<u8>().unwrap()
             };
-            assert!(hex_value >= 0x80 && hex_value <= 0xFF, 
-                   "Plugin response {} has value {} outside 0x80-0xFF range", resp.name, value);
+            assert!(
+                hex_value >= 0x80,
+                "Plugin response {} has value {} outside 0x80-0xFF range",
+                resp.name,
+                value
+            );
         }
     }
-    
+
     Ok(())
 }
 
@@ -252,46 +277,60 @@ fn test_rust_semantics_preservation() -> Result<()> {
             pub payload: Vec<u8>,
         }
     "#;
-    
+
     let protocol_def = parse_rust_source(source)?;
-    
+
     // Test that constants maintain their exact values
-    let version_const = protocol_def.constants.iter()
+    let version_const = protocol_def
+        .constants
+        .iter()
         .find(|c| c.name == "PROTOCOL_VERSION")
         .expect("Should find PROTOCOL_VERSION");
     assert_eq!(version_const.value, "1");
-    
-    let max_size_const = protocol_def.constants.iter()
+
+    let max_size_const = protocol_def
+        .constants
+        .iter()
         .find(|c| c.name == "MAX_MESSAGE_SIZE")
         .expect("Should find MAX_MESSAGE_SIZE");
     assert_eq!(max_size_const.value, "1024");
-    
+
     // Test that enum values are preserved exactly
-    let priority_enum = protocol_def.enums.iter()
+    let priority_enum = protocol_def
+        .enums
+        .iter()
         .find(|e| e.name == "Priority")
         .expect("Should find Priority enum");
-    
-    let critical_variant = priority_enum.variants.iter()
+
+    let critical_variant = priority_enum
+        .variants
+        .iter()
         .find(|v| v.name == "Critical")
         .expect("Should find Critical variant");
     assert_eq!(critical_variant.value, Some("20".to_string()));
-    
+
     // Test that struct fields map correctly to Python
-    let auth_struct = protocol_def.structs.iter()
+    let auth_struct = protocol_def
+        .structs
+        .iter()
         .find(|s| s.name == "AuthenticatedMessage")
         .expect("Should find AuthenticatedMessage struct");
-    
-    let token_field = auth_struct.fields.iter()
+
+    let token_field = auth_struct
+        .fields
+        .iter()
         .find(|f| f.name == "token")
         .expect("Should find token field");
     // Fixed size arrays should map to appropriate Python type
     assert!(token_field.rust_type.contains("[u8"));
-    
-    let payload_field = auth_struct.fields.iter()
+
+    let payload_field = auth_struct
+        .fields
+        .iter()
         .find(|f| f.name == "payload")
         .expect("Should find payload field");
     assert_eq!(payload_field.python_type, "List[int]");
-    
+
     Ok(())
 }
 
@@ -319,46 +358,58 @@ fn test_type_conversion_edge_cases() -> Result<()> {
             pub word_array: [u32; 4],
         }
     "#;
-    
+
     let protocol_def = parse_rust_source(source)?;
     let struct_def = &protocol_def.structs[0];
-    
+
     // Test nested option conversion
-    let nested_option = struct_def.fields.iter()
+    let nested_option = struct_def
+        .fields
+        .iter()
         .find(|f| f.name == "nested_option")
         .expect("Should find nested_option field");
     assert_eq!(nested_option.python_type, "Optional[Optional[str]]");
-    
+
     // Test complex generic conversion
-    let complex_vec = struct_def.fields.iter()
+    let complex_vec = struct_def
+        .fields
+        .iter()
         .find(|f| f.name == "complex_vec")
         .expect("Should find complex_vec field");
     assert_eq!(complex_vec.python_type, "List[Optional[List[str]]]");
-    
+
     // Test heapless types
-    let heapless_string = struct_def.fields.iter()
+    let heapless_string = struct_def
+        .fields
+        .iter()
         .find(|f| f.name == "heapless_string")
         .expect("Should find heapless_string field");
     assert_eq!(heapless_string.python_type, "str");
-    
-    let heapless_vec = struct_def.fields.iter()
+
+    let heapless_vec = struct_def
+        .fields
+        .iter()
         .find(|f| f.name == "heapless_vec")
         .expect("Should find heapless_vec field");
     assert_eq!(heapless_vec.python_type, "List[Optional[int]]");
-    
+
     // Test that custom types are preserved
-    let custom_type = struct_def.fields.iter()
+    let custom_type = struct_def
+        .fields
+        .iter()
         .find(|f| f.name == "custom_type")
         .expect("Should find custom_type field");
     assert!(custom_type.python_type.contains("MyCustomType"));
-    
+
     // Test arrays (should map to List)
-    let byte_array = struct_def.fields.iter()
+    let byte_array = struct_def
+        .fields
+        .iter()
         .find(|f| f.name == "byte_array")
         .expect("Should find byte_array field");
     // Arrays are preserved as-is since they're not in our type mapping
     assert!(byte_array.rust_type.contains("[u8"));
-    
+
     Ok(())
 }
 
@@ -381,26 +432,32 @@ fn test_documentation_preservation() -> Result<()> {
         /// Very long comment that exceeds the reasonable length for a single line and should be truncated with ellipsis
         pub const LONG: u32 = 4;
     "#;
-    
+
     let protocol_def = parse_rust_source(source)?;
-    
+
     // Test simple comment preservation
-    let simple = protocol_def.constants.iter()
+    let simple = protocol_def
+        .constants
+        .iter()
         .find(|c| c.name == "SIMPLE")
         .expect("Should find SIMPLE constant");
     assert_eq!(simple.doc_comment, "This is a single line comment");
-    
+
     // Test multiline joining
-    let multiline = protocol_def.constants.iter()
+    let multiline = protocol_def
+        .constants
+        .iter()
         .find(|c| c.name == "MULTILINE")
         .expect("Should find MULTILINE constant");
     assert!(multiline.doc_comment.contains("multiline"));
     assert!(multiline.doc_comment.contains("multiple lines"));
     // Comments are joined with spaces
     assert!(multiline.doc_comment.contains("spans multiple"));
-    
+
     // Test markdown cleanup
-    let markdown = protocol_def.constants.iter()
+    let markdown = protocol_def
+        .constants
+        .iter()
         .find(|c| c.name == "MARKDOWN")
         .expect("Should find MARKDOWN constant");
     assert!(markdown.doc_comment.contains("references"));
@@ -412,13 +469,15 @@ fn test_documentation_preservation() -> Result<()> {
     assert!(!markdown.doc_comment.contains("`"));
     assert!(!markdown.doc_comment.contains("**"));
     assert!(!markdown.doc_comment.contains("*"));
-    
+
     // Test truncation
-    let long = protocol_def.constants.iter()
+    let long = protocol_def
+        .constants
+        .iter()
         .find(|c| c.name == "LONG")
         .expect("Should find LONG constant");
     assert!(long.doc_comment.len() <= 80);
     assert!(long.doc_comment.ends_with("..."));
-    
+
     Ok(())
 }
