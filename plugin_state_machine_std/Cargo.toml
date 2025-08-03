@@ -1,16 +1,36 @@
 [package]
 name = "plugin_state_machine_std"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["BLE Plugin Team"]
+description = "BLE-USB bridge state machine for ESP32-based plugin devices"
+documentation = "https://docs.rs/plugin_state_machine_std"
+readme = "README.md"
+repository = "https://github.com/your-org/ble-plugin"
+keywords = ["ble", "usb", "esp32", "embedded", "bridge"]
+categories = ["embedded", "hardware-support", "network-programming"]
+rust-version = "1.70"
 
 [dependencies]
-# Custom
+# Local protocol definitions
 protocol = { path = "../protocol" }
-# Crates
+
+# ESP32 BLE stack integration
 esp32-nimble = { version = "0.11.0", default-features = false, features = [
     "no_std",
 ] }
-log = "0.4"
-heapless = "0.8.0"
+
+# ESP-IDF system services for task management and hardware interaction
 esp-idf-svc = { version = "0.51", default-features = false }
+
+# Logging framework for debugging and monitoring
+log = "0.4"
+
+# No-allocation collections for embedded systems
+heapless = "0.8.0"
+
+# UUID handling for BLE service and characteristic identifiers
 uuid = { version = "1.17.0", default-features = false }
+
+# Error library for displaying errors
+thiserror-no-std = "2.0.2"

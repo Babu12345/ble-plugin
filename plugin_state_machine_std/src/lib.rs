@@ -1,6 +1,113 @@
 #![deny(missing_docs)]
-//! This library is used to to contain the complete processing logic and state machine to facilitate data/command transfer from BLE
-//! to usb and visa versa.
+//! # Plugin State Machine Standard
+//!
+//! A comprehensive BLE-USB bridge state machine implementation for ESP32-based plugin devices.
+//!
+//! This library provides the core processing logic and state management required to facilitate 
+//! bidirectional data and command transfer between BLE peripherals and USB hosts. It serves as 
+//! the central processing unit for BLE plugin devices, handling USB command processing, BLE 
+//! device management, and efficient message routing.
+//!
+//! ## Key Features
+//!
+//! - **Efficient Message Dispatch**: Uses message type IDs for O(1) command routing
+//! - **Protocol Validation**: Magic number validation and header integrity checking
+//! - **BLE Integration**: Deep integration with ESP32-Nimble BLE stack
+//! - **Thread-Safe Communication**: Arc-wrapped senders for callback integration
+//! - **Comprehensive Error Handling**: Detailed error types for robust operation
+//! - **Memory Efficient**: Designed for embedded systems with limited resources
+//!
+//! ## Architecture Overview
+//!
+//! ```text
+//! ┌─────────────┐    USB Commands    ┌─────────────────────┐    BLE Operations    ┌─────────────┐
+//! │   USB Host  │ ──────────────────► │ Plugin State Machine │ ───────────────────► │ BLE Clients │
+//! │             │ ◄────────────────── │                     │ ◄─────────────────── │             │
+//! └─────────────┘    USB Responses   └─────────────────────┘    BLE Callbacks     └─────────────┘
+//! ```
+//!
+//! ## Message Protocol
+//!
+//! The state machine uses a standardized 5-byte message header:
+//!
+//! ```text
+//! ┌─────────────┬─────────────┬─────────────┬─────────────────┐
+//! │   Magic     │   Type ID   │   Length    │     Payload     │
+//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │   (variable)    │
+//! └─────────────┴─────────────┴─────────────┴─────────────────┘
+//! ```
+//!
+//! - **Magic Number**: 0xDEAD for message integrity validation
+//! - **Type ID**: Enables efficient O(1) command dispatch
+//! - **Length**: Payload size for proper deserialization
+//! - **Payload**: Bincode-serialized command/response data
+//!
+//! ## Usage Example
+//!
+//! ```rust,no_run
+//! use plugin_state_machine_std::PluginStateMachine;
+//! use protocol::plugin::plugin::{PluginSender, PluginReceiver};
+//! use esp32_nimble::BLEDevice;
+//! use protocol::DEFAULT_PACKET_SIZE;
+//!
+//! // Initialize communication channels
+//! let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) = 
+//!     /* your USB channel setup */;
+//! # panic!("This is a documentation example");
+//! let ble_device = BLEDevice::take();
+//!
+//! // Create and run the state machine
+//! let state_machine = PluginStateMachine::new(usb_sender, usb_receiver, ble_device);
+//! let runner = state_machine.runner_fn();
+//! 
+//! // Typically run in a separate thread
+//! std::thread::spawn(runner);
+//! ```
+//!
+//! ## Supported Commands
+//!
+//! ### Peripheral Management
+//! - [`HostCommandConfigurePeripheral`]: Configure BLE peripheral with name and UUID
+//! - [`HostCommandStartAdvertisement`]: Start BLE advertising
+//!
+//! ### Service Operations  
+//! - [`HostCommandConfigureService`]: Create BLE services
+//! - [`HostCommandGetServiceInfo`]: Query service information
+//!
+//! ### Characteristic Management
+//! - [`HostCommandConfigureCharacteristic`]: Create characteristics with properties
+//! - [`HostCommandConfigureCharacteristicRead`]: Set up read operations
+//! - [`HostCommandGetCharacteristicInfo`]: Query characteristic details
+//! - [`HostCommandNotifyCharacteristicValue`]: Send notifications to clients
+//!
+//! ## Error Handling
+//!
+//! The state machine provides comprehensive error handling through the [`errors`] module:
+//!
+//! - [`StateMachineError::InvalidMessageFormat`]: Malformed USB messages
+//! - [`StateMachineError::UnknownMessageType`]: Unsupported command types  
+//! - [`StateMachineError::InvalidBleConfiguration`]: BLE setup errors
+//! - [`StateMachineError::UsbSendError`]: USB communication failures
+//!
+//! ## Performance Characteristics
+//!
+//! - **Command Routing**: O(1) lookup using message type IDs
+//! - **Memory Usage**: Optimized for embedded systems using heapless collections
+//! - **Latency**: Minimal processing overhead with direct dispatch
+//! - **Throughput**: Efficient binary serialization with bincode
+//!
+//! [`HostCommandConfigurePeripheral`]: protocol::io_types::HostCommandConfigurePeripheral
+//! [`HostCommandStartAdvertisement`]: protocol::io_types::HostCommandStartAdvertisement
+//! [`HostCommandConfigureService`]: protocol::io_types::HostCommandConfigureService
+//! [`HostCommandGetServiceInfo`]: protocol::io_types::HostCommandGetServiceInfo
+//! [`HostCommandConfigureCharacteristic`]: protocol::io_types::HostCommandConfigureCharacteristic
+//! [`HostCommandConfigureCharacteristicRead`]: protocol::io_types::HostCommandConfigureCharacteristicRead
+//! [`HostCommandGetCharacteristicInfo`]: protocol::io_types::HostCommandGetCharacteristicInfo
+//! [`HostCommandNotifyCharacteristicValue`]: protocol::io_types::HostCommandNotifyCharacteristicValue
+//! [`StateMachineError::InvalidMessageFormat`]: errors::StateMachineError::InvalidMessageFormat
+//! [`StateMachineError::UnknownMessageType`]: errors::StateMachineError::UnknownMessageType
+//! [`StateMachineError::InvalidBleConfiguration`]: errors::StateMachineError::InvalidBleConfiguration
+//! [`StateMachineError::UsbSendError`]: errors::StateMachineError::UsbSendError
 
 pub mod errors;
 
@@ -36,10 +143,19 @@ use protocol::{MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MessageTypeId};
 
 use std::sync::Arc;
 use uuid::Uuid;
-// This is used to store the metadata of the plugin state machine
+/// Internal metadata storage for the plugin state machine
+/// 
+/// This structure maintains the current state and configuration of the BLE plugin,
+/// including device name, service-characteristic relationships, and connection information.
 #[derive(Default)]
 struct PluginStateMachineMetadata {
+    /// Optional BLE device name for advertising
     ble_name: Option<String<MAX_NAME_SIZE>>,
+    
+    /// Mapping from service UUIDs to their characteristic UUIDs and properties
+    /// 
+    /// This enables efficient lookup of characteristics within services and
+    /// provides quick access to characteristic properties for validation.
     service_to_characteristic_uuids: HashMap<
         Uuid,
         heapless::Vec<
@@ -49,20 +165,80 @@ struct PluginStateMachineMetadata {
     >, // (UUID, properties)
 }
 
-/// Contains state machine to process BLE and usb data and facilitate their data transfer
+/// Main state machine for processing BLE and USB data and facilitating bidirectional transfer
+///
+/// The `PluginStateMachine` serves as the central processing unit for BLE plugin devices,
+/// handling USB command reception, BLE device configuration, and data forwarding between
+/// the two communication domains.
+///
+/// ## Architecture
+///
+/// The state machine operates as a bridge:
+/// - **USB Side**: Receives commands from host and sends responses/data
+/// - **BLE Side**: Manages peripheral configuration and handles client interactions
+/// - **Processing**: Efficiently routes messages using type IDs and maintains state
+///
+/// ## Thread Safety
+///
+/// - USB sender is Arc-wrapped for sharing across BLE callbacks
+/// - USB receiver has exclusive access for command processing
+/// - BLE device uses static mutable reference for ESP32 integration
+///
+/// ## Usage Pattern
+///
+/// 1. Create with communication channels and BLE device
+/// 2. Start the runner (typically in a separate thread)
+/// 3. State machine processes commands automatically
+/// 4. BLE callbacks forward data back to USB host
 pub struct PluginStateMachine {
+    /// Thread-safe USB sender for responses and BLE data forwarding
     usb_sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
+    
+    /// USB receiver for incoming host commands (exclusive access)
     usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
+    
+    /// ESP32 BLE device instance (static mutable for hardware integration)
     ble_device: &'static mut BLEDevice,
+    
+    /// Optional BLE server instance (created after peripheral configuration)
     server: Option<&'static mut BLEServer>,
+    
+    /// Internal state and configuration metadata
     metadata: PluginStateMachineMetadata,
 }
 
-/// There will be 2 runners the first will be processing
-/// usb data and sending it to BLE. The second will be processing
-/// BLE data and sending it to USB.
 impl PluginStateMachine {
-    /// Create a new instance of the processing state machine
+    /// Create a new instance of the plugin state machine
+    ///
+    /// Initializes the state machine with the necessary communication channels and BLE device.
+    /// The state machine starts in an unconfigured state and requires peripheral configuration
+    /// before it can handle BLE operations.
+    ///
+    /// # Arguments
+    ///
+    /// * `usb_sender` - Channel for sending responses and data to the USB host
+    /// * `usb_receiver` - Channel for receiving commands from the USB host  
+    /// * `ble_device` - ESP32 BLE device instance (must be static for hardware integration)
+    ///
+    /// # Returns
+    ///
+    /// A new `PluginStateMachine` instance ready to process commands
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use plugin_state_machine_std::PluginStateMachine;
+    /// use protocol::plugin::plugin::{PluginSender, PluginReceiver};
+    /// use esp32_nimble::BLEDevice;
+    /// use protocol::DEFAULT_PACKET_SIZE;
+    ///
+    /// let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) = 
+    ///     /* your USB channel setup */;
+    /// # panic!("Documentation example");
+    /// let ble_device = BLEDevice::take();
+    ///
+    /// let state_machine = PluginStateMachine::new(usb_sender, usb_receiver, ble_device);
+    /// ```
     pub fn new(
         usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
         usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
@@ -77,7 +253,34 @@ impl PluginStateMachine {
         }
     }
 
-    /// Extract message type ID from received data
+    /// Extract message type ID from received USB data with validation
+    ///
+    /// This method validates the message header format and extracts the message type ID
+    /// for efficient command dispatch. It performs integrity checks including magic
+    /// number validation and header size verification.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Raw USB data buffer containing message header and payload
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(MessageTypeId)` - Successfully extracted message type ID
+    /// * `Err(StateMachineError)` - Invalid message format or unknown type ID
+    ///
+    /// # Errors
+    ///
+    /// * `InvalidMessageFormat` - Data too short, invalid magic number
+    /// * `UnknownMessageType` - Unrecognized message type ID
+    ///
+    /// # Message Header Format
+    ///
+    /// ```text
+    /// [0-1]: Magic number (0xDEAD, little-endian)
+    /// [2]:   Message type ID
+    /// [3-4]: Payload length (little-endian)
+    /// [5+]:  Payload data
+    /// ```
     fn extract_message_type_id(data: &[u8]) -> Result<MessageTypeId> {
         // Check if we have enough bytes for a valid header
         if data.len() < MESSAGE_HEADER_SIZE {
@@ -114,7 +317,30 @@ impl PluginStateMachine {
         }
     }
 
-    /// Returns a closure that can be used to run the state machine in a separate thread.
+    /// Returns a closure that can be used to run the state machine in a separate thread
+    ///
+    /// This method consumes the state machine and returns a closure suitable for
+    /// spawning in a separate thread. The closure contains the main processing loop
+    /// that handles USB commands and manages BLE operations.
+    ///
+    /// # Returns
+    ///
+    /// A closure that runs the state machine's main processing loop
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use plugin_state_machine_std::PluginStateMachine;
+    /// # let state_machine = panic!("Documentation example");
+    ///
+    /// let runner = state_machine.runner_fn();
+    /// 
+    /// // Run in separate thread
+    /// std::thread::spawn(runner);
+    ///
+    /// // Or run in async context
+    /// // tokio::task::spawn_blocking(runner);
+    /// ```
     pub fn runner_fn(mut self) -> impl FnMut() {
         move || {
             self.runner();
