@@ -17,7 +17,7 @@ cd "$CODEGEN_DIR"
 
 # Run tests first to validate codegen
 echo "🧪 Running codegen tests..."
-if ! cargo test --quiet; then
+if ! cargo test --quiet > /dev/null 2>&1; then
     echo "❌ Tests failed! Aborting generation."
     exit 1
 fi
