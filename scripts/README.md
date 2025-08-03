@@ -20,6 +20,9 @@ The `generate-python-types.sh` script automates the entire process of:
 # Run from the project root directory
 ./scripts/generate-python-types.sh
 
+# Force regeneration even if types are up to date
+./scripts/generate-python-types.sh --force
+
 # Or run from anywhere
 /path/to/ble-plugin/scripts/generate-python-types.sh
 ```
@@ -32,6 +35,42 @@ The script performs the following steps automatically:
 2. **🐍 Generation**: Runs the generator to create Python types from Rust definitions
 3. **📊 Summary**: Reports statistics about what was generated
 4. **💡 Guidance**: Provides next steps and testing commands
+
+### Hash-Based Change Detection
+
+The script includes intelligent change detection to avoid unnecessary regeneration:
+
+1. **🔐 Hash Calculation**: Calculates a SHA-256 hash of all Rust protocol source files
+2. **📋 Comparison**: Compares with the hash stored in the existing generated file
+3. **⚡ Skip Logic**: Skips regeneration if protocol hasn't changed
+4. **🔄 Force Option**: Use `--force` flag to bypass hash checking
+
+#### Hash Check Output
+
+```
+🔐 Checking if regeneration is needed...
+🔐 Checking protocol hash...
+Current protocol hash:  a1b2c3d4e5f6...
+Existing generated hash: a1b2c3d4e5f6...
+✅ Generated types are up to date
+✅ Generated types are up to date, skipping regeneration
+💡 Use --force flag to regenerate anyway
+```
+
+#### Force Regeneration
+
+Use the `--force` flag when you need to regenerate regardless of hash status:
+
+```bash
+# Force regeneration (bypasses hash check)
+./scripts/generate-python-types.sh --force
+```
+
+Common scenarios for using `--force`:
+- Testing the generation pipeline
+- Debugging code generation issues  
+- After modifying the code generator itself
+- When the generator logic has changed but source files haven't
 
 ### Output
 
@@ -194,6 +233,49 @@ chmod +x scripts/generate-python-types.sh
 - Clean build: `cd codegen && cargo clean && cargo build`
 - Check dependencies: `cd codegen && cargo update`
 
+## check-python-types-hash.sh
+
+A companion utility script that performs hash-based change detection for the protocol source files.
+
+### Overview
+
+The `check-python-types-hash.sh` script determines whether Python types need regeneration by comparing the current protocol hash with the hash stored in the existing generated file.
+
+### Usage
+
+```bash
+# Check if regeneration is needed (exit code 0 = needed, 1 = current)
+./scripts/check-python-types-hash.sh
+
+# Use in conditional logic
+if ./scripts/check-python-types-hash.sh; then
+    echo "Regeneration needed"
+    ./scripts/generate-python-types.sh
+else
+    echo "Types are current"
+fi
+```
+
+### What It Does
+
+1. **📁 Source Scan**: Finds all `.rs` files in `protocol/src/`
+2. **🔐 Hash Calculation**: Computes SHA-256 hash of all source content
+3. **📋 Comparison**: Extracts existing hash from `generated_types.py`
+4. **🚦 Exit Code**: Returns 0 if regeneration needed, 1 if current
+
+### Output Example
+
+```
+🔐 Checking protocol hash...
+Current protocol hash:  a1b2c34d5e6f789...
+Existing generated hash: b2c3d4e5f6789a1...
+🔄 Generated types need to be regenerated
+```
+
+### Integration
+
+This script is automatically called by `generate-python-types.sh` but can also be used independently in CI/CD pipelines or development workflows.
+
 #### Debug Mode
 
 For troubleshooting, you can run the generator directly:
@@ -249,6 +331,7 @@ The script is compatible with:
 
 ### Related Files
 
+- **`check-python-types-hash.sh`**: Hash-based change detection utility
 - **`codegen/`**: The Rust code generator implementation
 - **`codegen/README.md`**: Detailed technical documentation
 - **`protocol/src/`**: Source Rust protocol definitions
