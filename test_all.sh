@@ -36,7 +36,6 @@ test_rust_crates() {
     # Find all Cargo.toml files and test each crate
     local rust_crates=(
         "lib_utils"
-        "protocol_io"
         "protocol"
         "codegen"
     )
@@ -87,6 +86,63 @@ test_rust_crates() {
     
     if [ ${#failed_crates[@]} -gt 0 ]; then
         print_error "Failed crates (${#failed_crates[@]}):"
+        for crate in "${failed_crates[@]}"; do
+            echo "  ✗ $crate"
+        done
+        return 1
+    fi
+    
+    return 0
+}
+
+# Function to check compilation for selected crates
+compile_selected_crates() {
+    print_status "Checking compilation for selected crates..."
+    
+    # Additional crates to check for compilation only
+    local compile_crates=(
+        "protocol_io"
+        "host-std"
+        "plugin-echo-example"
+        "plugin-no-std"
+        "plugin-host-std"
+        "plugin-std"
+    )
+    
+    local failed_crates=()
+    local successful_crates=()
+    
+    for crate in "${compile_crates[@]}"; do
+        if [ -d "$crate" ] && [ -f "$crate/Cargo.toml" ]; then
+            print_status "Checking compilation for $crate..."
+            
+            cd "$crate"
+            
+            if cargo check --quiet 2>/dev/null; then
+                print_success "$crate compiles successfully"
+                successful_crates+=("$crate")
+            else
+                print_error "$crate failed to compile"
+                failed_crates+=("$crate")
+            fi
+            
+            cd ..
+        else
+            print_warning "Skipping $crate - directory or Cargo.toml not found"
+        fi
+    done
+    
+    # Summary for compilation check
+    print_status "Compilation Check Summary:"
+    if [ ${#successful_crates[@]} -gt 0 ]; then
+        print_success "Successfully compiled crates (${#successful_crates[@]}):"
+        for crate in "${successful_crates[@]}"; do
+            echo "  ✓ $crate"
+        done
+    fi
+    
+    if [ ${#failed_crates[@]} -gt 0 ]; then
+        print_error "Failed to compile crates (${#failed_crates[@]}):"
         for crate in "${failed_crates[@]}"; do
             echo "  ✗ $crate"
         done
@@ -192,6 +248,7 @@ main() {
     local test_type="${1:-all}"
     local rust_success=0
     local python_success=0
+    local compile_success=0
     
     print_status "Starting test suite for BLE Plugin project"
     print_status "Test type: $test_type"
@@ -206,9 +263,16 @@ main() {
             test_python_packages
             python_success=$?
             ;;
+        "compile")
+            compile_selected_crates
+            compile_success=$?
+            ;;
         "all"|*)
             test_rust_crates
             rust_success=$?
+            echo
+            compile_selected_crates
+            compile_success=$?
             echo
             test_python_packages  
             python_success=$?
@@ -226,6 +290,14 @@ main() {
         fi
     fi
     
+    if [ "$test_type" = "all" ] || [ "$test_type" = "compile" ]; then
+        if [ $compile_success -eq 0 ]; then
+            print_success "All selected crates compiled successfully"
+        else
+            print_error "Some selected crates failed to compile"
+        fi
+    fi
+    
     if [ "$test_type" = "all" ] || [ "$test_type" = "python" ]; then
         if [ $python_success -eq 0 ]; then
             print_success "All Python packages passed"
@@ -235,7 +307,7 @@ main() {
     fi
     
     # Exit with error if any tests failed
-    if [ $rust_success -ne 0 ] || [ $python_success -ne 0 ]; then
+    if [ $rust_success -ne 0 ] || [ $python_success -ne 0 ] || [ $compile_success -ne 0 ]; then
         exit 1
     fi
     
@@ -244,14 +316,15 @@ main() {
 
 # Show usage if help requested
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-    echo "Usage: $0 [rust|python|all]"
+    echo "Usage: $0 [rust|python|compile|all]"
     echo
     echo "Test all Rust and Python libraries in the BLE plugin project"
     echo
     echo "Options:"
     echo "  rust    - Test only Rust crates"
     echo "  python  - Test only Python packages"
-    echo "  all     - Test both Rust and Python (default)"
+    echo "  compile - Check compilation for selected crates"
+    echo "  all     - Test Rust crates, check compilation, and test Python packages (default)"
     echo "  -h, --help - Show this help message"
     exit 0
 fi

@@ -57,11 +57,14 @@ This project includes a comprehensive test script that can test all Rust crates 
 ### Run All Tests
 
 ```bash
-# Test everything (Rust + Python)
+# Test everything (Rust + Python + Compilation check)
 ./test_all.sh
 
 # Test only Rust crates
 ./test_all.sh rust
+
+# Check compilation for selected crates
+./test_all.sh compile
 
 # Test only Python packages  
 ./test_all.sh python
@@ -71,7 +74,8 @@ This project includes a comprehensive test script that can test all Rust crates 
 ```
 
 The test script will:
-- **Rust**: Test all 14 Rust crates in the project, falling back to compile-only checks for crates without tests
+- **Rust**: Test core Rust crates with comprehensive test suites
+- **Compilation**: Check compilation for additional selected crates (protocol_io, host-std, plugin variants, etc.)
 - **Python**: Test Python packages in their virtual environments, focusing only on project code (not site-packages)
 - Provide colored output showing successes and failures
 - Exit with error code if any tests fail
