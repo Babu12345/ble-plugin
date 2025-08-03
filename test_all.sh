@@ -51,7 +51,7 @@ test_rust_crates() {
             
             # Check if tests exist
             if [ -d "tests" ] || grep -q "\[\[test\]\]" Cargo.toml 2>/dev/null || find src -name "*.rs" -exec grep -l "#\[test\]" {} \; | head -1 >/dev/null 2>&1; then
-                if cargo test --quiet 2>/dev/null; then
+                if cargo test --quiet >/dev/null 2>&1; then
                     print_success "$crate tests passed"
                     successful_crates+=("$crate")
                 else
