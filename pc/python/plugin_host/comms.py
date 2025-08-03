@@ -571,9 +571,10 @@ class USBDataListener:
         self.host_device = host_device
         self.receive_timeout_ms = receive_timeout_ms
         self.message_queue = queue.Queue()
-        self.running = False
+        self._stop_event = threading.Event()
         self.listener_thread = None
         self.decoder = MessageDecoder()
+        self._stats_lock = threading.Lock()
         self._stats = {
             'messages_received': 0,
             'decode_successes': 0,
@@ -588,13 +589,22 @@ class USBDataListener:
         Returns:
             bool: True if started successfully, False if already running
         """
-        if self.running:
+        if self.listener_thread and self.listener_thread.is_alive():
             return False
         
         if not self.host_device.is_connected():
             raise USBCommunicationError("Host device must be connected before starting listener")
         
-        self.running = True
+        # Clear stop event and reset stats
+        self._stop_event.clear()
+        with self._stats_lock:
+            self._stats = {
+                'messages_received': 0,
+                'decode_successes': 0,
+                'decode_failures': 0,
+                'usb_errors': 0
+            }
+        
         self.listener_thread = threading.Thread(target=self._listen_loop, daemon=True)
         self.listener_thread.start()
         return True
@@ -606,22 +616,26 @@ class USBDataListener:
         Returns:
             bool: True if stopped successfully
         """
-        if not self.running:
+        if not self.listener_thread or not self.listener_thread.is_alive():
             return False
         
-        self.running = False
+        # Signal the thread to stop
+        self._stop_event.set()
+        
+        # Wait for the thread to finish
         if self.listener_thread:
             self.listener_thread.join(timeout=2.0)
+            # If thread didn't stop gracefully, it will be cleaned up when the object is destroyed
             self.listener_thread = None
         return True
     
     def is_listening(self) -> bool:
         """Check if the listener is currently running"""
-        return self.running and self.listener_thread is not None
+        return self.listener_thread is not None and self.listener_thread.is_alive() and not self._stop_event.is_set()
     
     def _listen_loop(self):
         """Main listening loop (runs in separate thread)"""
-        while self.running:
+        while not self._stop_event.is_set():
             try:
                 # Try to receive raw data (with timeout to allow thread exit)
                 raw_data = self.host_device.usb_device.receive_data(
@@ -629,13 +643,15 @@ class USBDataListener:
                 )
                 
                 if raw_data and len(raw_data) > 0:
-                    self._stats['messages_received'] += 1
+                    with self._stats_lock:
+                        self._stats['messages_received'] += 1
                     
                     # Try to decode the message
                     decoded_message = self.decoder.decode_message(raw_data)
                     
                     if decoded_message:
-                        self._stats['decode_successes'] += 1
+                        with self._stats_lock:
+                            self._stats['decode_successes'] += 1
                         message_info = {
                             'timestamp': time.time(),
                             'message_type': self.decoder.get_message_type_name(decoded_message),
@@ -644,7 +660,8 @@ class USBDataListener:
                             'decoded': True
                         }
                     else:
-                        self._stats['decode_failures'] += 1
+                        with self._stats_lock:
+                            self._stats['decode_failures'] += 1
                         message_info = {
                             'timestamp': time.time(),
                             'message_type': 'Unknown',
@@ -657,13 +674,23 @@ class USBDataListener:
                 
             except USBCommunicationError as e:
                 if "timeout" not in str(e).lower():
-                    self._stats['usb_errors'] += 1
+                    with self._stats_lock:
+                        self._stats['usb_errors'] += 1
                 # Continue listening even on timeouts and some errors
-                time.sleep(0.01)
+                # Check stop event more frequently during error recovery
+                if not self._stop_event.wait(0.01):
+                    continue
+                else:
+                    break
             except Exception as e:
-                self._stats['usb_errors'] += 1
+                with self._stats_lock:
+                    self._stats['usb_errors'] += 1
                 # Log unexpected errors but continue
-                time.sleep(0.1)
+                # Check stop event more frequently during error recovery
+                if not self._stop_event.wait(0.1):
+                    continue
+                else:
+                    break
     
     def get_message(self, timeout: Optional[float] = None) -> Optional[dict]:
         """
@@ -719,19 +746,21 @@ class USBDataListener:
         Returns:
             dict: Statistics including message counts and error rates
         """
-        stats = self._stats.copy()
+        with self._stats_lock:
+            stats = self._stats.copy()
         stats['queue_size'] = self.message_queue.qsize()
         stats['is_listening'] = self.is_listening()
         return stats
     
     def reset_stats(self):
         """Reset all statistics counters"""
-        self._stats = {
-            'messages_received': 0,
-            'decode_successes': 0,
-            'decode_failures': 0,
-            'usb_errors': 0
-        }
+        with self._stats_lock:
+            self._stats = {
+                'messages_received': 0,
+                'decode_successes': 0,
+                'decode_failures': 0,
+                'usb_errors': 0
+            }
 
 
 class USBMessageHandler:
