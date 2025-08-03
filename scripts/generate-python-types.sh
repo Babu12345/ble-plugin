@@ -15,6 +15,14 @@ echo "🔄 Generating Python types from Rust protocol library..."
 # Change to codegen directory
 cd "$CODEGEN_DIR"
 
+# Run tests first to validate codegen
+echo "🧪 Running codegen tests..."
+if ! cargo test --quiet; then
+    echo "❌ Tests failed! Aborting generation."
+    exit 1
+fi
+echo "✅ All tests passed!"
+
 # Build the codegen tool if needed
 echo "🔨 Building code generator..."
 cargo build --release --bin generate-python
@@ -52,17 +60,3 @@ else
     echo "❌ Failed to generate Python types"
     exit 1
 fi
-
-echo ""
-echo "🎉 Python type generation completed successfully!"
-echo ""
-echo "🧪 To run tests:"
-echo "   cargo test                          # Run all 41 tests"
-echo "   cargo test --lib                    # Unit tests (14)"
-echo "   cargo test --test integration_tests # Integration tests (8)"
-echo "   cargo test --test validation_tests  # Validation tests (6)"
-echo "   cargo test --test error_handling_tests # Error handling tests (7)"
-echo "   cargo test --test regression_tests  # Regression tests (6)"
-echo ""
-echo "🔧 To run a quick test validation:"
-echo "   cargo test --test validation_tests test_message_type_id_ranges"
