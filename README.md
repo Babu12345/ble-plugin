@@ -95,7 +95,9 @@ cargo espmonitor <SERIAL_DEVICE_PATH>
 cargo generate esp-rs/esp-idf-template cargo (then you can configure the name and everything else from the template)
 
 Make sure you add 
-# https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_tools_install_dir-esp_idf_tools_install_dir
+
+https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_tools_install_dir-esp_idf_tools_install_dir
+
 ESP_IDF_TOOLS_INSTALL_DIR = { value = "global" }
 
 to the [env] section of the config.toml file
