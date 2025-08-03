@@ -1,8 +1,142 @@
-//! Defines the host and plug-in protocols that they must adhere to in order to
-//! transfer data and commands between each other. Note when this library references Host it refers to
-//! the the device that is accessing the capabilitiese of the plugin. It does not refer to the USB host protocol.
-//! This is because it's technically correct for the plugin to implement the USB host protocol for "hosts" that implement
-//! the USB device protocol only
+//! # Protocol - BLE Plugin Communication Protocol
+//!
+//! A comprehensive communication protocol library for BLE-USB bridge systems, defining standardized
+//! message formats, serialization, and type-safe command/response structures for plugin devices.
+//!
+//! ## Overview
+//!
+//! This library defines the complete communication protocol between host devices (PCs, mobile devices)
+//! and BLE plugin devices (ESP32-based bridge devices). It provides type-safe message definitions,
+//! efficient serialization, and protocol validation to ensure reliable communication across the
+//! USB-BLE bridge.
+//!
+//! **Note**: When this library references "Host", it refers to the device accessing the capabilities
+//! of the plugin (typically a PC or mobile device), not the USB host protocol implementation. The plugin
+//! device can implement either USB host or device protocols as needed.
+//!
+//! ## Architecture
+//!
+//! ```text
+//! ┌─────────────────┐     USB Commands     ┌─────────────────┐     BLE Operations     ┌─────────────┐
+//! │   Host Device   │ ──────────────────► │  Plugin Device  │ ──────────────────────► │ BLE Clients │
+//! │  (PC/Mobile)    │ ◄────────────────── │   (ESP32 + BLE) │ ◄────────────────────── │             │
+//! └─────────────────┘     USB Responses   └─────────────────┘     BLE Callbacks      └─────────────┘
+//! ```
+//!
+//! ## Protocol Features
+//!
+//! - **Type-Safe Messages**: Rust type system ensures protocol correctness
+//! - **Efficient Serialization**: Binary serialization using bincode
+//! - **Message Validation**: Magic number and header integrity checking  
+//! - **Version Compatibility**: Structured message IDs for protocol evolution
+//! - **Cross-Platform**: Supports both embedded (no_std) and standard environments
+//! - **Extensible Design**: Easy addition of new command and response types
+//!
+//! ## Message Protocol Format
+//!
+//! All messages use a standardized 5-byte header followed by serialized payload:
+//!
+//! ```text
+//! ┌─────────────┬─────────────┬─────────────┬─────────────────┐
+//! │   Magic     │   Type ID   │   Length    │     Payload     │
+//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │   (variable)    │
+//! └─────────────┴─────────────┴─────────────┴─────────────────┘
+//! ```
+//!
+//! - **Magic Number**: 0xDEAD (little-endian) for message integrity validation
+//! - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
+//! - **Length**: Payload size in bytes (little-endian)
+//! - **Payload**: Bincode-serialized message data
+//!
+//! ## Message Categories
+//!
+//! ### Host Commands (0x01-0x0F)
+//! Commands sent from host devices to configure and control the BLE plugin:
+//!
+//! - **Peripheral Management**: Configure device name, UUID, advertising
+//! - **Service Operations**: Create and manage BLE services
+//! - **Characteristic Control**: Create characteristics with properties
+//! - **Data Operations**: Read/write/notify characteristic values
+//! - **Query Commands**: Get service and characteristic information
+//!
+//! ### Plugin Responses (0x10+)  
+//! Responses and data sent from plugin devices back to hosts:
+//!
+//! - **Configuration Responses**: Success/error status for commands
+//! - **Data Forwarding**: BLE client data forwarded to host
+//! - **Information Responses**: Service and characteristic details
+//! - **Error Notifications**: Detailed error information
+//!
+//! ## Core Modules
+//!
+//! - [`io`]: Core serialization traits and message header handling
+//! - [`io_types`]: All message type definitions and structures
+//! - [`host`]: Host-specific communication utilities
+//! - [`plugin`]: Plugin-specific communication channels
+//! - [`errors`]: Comprehensive error handling
+//!
+//! ## Usage Examples
+//!
+//! ### Basic Message Creation
+//!
+//! ```rust
+//! use protocol::io_types::HostCommandConfigurePeripheral;
+//! use heapless::String;
+//! use uuid::Uuid;
+//!
+//! // Create a peripheral configuration command
+//! let command = HostCommandConfigurePeripheral {
+//!     name: String::try_from("MyDevice").unwrap(),
+//!     uuid: Uuid::new_v4(),
+//! };
+//! ```
+//!
+//! ### Message Serialization
+//!
+//! ```rust,no_run
+//! use protocol::{IO, DEFAULT_PACKET_SIZE};
+//! # use protocol::io_types::HostCommandConfigurePeripheral;
+//! # let command: HostCommandConfigurePeripheral = panic!("Documentation example");
+//!
+//! // Serialize to fixed-size buffer with header
+//! let serialized: [u8; DEFAULT_PACKET_SIZE] = command.to_bytes()?;
+//!
+//! // Or serialize to provided buffer
+//! let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
+//! command.to_bytes_in_slice(&mut buffer)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Message Deserialization
+//!
+//! ```rust,no_run
+//! use protocol::{IO, io_types::HostCommandConfigurePeripheral};
+//!
+//! // Deserialize from received bytes (includes header validation)
+//! let received_data: &[u8] = &[/* USB data */];
+//! let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ## Protocol Constants
+//!
+//! - [`MAX_NAME_SIZE`]: Maximum length for device names (30 characters)
+//! - [`DEFAULT_PACKET_SIZE`]: Standard USB packet size (256 bytes)
+//! - [`MESSAGE_HEADER_SIZE`]: Protocol header size (5 bytes)
+//! - [`MESSAGE_MAGIC`]: Magic number for validation (0xDEAD)
+//!
+//! ## Feature Flags
+//!
+//! - `std`: Standard library support (enabled by default)
+//! - `serde`: Serde serialization support
+//! - `defmt`: Defmt logging support for embedded systems
+//!
+//! ## Compatibility
+//!
+//! - **Rust Version**: 1.70+
+//! - **Embedded**: Full no_std support with heapless collections
+//! - **Platforms**: Cross-platform (desktop, mobile, embedded)
+//! - **Endianness**: Little-endian byte order for consistency
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
@@ -14,9 +148,39 @@ pub mod io_types;
 pub mod plugin;
 pub use io::*;
 
-/// This is the maximum size of the name of the peripheral
+/// Maximum size for BLE peripheral device names
+///
+/// This constant defines the maximum length for device names used in BLE advertising
+/// and peripheral configuration. The limit ensures compatibility with BLE advertising
+/// packet size constraints and embedded system memory limitations.
+///
+/// # Usage
+///
+/// ```rust
+/// use protocol::MAX_NAME_SIZE;
+/// use heapless::String;
+///
+/// let device_name: String<MAX_NAME_SIZE> = String::try_from("MyBLEDevice").unwrap();
+/// ```
 pub const MAX_NAME_SIZE: usize = 30;
-/// Represents the default transfer size. For FS it's 8, 16, 32, or 64 bytes. For HS the max is 512 bytes
+
+/// Default USB packet size for communication
+///
+/// This represents the standard transfer size for USB communication between host and plugin
+/// devices. The value is optimized for USB High-Speed (HS) transfers while maintaining
+/// compatibility with Full-Speed (FS) devices.
+///
+/// - **Full-Speed USB**: Supports 8, 16, 32, or 64 bytes maximum
+/// - **High-Speed USB**: Supports up to 512 bytes maximum  
+/// - **Chosen Value**: 256 bytes for optimal performance across both modes
+///
+/// # Usage
+///
+/// ```rust
+/// use protocol::DEFAULT_PACKET_SIZE;
+///
+/// let buffer: [u8; DEFAULT_PACKET_SIZE] = [0; DEFAULT_PACKET_SIZE];
+/// ```
 pub const DEFAULT_PACKET_SIZE: usize = 256;
 
 #[cfg(test)]
