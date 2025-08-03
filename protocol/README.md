@@ -9,10 +9,11 @@ This library provides the complete communication protocol between host devices (
 ## Architecture
 
 ```text
-┌─────────────────┐     USB Commands     ┌─────────────────┐     BLE Operations     ┌─────────────┐
-│   Host Device   │ ──────────────────► │  Plugin Device  │ ──────────────────────► │ BLE Clients │
-│  (PC/Mobile)    │ ◄────────────────── │   (ESP32 + BLE) │ ◄────────────────────── │             │
-└─────────────────┘     USB Responses   └─────────────────┘     BLE Callbacks      └─────────────┘
+┌─────────────────┐     USB Commands     ┌─────────────────┐     BLE Operations      ┌─────────────┐
+│   Host Device   │ ──────────────────►  │  Plugin Device  │ ──────────────────────► │ BLE Clients │
+│ (PC/Mobile/     │                      │  (ESP32 + BLE)  │                         │             │
+│  Embedded)      │ ◄──────────────────  │                 │ ◄────────────────────── │             │
+└─────────────────┘     USB Responses    └─────────────────┘     BLE Callbacks       └─────────────┘
 ```
 
 ## Key Features
