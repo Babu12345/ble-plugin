@@ -32,6 +32,43 @@ For detailed documentation, see:
 - **Script Usage**: [`scripts/README.md`](scripts/README.md)
 - **Code Generator**: [`codegen/README.md`](codegen/README.md)
 
+## Testing
+
+This project includes a comprehensive test script that can test all Rust crates and Python packages in the project.
+
+### Run All Tests
+
+```bash
+# Test everything (Rust + Python)
+./test_all.sh
+
+# Test only Rust crates
+./test_all.sh rust
+
+# Test only Python packages  
+./test_all.sh python
+
+# Show help
+./test_all.sh --help
+```
+
+The test script will:
+- **Rust**: Test all 14 Rust crates in the project, falling back to compile-only checks for crates without tests
+- **Python**: Test Python packages in their virtual environments, focusing only on project code (not site-packages)
+- Provide colored output showing successes and failures
+- Exit with error code if any tests fail
+
+### Tested Components
+
+**Rust Crates:**
+- `lib_utils` - Utility functions
+- `protocol_io` - Protocol I/O operations  
+- `protocol` - Core protocol definitions (17 tests)
+- `codegen` - Code generation tools (41 tests total)
+
+**Python Packages:**
+- `pc/python` - Host-side Python implementation (40 tests)
+
 ### Testing the Code Generator
 
 ```bash
