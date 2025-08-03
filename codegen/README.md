@@ -9,13 +9,13 @@ This tool addresses the critical issue of maintaining consistency between Rust a
 ## Architecture
 
 ```text
-┌─────────────────┐    Parse AST     ┌─────────────────┐    Generate     ┌─────────────────┐
-│   Rust Protocol │ ──────────────► │   Code Generator │ ─────────────► │  Python Types   │
-│     Library     │                 │                 │                │                 │
-└─────────────────┘                 └─────────────────┘                └─────────────────┘
-        │                                     │                                │
-        │                                     │                                │
-   Source of Truth                     Validation Tool                Generated Code
+┌─────────────────┐    Parse AST    ┌─────────────────┐     Generate     ┌─────────────────┐
+│   Rust Protocol │ ──────────────► │  Code Generator │  ─────────────►  │  Python Types   │
+│     Library     │                 │                 │                  │                 │
+└─────────────────┘                 └─────────────────┘                  └─────────────────┘
+        │                                     │                                  │
+        │                                     │                                  │
+   Source of Truth                     Validation Tool                     Generated Code
 ```
 
 ## Features
