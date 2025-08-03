@@ -1,13 +1,30 @@
 [package]
 name = "protocol_io"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["BLE Plugin Team"]
+description = "Procedural macros for BLE plugin protocol I/O trait implementation"
+documentation = "https://docs.rs/protocol_io"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/your-org/ble-plugin"
+keywords = ["macro", "derive", "protocol", "ble", "io"]
+categories = [
+    "development-tools::procedural-macro-helpers",
+    "embedded",
+    "network-programming",
+]
+rust-version = "1.70"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-# Crates
+# Procedural macro utilities
 proc-macro2 = "1.0"
+
+# Code generation and quoting
 quote = "1.0"
+
+# Rust AST parsing and manipulation
 syn = { version = "2.0", features = ["full"] }
