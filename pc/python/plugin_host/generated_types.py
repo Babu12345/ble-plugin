@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "baa3340cf131d2cde03cde23fcc5a002198407c865a6c7d412dae2cdf157b450"
+PROTOCOL_HASH = "76f6c48d00c3004c3bcc143346189bfb7be6a717ca5415d7deba8f9c1fc99fb6"
 
 # ==================== CONSTANTS ====================
 
@@ -270,10 +270,12 @@ class PluginAuthenticationCompletedResponse:
     """Plugin authentication completed response
     
     Attributes:
-        peripheral_uuid:Peripheral UUID
+        address:Address of the device that was authenticated
+        address_type:Address type
         success:Whether the authentication was successful
     """
-    peripheral_uuid: str
+    address: List[attrs2bin.U8]
+    address_type: BluetoothAddressType
     success: bool
 
 # ==================== MESSAGE TYPE MAPPING ====================

@@ -28,11 +28,11 @@ This report summarizes the Python code generated from the Rust protocol library.
 - PluginData (3 fields)
 - PluginServiceInfoResponse (3 fields)
 - PluginCharacteristicInfoResponse (4 fields)
-- PluginAuthenticationCompletedResponse (2 fields)
+- PluginAuthenticationCompletedResponse (3 fields)
 
 ## Usage
 
 Replace the existing types.py file with generated_types.py, or carefully merge
 the generated definitions into your existing code.
 
-Generated at: 2025-08-03 21:59:47 UTC
+Generated at: 2025-08-03 22:17:13 UTC
