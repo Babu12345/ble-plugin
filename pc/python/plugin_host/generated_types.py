@@ -170,7 +170,7 @@ class HostCommandConfigureCharacteristicRead:
     """
     uuid: str
     service_uuid: str
-    value: List[int]
+    value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
 class HostCommandGetServiceInfo:
@@ -212,11 +212,11 @@ class HostCommandNotifyCharacteristicValue:
         service_uuid:Service UUID this characteristic belongs to
         value:Value to notify
     """
-    address: List[int]
+    address: List[attrs2bin.U8]
     address_type: BluetoothAddressType
     characteristic_uuid: str
     service_uuid: str
-    value: List[int]
+    value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
 class PluginData:

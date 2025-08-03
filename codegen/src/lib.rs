@@ -66,7 +66,8 @@ pub fn rust_type_to_python(rust_type: &str) -> String {
     let normalized = rust_type.replace(" ", "");
 
     match normalized.as_str() {
-        "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" => "int".to_string(),
+        "u8" => "attrs2bin.U8".to_string(),
+        "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" => "int".to_string(),
         "f32" | "f64" => "float".to_string(),
         "bool" => "bool".to_string(),
         "String" => "str".to_string(),
@@ -91,7 +92,7 @@ pub fn rust_type_to_python(rust_type: &str) -> String {
             )
         }
         t if t.contains("&") && t.contains("[u8]") => "bytes".to_string(), // Slice references &[u8]
-        t if t.contains("[u8") => "List[int]".to_string(),                 // Arrays like [u8; 6]
+        t if t.contains("[u8") => "List[attrs2bin.U8]".to_string(),                 // Arrays like [u8; 6]
         _ => rust_type.to_string(), // For custom types, keep as-is
     }
 }
@@ -377,7 +378,7 @@ mod tests {
 
     #[test]
     fn test_rust_type_to_python_primitives() {
-        assert_eq!(rust_type_to_python("u8"), "int");
+        assert_eq!(rust_type_to_python("u8"), "attrs2bin.U8");
         assert_eq!(rust_type_to_python("u16"), "int");
         assert_eq!(rust_type_to_python("u32"), "int");
         assert_eq!(rust_type_to_python("u64"), "int");
@@ -394,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_rust_type_to_python_generics() {
-        assert_eq!(rust_type_to_python("Vec<u8>"), "List[int]");
+        assert_eq!(rust_type_to_python("Vec<u8>"), "List[attrs2bin.U8]");
         assert_eq!(rust_type_to_python("Vec<String>"), "List[str]");
         assert_eq!(rust_type_to_python("heapless::Vec<u16>"), "List[int]");
         assert_eq!(rust_type_to_python("Option<u32>"), "Optional[int]");
@@ -728,7 +729,7 @@ mod tests {
             .iter()
             .find(|f| f.name == "data")
             .expect("Should find data field");
-        assert_eq!(data_field.python_type, "List[int]");
+        assert_eq!(data_field.python_type, "List[attrs2bin.U8]");
 
         Ok(())
     }
@@ -759,7 +760,7 @@ mod tests {
             .iter()
             .find(|f| f.name == "fixed_array")
             .expect("Should find fixed_array field");
-        assert_eq!(fixed_array_field.python_type, "List[int]");
+        assert_eq!(fixed_array_field.python_type, "List[attrs2bin.U8]");
 
         let slice_ref_field = struct_def
             .fields

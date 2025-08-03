@@ -329,7 +329,7 @@ fn test_rust_semantics_preservation() -> Result<()> {
         .iter()
         .find(|f| f.name == "payload")
         .expect("Should find payload field");
-    assert_eq!(payload_field.python_type, "List[int]");
+    assert_eq!(payload_field.python_type, "List[attrs2bin.U8]");
 
     Ok(())
 }

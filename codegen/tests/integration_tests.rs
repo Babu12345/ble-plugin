@@ -97,7 +97,7 @@ fn test_parse_complete_protocol() -> Result<()> {
     assert!(!struct_def.fields[1].is_optional);
 
     assert_eq!(struct_def.fields[2].name, "max_connections");
-    assert_eq!(struct_def.fields[2].python_type, "Optional[int]");
+    assert_eq!(struct_def.fields[2].python_type, "Optional[attrs2bin.U8]");
     assert!(struct_def.fields[2].is_optional);
 
     Ok(())
@@ -206,7 +206,7 @@ fn test_parse_complex_generic_types() -> Result<()> {
     assert_eq!(struct_def.fields.len(), 6);
 
     // Check Python type mappings for complex generics
-    assert_eq!(struct_def.fields[0].python_type, "List[int]");
+    assert_eq!(struct_def.fields[0].python_type, "List[attrs2bin.U8]");
     assert_eq!(struct_def.fields[1].python_type, "List[Optional[str]]");
     assert_eq!(struct_def.fields[2].python_type, "str");
     assert_eq!(struct_def.fields[3].python_type, "List[int]");

@@ -180,7 +180,7 @@ fn test_modules_with_complex_types() -> Result<()> {
     let size_limited_field = complex_struct.fields.iter()
         .find(|f| f.name == "size_limited")
         .expect("Should find size_limited field");
-    assert_eq!(size_limited_field.python_type, "List[int]");
+    assert_eq!(size_limited_field.python_type, "List[attrs2bin.U8]");
     
     Ok(())
 }

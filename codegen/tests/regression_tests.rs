@@ -80,7 +80,7 @@ fn test_sample_protocol_parsing() -> Result<()> {
     let max_connections_field = configure_peripheral.fields.iter()
         .find(|f| f.name == "max_connections")
         .expect("Should find max_connections field");
-    assert_eq!(max_connections_field.python_type, "Optional[int]");
+    assert_eq!(max_connections_field.python_type, "Optional[attrs2bin.U8]");
     assert!(max_connections_field.is_optional);
     
     Ok(())
@@ -160,14 +160,14 @@ fn test_complex_type_mappings() -> Result<()> {
         .find(|f| f.name == "data")
         .expect("Should find data field");
     assert!(data_field.rust_type.contains("Vec"));
-    assert_eq!(data_field.python_type, "List[int]");
+    assert_eq!(data_field.python_type, "List[attrs2bin.U8]");
     
     // Test Option<T> -> Optional[T] mapping
     let max_connections_field = configure_peripheral.fields.iter()
         .find(|f| f.name == "max_connections")
         .expect("Should find max_connections field");
     assert!(max_connections_field.rust_type.contains("Option"));
-    assert_eq!(max_connections_field.python_type, "Optional[int]");
+    assert_eq!(max_connections_field.python_type, "Optional[attrs2bin.U8]");
     assert!(max_connections_field.is_optional);
     
     // Test custom enum type preservation
