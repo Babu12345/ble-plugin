@@ -37,6 +37,11 @@ mod common {
         pub fn size(&self) -> usize {
             self.0.len()
         }
+
+        /// Get access to the raw bytes
+        pub fn raw_bytes(&self) -> &[u8] {
+            &self.0
+        }
     }
 }
 

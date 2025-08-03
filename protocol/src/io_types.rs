@@ -10,6 +10,7 @@ pub mod host {
     use crate::HostIO;
     use crate::IO;
     use crate::MAX_NAME_SIZE;
+    use crate::{MessageType, MessageTypeId};
     use heapless::String;
     use heapless::Vec;
     use protocol_io::HostIO;
@@ -25,11 +26,23 @@ pub mod host {
         pub uuid: Uuid,
     }
 
+    impl MessageType for HostCommandConfigurePeripheral {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandConfigurePeripheral
+        }
+    }
+
     /// Host command. Configure service
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandConfigureService {
         /// Service UUID
         pub uuid: Uuid,
+    }
+
+    impl MessageType for HostCommandConfigureService {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandConfigureService
+        }
     }
 
     /// Properties enumeration for BLE characteristics.
@@ -62,6 +75,12 @@ pub mod host {
         pub properties: heapless::Vec<BLEProperties, MAX_PROPERTIES>, // Assuming max 4 properties per characteristic
     }
 
+    impl MessageType for HostCommandConfigureCharacteristic {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandConfigureCharacteristic
+        }
+    }
+
     /// Host command. Configure characteristic read
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandConfigureCharacteristicRead {
@@ -73,11 +92,23 @@ pub mod host {
         pub value: Vec<u8, MAX_NAME_SIZE>,
     }
 
+    impl MessageType for HostCommandConfigureCharacteristicRead {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandConfigureCharacteristicRead
+        }
+    }
+
     /// Host command. Get service info
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandGetServiceInfo {
         /// Service UUID
         pub uuid: Uuid,
+    }
+
+    impl MessageType for HostCommandGetServiceInfo {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandGetServiceInfo
+        }
     }
 
     /// Host command. Get characteristic info
@@ -89,11 +120,23 @@ pub mod host {
         pub service_uuid: Uuid,
     }
 
-    /// Host command. Get characteristic info
+    impl MessageType for HostCommandGetCharacteristicInfo {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandGetCharacteristicInfo
+        }
+    }
+
+    /// Host command. Start advertisement
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
     pub struct HostCommandStartAdvertisement {
         /// Allow multiple central connections
         pub allow_multi_connect: bool,
+    }
+
+    impl MessageType for HostCommandStartAdvertisement {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandStartAdvertisement
+        }
     }
 
     /// Bluetooth Device address type
@@ -124,11 +167,18 @@ pub mod host {
         /// Value to notify
         pub value: Vec<u8, MAX_NAME_SIZE>,
     }
+
+    impl MessageType for HostCommandNotifyCharacteristicValue {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::HostCommandNotifyCharacteristicValue
+        }
+    }
 }
 
 /// Plugin types
 pub mod plugin {
     use crate::PluginIO;
+    use crate::{MessageType, MessageTypeId};
     use protocol_io::PluginIO;
     use uuid::Uuid;
 
@@ -161,6 +211,12 @@ pub mod plugin {
         pub data: &'a [u8],
     }
 
+    impl<'a> MessageType for PluginData<'a> {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::PluginData
+        }
+    }
+
     /// Represents the error that can occur during plugin configuration
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
     #[repr(u8)]
@@ -181,6 +237,12 @@ pub mod plugin {
         CharacteristicWithoutServiceConfiguration,
     }
 
+    impl MessageType for PluginConfigurationError {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::PluginConfigurationError
+        }
+    }
+
     /// Maximum characteritics per service
     pub const MAX_CHARACTERISTICS_PER_SERVICE: usize = 16;
 
@@ -195,6 +257,12 @@ pub mod plugin {
         pub exists: bool,
     }
 
+    impl MessageType for PluginServiceInfoResponse {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::PluginServiceInfoResponse
+        }
+    }
+
     /// Characteristic information response
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
     pub struct PluginCharacteristicInfoResponse {
@@ -206,5 +274,11 @@ pub mod plugin {
         pub properties: heapless::Vec<BLEProperties, 4>,
         /// Whether the characteristic exists
         pub exists: bool,
+    }
+
+    impl MessageType for PluginCharacteristicInfoResponse {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::PluginCharacteristicInfoResponse
+        }
     }
 }

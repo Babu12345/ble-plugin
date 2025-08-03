@@ -9,6 +9,7 @@ use errors::StateMachineError;
 use esp_idf_svc::hal::task::block_on;
 use esp32_nimble::BLEAddress;
 use esp32_nimble::BLEAddressType;
+use protocol::MESSAGE_HEADER_SIZE;
 use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
 use protocol::io_types::HostCommandNotifyCharacteristicValue;
@@ -26,11 +27,12 @@ use heapless::String;
 use protocol::io_types::{
     HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
     HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
-    HostCommandStartAdvertisement, PluginCharacteristicInfoResponse, PluginConfigurationError, PluginServiceInfoResponse,
-    MAX_PROPERTIES, MAX_CHARACTERISTICS_PER_SERVICE,
+    HostCommandStartAdvertisement, MAX_CHARACTERISTICS_PER_SERVICE, MAX_PROPERTIES,
+    PluginCharacteristicInfoResponse, PluginConfigurationError, PluginServiceInfoResponse,
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
+use protocol::{MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MessageTypeId};
 
 use std::sync::Arc;
 use uuid::Uuid;
@@ -38,7 +40,13 @@ use uuid::Uuid;
 #[derive(Default)]
 struct PluginStateMachineMetadata {
     ble_name: Option<String<MAX_NAME_SIZE>>,
-    service_to_characteristic_uuids: HashMap<Uuid, heapless::Vec<(Uuid, heapless::Vec<BLEProperties, MAX_PROPERTIES>), MAX_CHARACTERISTICS_PER_SERVICE>>, // (UUID, properties)
+    service_to_characteristic_uuids: HashMap<
+        Uuid,
+        heapless::Vec<
+            (Uuid, heapless::Vec<BLEProperties, MAX_PROPERTIES>),
+            MAX_CHARACTERISTICS_PER_SERVICE,
+        >,
+    >, // (UUID, properties)
 }
 
 /// Contains state machine to process BLE and usb data and facilitate their data transfer
@@ -69,6 +77,43 @@ impl PluginStateMachine {
         }
     }
 
+    /// Extract message type ID from received data
+    fn extract_message_type_id(data: &[u8]) -> Result<MessageTypeId> {
+        // Check if we have enough bytes for a valid header
+        if data.len() < MESSAGE_HEADER_SIZE {
+            log::error!("Received data too short for valid message header");
+            return Err(StateMachineError::InvalidMessageFormat);
+        }
+
+        // Verify magic number
+        let magic = u16::from_le_bytes([data[0], data[1]]);
+        if magic != MESSAGE_MAGIC {
+            log::error!(
+                "Invalid magic number: expected 0x{:X}, got 0x{:X}",
+                MESSAGE_MAGIC,
+                magic
+            );
+            return Err(StateMachineError::InvalidMessageFormat);
+        }
+
+        // Extract message type ID
+        let type_id = data[MESSAGE_MAGIC_BYTES];
+        match type_id {
+            0x01 => Ok(MessageTypeId::HostCommandConfigurePeripheral),
+            0x02 => Ok(MessageTypeId::HostCommandConfigureService),
+            0x03 => Ok(MessageTypeId::HostCommandConfigureCharacteristic),
+            0x04 => Ok(MessageTypeId::HostCommandConfigureCharacteristicRead),
+            0x05 => Ok(MessageTypeId::HostCommandGetServiceInfo),
+            0x06 => Ok(MessageTypeId::HostCommandGetCharacteristicInfo),
+            0x07 => Ok(MessageTypeId::HostCommandStartAdvertisement),
+            0x08 => Ok(MessageTypeId::HostCommandNotifyCharacteristicValue),
+            _ => {
+                log::error!("Unknown message type ID: 0x{:02X}", type_id);
+                Err(StateMachineError::UnknownMessageType)
+            }
+        }
+    }
+
     /// Returns a closure that can be used to run the state machine in a separate thread.
     pub fn runner_fn(mut self) -> impl FnMut() {
         move || {
@@ -85,7 +130,7 @@ impl PluginStateMachine {
     /// - Sets up BLE callback functions for BLE -> USB communication
     /// - Runs concurrently to avoid blocking the main thread
     ///
-    /// TODO: Be smarter about decoding the usb data and sure that there are no collisions (meaning that the received data can be represented as > 1 commands)
+    /// Uses message type ID for fast and accurate message dispatch.
     fn runner(&mut self) {
         log::info!("Starting USB-BLE bridge runner");
         loop {
@@ -93,94 +138,145 @@ impl PluginStateMachine {
                 Ok(data) => {
                     log::debug!("Received USB data: {} bytes", data.size());
 
-                    let maybe_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        if let Err(e) = self.handle_configure_peripheral(cmd) {
-                            log::error!("Failed to handle configure peripheral command: {:?}", e);
-                        }
-                        continue;
-                    }
+                    // Extract message type ID for efficient dispatch
+                    match Self::extract_message_type_id(data.raw_bytes()) {
+                        Ok(message_type) => {
+                            let result = match message_type {
+                                MessageTypeId::HostCommandConfigurePeripheral => {
+                                    match data.decode::<HostCommandConfigurePeripheral>() {
+                                        Ok(cmd) => self.handle_configure_peripheral(cmd),
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandConfigurePeripheral: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                MessageTypeId::HostCommandConfigureService => {
+                                    match data.decode::<HostCommandConfigureService>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_configure_service(cmd)
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandConfigureService: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                MessageTypeId::HostCommandConfigureCharacteristic => {
+                                    match data.decode::<HostCommandConfigureCharacteristic>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_configure_characteristic(cmd)
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandConfigureCharacteristic: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                MessageTypeId::HostCommandConfigureCharacteristicRead => {
+                                    match data.decode::<HostCommandConfigureCharacteristicRead>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_configure_characteristic_read(cmd)
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandConfigureCharacteristicRead: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                MessageTypeId::HostCommandNotifyCharacteristicValue => {
+                                    match data.decode::<HostCommandNotifyCharacteristicValue>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_notify_characteristic_value(cmd)
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandNotifyCharacteristicValue: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                MessageTypeId::HostCommandGetServiceInfo => {
+                                    match data.decode::<HostCommandGetServiceInfo>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_get_service_info(cmd)
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandGetServiceInfo: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                MessageTypeId::HostCommandGetCharacteristicInfo => {
+                                    match data.decode::<HostCommandGetCharacteristicInfo>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_get_characteristic_info(cmd)
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandGetCharacteristicInfo: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                MessageTypeId::HostCommandStartAdvertisement => {
+                                    match data.decode::<HostCommandStartAdvertisement>() {
+                                        Ok(cmd) => self.handle_start_advertisement(cmd),
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to decode HostCommandStartAdvertisement: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    log::warn!(
+                                        "Received message type ID that is not handled in plugin: {:?}",
+                                        message_type
+                                    );
+                                    continue;
+                                }
+                            };
 
-                    let maybe_cmd: Option<HostCommandConfigureService> = data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        log::info!("Received USB command: {:?}", cmd);
-                        if let Err(e) = self.handle_configure_service(cmd) {
-                            log::error!("Failed to handle configure service command: {:?}", e);
+                            if let Err(e) = result {
+                                log::error!("Failed to handle command {:?}: {:?}", message_type, e);
+                            }
                         }
-                        continue;
-                    }
-
-                    let maybe_cmd: Option<HostCommandConfigureCharacteristic> = data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        log::info!("Received USB command: {:?}", cmd);
-                        if let Err(e) = self.handle_configure_characteristic(cmd) {
-                            log::error!(
-                                "Failed to handle configure characteristic command: {:?}",
-                                e
+                        Err(e) => {
+                            log::error!("Failed to extract message type ID: {:?}", e);
+                            log::warn!(
+                                "Received unrecognized command data from USB, raw data length: {} bytes",
+                                data.size()
                             );
                         }
-                        continue;
                     }
-
-                    let maybe_cmd: Option<HostCommandConfigureCharacteristicRead> =
-                        data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        log::info!("Received USB command: {:?}", cmd);
-                        if let Err(e) = self.handle_configure_characteristic_read(cmd) {
-                            log::error!(
-                                "Failed to handle configure characteristic command: {:?}",
-                                e
-                            );
-                        }
-                        continue;
-                    }
-
-                    let maybe_cmd: Option<HostCommandNotifyCharacteristicValue> =
-                        data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        log::info!("Received USB command: {:?}", cmd);
-                        if let Err(e) = self.handle_notify_characteristic_value(cmd) {
-                            log::error!(
-                                "Failed to handle notify characteristic value command: {:?}",
-                                e
-                            );
-                        }
-                        continue;
-                    }
-
-                    let maybe_cmd: Option<HostCommandGetServiceInfo> = data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        log::info!("Received USB command: {:?}", cmd);
-                        if let Err(e) = self.handle_get_service_info(cmd) {
-                            log::error!("Failed to handle get service info command: {:?}", e);
-                        }
-                        continue;
-                    }
-
-                    let maybe_cmd: Option<HostCommandGetCharacteristicInfo> = data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        log::info!("Received USB command: {:?}", cmd);
-                        if let Err(e) = self.handle_get_characteristic_info(cmd) {
-                            log::error!(
-                                "Failed to handle get characteristic info command: {:?}",
-                                e
-                            );
-                        }
-                        continue;
-                    }
-
-                    let maybe_cmd: Option<HostCommandStartAdvertisement> = data.decode().ok();
-                    if let Some(cmd) = maybe_cmd {
-                        if let Err(e) = self.handle_start_advertisement(cmd) {
-                            log::error!("Failed to handle start advertisement command: {:?}", e);
-                        }
-                        continue;
-                    }
-
-                    log::warn!(
-                        "Received unrecognized command data from USB, raw data length: {} bytes",
-                        data.size()
-                    );
                 }
                 Err(e) => {
                     log::error!("Failed to receive data from USB: {:?}", e);

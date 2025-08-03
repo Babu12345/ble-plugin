@@ -17,6 +17,10 @@ pub enum StateMachineError {
     CharacteristicNotificationError,
     /// Error related to BLE characteristic UUID storage.
     CharacteristicUuidStorageError,
+    /// Error related to invalid message format.
+    InvalidMessageFormat,
+    /// Error related to unknown message type.
+    UnknownMessageType,
 }
 
 /// Result type for the plugin state machine operations.

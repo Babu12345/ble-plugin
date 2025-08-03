@@ -12,7 +12,7 @@ pub mod host;
 mod io;
 pub mod io_types;
 pub mod plugin;
-use io::*;
+pub use io::*;
 
 /// This is the maximum size of the name of the peripheral
 pub const MAX_NAME_SIZE: usize = 30;
