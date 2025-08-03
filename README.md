@@ -1,6 +1,24 @@
 ## Description
-Project for a BLE plugin device set. Contains implementation for the host and plugin side processing.
-Where possible, it also contains std and no_std implementations of the host and plugin code.
+
+A comprehensive BLE (Bluetooth Low Energy) plugin framework supporting bidirectional communication between host devices and plugin modules. This project provides a robust protocol implementation with automatic code generation to ensure consistency across multiple programming languages.
+
+### Key Features
+
+- **Dual-Architecture Support**: Complete implementations for both host and plugin sides
+- **Cross-Platform Compatibility**: Standard library (`std`) and embedded (`no_std`) implementations
+- **Protocol Consistency**: Automated code generation maintains synchronization between Rust and Python implementations
+- **Comprehensive Testing**: Extensive test coverage with 41+ validation tests for protocol integrity
+- **Message Type Management**: Structured message ID ranges (host: 0x01-0x7F, plugin: 0x80-0xFF)
+- **ESP32 Integration**: Ready-to-use templates and utilities for ESP-IDF based hardware
+
+### Architecture
+
+The project is organized into distinct components:
+- **Protocol Core**: Rust-based protocol definitions and I/O operations
+- **Host Implementation**: Python-based host-side communication layer
+- **Plugin Framework**: Embedded-friendly plugin implementations
+- **Code Generation**: Automated tooling for cross-language protocol consistency
+- **Testing Suite**: Comprehensive validation across all components
 
 ## Engineers
 Babuabel Wanyeki (babs@wanyekitech.com)
