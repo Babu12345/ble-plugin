@@ -183,7 +183,7 @@ test_python_packages() {
             if [ -f "pytest.ini" ] || [ -d "tests" ]; then
                 if command -v pytest >/dev/null 2>&1; then
                     # Only test the tests/ directory to avoid virtual environment packages
-                    if pytest tests/ --quiet 2>/dev/null; then
+                    if pytest tests/ --quiet >/dev/null 2>&1; then
                         print_success "$pkg_dir tests passed"
                         successful_packages+=("$pkg_dir")
                     else
@@ -193,7 +193,7 @@ test_python_packages() {
                 else
                     print_warning "$pkg_dir has tests but pytest not available"
                     # Try with python -m pytest
-                    if python -m pytest tests/ --quiet 2>/dev/null; then
+                    if python -m pytest tests/ --quiet >/dev/null 2>&1; then
                         print_success "$pkg_dir tests passed (using python -m pytest)"
                         successful_packages+=("$pkg_dir")
                     else

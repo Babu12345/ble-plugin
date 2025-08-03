@@ -197,6 +197,7 @@ mod tests {
         },
         MessageType, MessageTypeId, DEFAULT_PACKET_SIZE, IO,
     };
+    use strum::IntoEnumIterator;
 
     #[test]
     fn test_max_transfer_size() {
@@ -450,25 +451,9 @@ mod tests {
     #[test]
     fn test_message_type_id_uniqueness() {
         use std::collections::HashSet;
-
-        // Collect all message type ID values
-        let type_ids = vec![
-            MessageTypeId::HostCommandConfigurePeripheral as u8,
-            MessageTypeId::HostCommandConfigureService as u8,
-            MessageTypeId::HostCommandConfigureCharacteristic as u8,
-            MessageTypeId::HostCommandConfigureCharacteristicRead as u8,
-            MessageTypeId::HostCommandGetServiceInfo as u8,
-            MessageTypeId::HostCommandGetCharacteristicInfo as u8,
-            MessageTypeId::HostCommandStartAdvertisement as u8,
-            MessageTypeId::HostCommandNotifyCharacteristicValue as u8,
-            MessageTypeId::PluginData as u8,
-            MessageTypeId::PluginConfigurationError as u8,
-            MessageTypeId::PluginServiceInfoResponse as u8,
-            MessageTypeId::PluginCharacteristicInfoResponse as u8,
-        ];
-
+        let type_ids = MessageTypeId::iter().collect::<Vec<_>>();
         // Verify all IDs are unique
-        let unique_ids: HashSet<u8> = type_ids.iter().cloned().collect();
+        let unique_ids: HashSet<u8> = MessageTypeId::iter().map(|id| id as u8).collect();
         assert_eq!(
             type_ids.len(),
             unique_ids.len(),

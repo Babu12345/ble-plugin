@@ -57,6 +57,7 @@ use crate::{
 };
 use heapless::Vec;
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
 /// Size in bytes of the message type identifier field
 ///
@@ -114,7 +115,7 @@ pub const MESSAGE_HEADER_SIZE: usize =
 /// // Check if message is a plugin response  
 /// let is_plugin_response = (type_id as u8) >= 0x80;
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 #[repr(u8)]
 pub enum MessageTypeId {
     // Host Commands (0x01-0x0F)
