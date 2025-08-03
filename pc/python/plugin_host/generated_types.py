@@ -229,7 +229,7 @@ class PluginData:
     """
     src_id: str
     send_type: PluginDataSendType
-    data: List[int]
+    data: bytes
 
 @attr.s(auto_attribs=True)
 class PluginServiceInfoResponse:

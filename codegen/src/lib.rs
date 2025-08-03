@@ -86,8 +86,8 @@ pub fn rust_type_to_python(rust_type: &str) -> String {
         t if t.starts_with("Option<") => {
             format!("Optional[{}]", extract_generic_type(t).map(|inner| rust_type_to_python(&inner)).unwrap_or_else(|| "Any".to_string()))
         },
-        t if t.contains("[u8") => "List[int]".to_string(), // Arrays like [u8; 6] or slices &[u8]
         t if t.contains("&") && t.contains("[u8]") => "bytes".to_string(), // Slice references &[u8]
+        t if t.contains("[u8") => "List[int]".to_string(), // Arrays like [u8; 6]
         _ => rust_type.to_string(), // For custom types, keep as-is
     }
 }
@@ -97,6 +97,11 @@ fn extract_generic_type(type_str: &str) -> Option<String> {
     let start = type_str.find('<')?;
     let end = type_str.rfind('>')?;
     Some(type_str[start + 1..end].to_string())
+}
+
+/// Check if an item has public visibility
+fn is_public(vis: &syn::Visibility) -> bool {
+    matches!(vis, syn::Visibility::Public(_))
 }
 
 /// Extracts documentation comments from attributes and formats them for Python
@@ -164,7 +169,23 @@ pub fn parse_rust_source(source: &str) -> Result<ProtocolDef> {
     let mut enums = Vec::new();
     let mut structs = Vec::new();
 
-    for item in syntax_tree.items {
+    parse_items(&syntax_tree.items, &mut constants, &mut enums, &mut structs)?;
+
+    Ok(ProtocolDef {
+        constants,
+        enums,
+        structs,
+    })
+}
+
+/// Recursively parse items from a list, handling nested modules
+fn parse_items(
+    items: &[Item],
+    constants: &mut Vec<ConstantDef>,
+    enums: &mut Vec<EnumDef>,
+    structs: &mut Vec<StructDef>,
+) -> Result<()> {
+    for item in items {
         match item {
             Item::Const(const_item) => {
                 if let Some(constant) = extract_constant(&const_item)? {
@@ -183,42 +204,23 @@ pub fn parse_rust_source(source: &str) -> Result<ProtocolDef> {
             }
             Item::Mod(mod_item) => {
                 // Recursively parse items inside modules
-                if let Some((_, items)) = mod_item.content {
-                    for mod_item in items {
-                        match mod_item {
-                            Item::Const(const_item) => {
-                                if let Some(constant) = extract_constant(&const_item)? {
-                                    constants.push(constant);
-                                }
-                            }
-                            Item::Enum(enum_item) => {
-                                if let Some(enum_def) = extract_enum(&enum_item)? {
-                                    enums.push(enum_def);
-                                }
-                            }
-                            Item::Struct(struct_item) => {
-                                if let Some(struct_def) = extract_struct(&struct_item)? {
-                                    structs.push(struct_def);
-                                }
-                            }
-                            _ => {} // Ignore other items in modules
-                        }
-                    }
+                if let Some((_, mod_items)) = &mod_item.content {
+                    parse_items(mod_items, constants, enums, structs)?;
                 }
             }
             _ => {} // Ignore other items
         }
     }
-
-    Ok(ProtocolDef {
-        constants,
-        enums,
-        structs,
-    })
+    Ok(())
 }
 
 /// Extract constant definition from syn::ItemConst
 fn extract_constant(const_item: &ItemConst) -> Result<Option<ConstantDef>> {
+    // Only extract public constants
+    if !is_public(&const_item.vis) {
+        return Ok(None);
+    }
+    
     let name = const_item.ident.to_string();
     let doc_comment = extract_doc_comment(&const_item.attrs);
     
@@ -271,6 +273,11 @@ fn extract_constant(const_item: &ItemConst) -> Result<Option<ConstantDef>> {
 
 /// Extract enum definition from syn::ItemEnum
 fn extract_enum(enum_item: &ItemEnum) -> Result<Option<EnumDef>> {
+    // Only extract public enums
+    if !is_public(&enum_item.vis) {
+        return Ok(None);
+    }
+    
     let name = enum_item.ident.to_string();
     let doc_comment = extract_doc_comment(&enum_item.attrs);
     
@@ -317,6 +324,11 @@ fn extract_enum(enum_item: &ItemEnum) -> Result<Option<EnumDef>> {
 
 /// Extract struct definition from syn::ItemStruct
 fn extract_struct(struct_item: &ItemStruct) -> Result<Option<StructDef>> {
+    // Only extract public structs
+    if !is_public(&struct_item.vis) {
+        return Ok(None);
+    }
+    
     let name = struct_item.ident.to_string();
     let doc_comment = extract_doc_comment(&struct_item.attrs);
     
@@ -701,6 +713,95 @@ mod tests {
             .find(|f| f.name == "data")
             .expect("Should find data field");
         assert_eq!(data_field.python_type, "List[int]");
+        
+        Ok(())
+    }
+
+    /// Test that module parsing handles array and slice types correctly
+    #[test]
+    fn test_module_array_and_slice_types() -> Result<()> {
+        let source = r#"
+            pub mod types {
+                pub struct ArrayStruct {
+                    pub fixed_array: [u8; 6],
+                    pub slice_ref: &'static [u8],
+                    pub vec_data: Vec<u16>,
+                    pub heapless_vec: heapless::Vec<u32, 10>,
+                }
+            }
+        "#;
+        
+        let result = parse_rust_source(source)?;
+        
+        assert_eq!(result.structs.len(), 1);
+        let struct_def = &result.structs[0];
+        assert_eq!(struct_def.name, "ArrayStruct");
+        
+        // Check that array types are converted correctly
+        let fixed_array_field = struct_def.fields.iter()
+            .find(|f| f.name == "fixed_array")
+            .expect("Should find fixed_array field");
+        assert_eq!(fixed_array_field.python_type, "List[int]");
+        
+        let slice_ref_field = struct_def.fields.iter()
+            .find(|f| f.name == "slice_ref")
+            .expect("Should find slice_ref field");
+        assert_eq!(slice_ref_field.python_type, "bytes");
+        
+        let vec_data_field = struct_def.fields.iter()
+            .find(|f| f.name == "vec_data")
+            .expect("Should find vec_data field");
+        assert_eq!(vec_data_field.python_type, "List[int]");
+        
+        let heapless_vec_field = struct_def.fields.iter()
+            .find(|f| f.name == "heapless_vec")
+            .expect("Should find heapless_vec field");
+        assert_eq!(heapless_vec_field.python_type, "List[int]");
+        
+        Ok(())
+    }
+
+    /// Test module parsing with const expressions and complex values
+    #[test]
+    fn test_module_const_expressions() -> Result<()> {
+        let source = r#"
+            pub mod constants {
+                pub const SIMPLE_VALUE: u32 = 42;
+                pub const HEX_VALUE: u16 = 0xDEAD;
+                pub const STRING_VALUE: &str = "test_string";
+                pub const BOOL_VALUE: bool = true;
+                pub const REFERENCE_VALUE: usize = SIMPLE_VALUE;
+            }
+        "#;
+        
+        let result = parse_rust_source(source)?;
+        
+        assert_eq!(result.constants.len(), 5);
+        
+        let simple_const = result.constants.iter()
+            .find(|c| c.name == "SIMPLE_VALUE")
+            .expect("Should find SIMPLE_VALUE");
+        assert_eq!(simple_const.value, "42");
+        
+        let hex_const = result.constants.iter()
+            .find(|c| c.name == "HEX_VALUE")
+            .expect("Should find HEX_VALUE");
+        assert_eq!(hex_const.value, "0xDEAD");
+        
+        let string_const = result.constants.iter()
+            .find(|c| c.name == "STRING_VALUE")
+            .expect("Should find STRING_VALUE");
+        assert_eq!(string_const.value, "\"test_string\"");
+        
+        let bool_const = result.constants.iter()
+            .find(|c| c.name == "BOOL_VALUE")
+            .expect("Should find BOOL_VALUE");
+        assert_eq!(bool_const.value, "true");
+        
+        let ref_const = result.constants.iter()
+            .find(|c| c.name == "REFERENCE_VALUE")
+            .expect("Should find REFERENCE_VALUE");
+        assert_eq!(ref_const.value, "SIMPLE_VALUE");
         
         Ok(())
     }

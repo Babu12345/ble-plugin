@@ -88,7 +88,7 @@ fn test_unsupported_constructs() -> Result<()> {
     
     let result = parse_rust_source(source_with_unsupported)?;
     
-    // Should extract supported items (including those in modules)
+    // Should extract only public supported items (including those in modules)
     assert_eq!(result.constants.len(), 2);
     
     let constant_names: Vec<_> = result.constants.iter().map(|c| &c.name).collect();

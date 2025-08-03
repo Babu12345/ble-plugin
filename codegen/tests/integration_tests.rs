@@ -158,10 +158,10 @@ fn test_parse_mixed_visibility_and_attributes() -> Result<()> {
     
     let result = parse_rust_source(source)?;
     
-    // Should parse both public and private items (visibility is not filtered at parse level)
-    assert_eq!(result.constants.len(), 2);
-    assert_eq!(result.enums.len(), 2);
-    assert_eq!(result.structs.len(), 2);
+    // Should parse only public items (private items are filtered out)
+    assert_eq!(result.constants.len(), 1); // Only PUBLIC_CONST
+    assert_eq!(result.enums.len(), 1);     // Only PublicEnum 
+    assert_eq!(result.structs.len(), 1);   // Only PublicStruct
     
     // Check that attributes are preserved where relevant
     let public_enum = result.enums.iter().find(|e| e.name == "PublicEnum").unwrap();
