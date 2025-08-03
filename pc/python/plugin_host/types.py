@@ -20,24 +20,6 @@ MESSAGE_TYPE_ID_BYTES = 1
 DATA_BYTES_LENGTH_IN_BYTES = 2
 MESSAGE_HEADER_SIZE = MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES + DATA_BYTES_LENGTH_IN_BYTES  # 5 bytes
 
-class MessageTypeId(Enum):
-    """Message type identifiers for command discrimination."""
-    # Host commands
-    HostCommandConfigurePeripheral = 0x01
-    HostCommandConfigureService = 0x02
-    HostCommandConfigureCharacteristic = 0x03
-    HostCommandConfigureCharacteristicRead = 0x04
-    HostCommandGetServiceInfo = 0x05
-    HostCommandGetCharacteristicInfo = 0x06
-    HostCommandStartAdvertisement = 0x07
-    HostCommandNotifyCharacteristicValue = 0x08
-    # Plugin responses
-    PluginData = 0x10
-    PluginConfigurationError = 0x11
-    PluginServiceInfoResponse = 0x12
-    PluginCharacteristicInfoResponse = 0x13
-
-
 # Host types
 
 @attr.s(auto_attribs=True)
@@ -241,6 +223,26 @@ class PluginCharacteristicInfoResponse:
     properties: List[BLEProperties]
     exists: bool
 
+
+class MessageTypeId(Enum):
+    """Message type identifiers for command discrimination."""
+    # Host commands
+    HostCommandConfigurePeripheral = 0x01
+    HostCommandConfigureService = 0x02
+    HostCommandConfigureCharacteristic = 0x03
+    HostCommandConfigureCharacteristicRead = 0x04
+    HostCommandGetServiceInfo = 0x05
+    HostCommandGetCharacteristicInfo = 0x06
+    HostCommandStartAdvertisement = 0x07
+    HostCommandNotifyCharacteristicValue = 0x08
+    # Plugin responses
+    PluginData = 0x10
+    PluginConfigurationError = 0x11
+    PluginServiceInfoResponse = 0x12
+    PluginCharacteristicInfoResponse = 0x13
+
+
+
 # Map message types to their type IDs
 MESSAGE_TYPE_MAP = {
     HostCommandConfigurePeripheral: MessageTypeId.HostCommandConfigurePeripheral,
@@ -257,18 +259,5 @@ MESSAGE_TYPE_MAP = {
     PluginCharacteristicInfoResponse: MessageTypeId.PluginCharacteristicInfoResponse,
 }
 
-# Reverse map for type ID to message type
-TYPE_ID_TO_MESSAGE_TYPE = {
-    MessageTypeId.HostCommandConfigurePeripheral: HostCommandConfigurePeripheral,
-    MessageTypeId.HostCommandConfigureService: HostCommandConfigureService,
-    MessageTypeId.HostCommandConfigureCharacteristic: HostCommandConfigureCharacteristic,
-    MessageTypeId.HostCommandConfigureCharacteristicRead: HostCommandConfigureCharacteristicRead,
-    MessageTypeId.HostCommandGetServiceInfo: HostCommandGetServiceInfo,
-    MessageTypeId.HostCommandGetCharacteristicInfo: HostCommandGetCharacteristicInfo,
-    MessageTypeId.HostCommandStartAdvertisement: HostCommandStartAdvertisement,
-    MessageTypeId.HostCommandNotifyCharacteristicValue: HostCommandNotifyCharacteristicValue,
-    MessageTypeId.PluginData: PluginData,
-    MessageTypeId.PluginConfigurationError: PluginConfigurationError,
-    MessageTypeId.PluginServiceInfoResponse: PluginServiceInfoResponse,
-    MessageTypeId.PluginCharacteristicInfoResponse: PluginCharacteristicInfoResponse,
-}
+# Reverse map for easy lookup
+TYPE_ID_TO_MESSAGE_TYPE = {v: k for k, v in MESSAGE_TYPE_MAP.items()}
