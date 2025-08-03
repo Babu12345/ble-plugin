@@ -236,10 +236,10 @@ class MessageTypeId(Enum):
     HostCommandStartAdvertisement = 0x07
     HostCommandNotifyCharacteristicValue = 0x08
     # Plugin responses
-    PluginData = 0x10
-    PluginConfigurationError = 0x11
-    PluginServiceInfoResponse = 0x12
-    PluginCharacteristicInfoResponse = 0x13
+    PluginData = 0x80
+    PluginConfigurationError = 0x81
+    PluginServiceInfoResponse = 0x82
+    PluginCharacteristicInfoResponse = 0x83
 
 
 

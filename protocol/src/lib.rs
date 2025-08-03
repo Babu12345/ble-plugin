@@ -59,7 +59,7 @@
 //! - **Data Operations**: Read/write/notify characteristic values
 //! - **Query Commands**: Get service and characteristic information
 //!
-//! ### Plugin Responses (0x10+)  
+//! ### Plugin Responses (0x80+)  
 //! Responses and data sent from plugin devices back to hosts:
 //!
 //! - **Configuration Responses**: Success/error status for commands
@@ -243,10 +243,10 @@ mod tests {
             MessageTypeId::HostCommandNotifyCharacteristicValue as u8,
             0x08
         );
-        assert_eq!(MessageTypeId::PluginData as u8, 0x10);
-        assert_eq!(MessageTypeId::PluginConfigurationError as u8, 0x11);
-        assert_eq!(MessageTypeId::PluginServiceInfoResponse as u8, 0x12);
-        assert_eq!(MessageTypeId::PluginCharacteristicInfoResponse as u8, 0x13);
+        assert_eq!(MessageTypeId::PluginData as u8, 0x80);
+        assert_eq!(MessageTypeId::PluginConfigurationError as u8, 0x81);
+        assert_eq!(MessageTypeId::PluginServiceInfoResponse as u8, 0x82);
+        assert_eq!(MessageTypeId::PluginCharacteristicInfoResponse as u8, 0x83);
     }
 
     #[test]
@@ -505,20 +505,20 @@ mod tests {
 
     #[test]
     fn test_message_type_id_ranges() {
-        // Verify host commands are in 0x01-0x0F range
-        assert!((MessageTypeId::HostCommandConfigurePeripheral as u8) < 0x10);
-        assert!((MessageTypeId::HostCommandConfigureService as u8) < 0x10);
-        assert!((MessageTypeId::HostCommandConfigureCharacteristic as u8) < 0x10);
-        assert!((MessageTypeId::HostCommandConfigureCharacteristicRead as u8) < 0x10);
-        assert!((MessageTypeId::HostCommandGetServiceInfo as u8) < 0x10);
-        assert!((MessageTypeId::HostCommandGetCharacteristicInfo as u8) < 0x10);
-        assert!((MessageTypeId::HostCommandStartAdvertisement as u8) < 0x10);
-        assert!((MessageTypeId::HostCommandNotifyCharacteristicValue as u8) < 0x10);
+        // Verify host commands are in 0x01-0x7F range
+        assert!((MessageTypeId::HostCommandConfigurePeripheral as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandConfigureService as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandConfigureCharacteristic as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandConfigureCharacteristicRead as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandGetServiceInfo as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandGetCharacteristicInfo as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandStartAdvertisement as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandNotifyCharacteristicValue as u8) < 0x80);
 
-        // Verify plugin responses are in 0x10+ range
-        assert!((MessageTypeId::PluginData as u8) >= 0x10);
-        assert!((MessageTypeId::PluginConfigurationError as u8) >= 0x10);
-        assert!((MessageTypeId::PluginServiceInfoResponse as u8) >= 0x10);
-        assert!((MessageTypeId::PluginCharacteristicInfoResponse as u8) >= 0x10);
+        // Verify plugin responses are in 0x80+ range
+        assert!((MessageTypeId::PluginData as u8) >= 0x80);
+        assert!((MessageTypeId::PluginConfigurationError as u8) >= 0x80);
+        assert!((MessageTypeId::PluginServiceInfoResponse as u8) >= 0x80);
+        assert!((MessageTypeId::PluginCharacteristicInfoResponse as u8) >= 0x80);
     }
 }

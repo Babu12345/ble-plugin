@@ -96,9 +96,8 @@ pub const MESSAGE_HEADER_SIZE: usize =
 ///
 /// ## Type ID Ranges
 ///
-/// - **0x01-0x0F**: Host commands sent to plugin device
-/// - **0x10-0x1F**: Plugin responses sent to host device
-/// - **0x20+**: Reserved for future extensions
+/// - **0x01-0x7F**: Host commands sent to plugin device
+/// - **0x80-0xFF**: Plugin responses sent to host device
 ///
 /// ## Usage
 ///
@@ -106,53 +105,51 @@ pub const MESSAGE_HEADER_SIZE: usize =
 /// use protocol::MessageTypeId;
 ///
 /// // Check if message is a host command
-/// let is_host_command = (type_id as u8) < 0x10;
+/// let is_host_command = (type_id as u8) < 0x80;
 ///
 /// // Check if message is a plugin response  
-/// let is_plugin_response = (type_id as u8) >= 0x10;
+/// let is_plugin_response = (type_id as u8) >= 0x80;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum MessageTypeId {
     // Host Commands (0x01-0x0F)
-    
     /// Configure BLE peripheral device with name and UUID
     HostCommandConfigurePeripheral = 0x01,
-    
+
     /// Create a new BLE service with specified UUID
     HostCommandConfigureService = 0x02,
-    
+
     /// Create a BLE characteristic with properties
     HostCommandConfigureCharacteristic = 0x03,
-    
+
     /// Configure characteristic for read operations with default value
     HostCommandConfigureCharacteristicRead = 0x04,
-    
+
     /// Query information about a BLE service
     HostCommandGetServiceInfo = 0x05,
-    
+
     /// Query information about a BLE characteristic
     HostCommandGetCharacteristicInfo = 0x06,
-    
+
     /// Start BLE advertising with optional multi-connect support
     HostCommandStartAdvertisement = 0x07,
-    
+
     /// Send notification/indication to connected BLE client
     HostCommandNotifyCharacteristicValue = 0x08,
-    
-    // Plugin Responses (0x10+)
-    
+
+    // Plugin Responses (0x80+)
     /// Data forwarded from BLE client to host
-    PluginData = 0x10,
-    
+    PluginData = 0x80,
+
     /// Configuration error response from plugin
-    PluginConfigurationError = 0x11,
-    
+    PluginConfigurationError = 0x81,
+
     /// Service information response with characteristic list
-    PluginServiceInfoResponse = 0x12,
-    
+    PluginServiceInfoResponse = 0x82,
+
     /// Characteristic information response with properties
-    PluginCharacteristicInfoResponse = 0x13,
+    PluginCharacteristicInfoResponse = 0x83,
 }
 
 /// Trait for associating types with their message type identifiers

@@ -43,7 +43,7 @@ All messages use a standardized 5-byte header followed by serialized payload:
 
 ## Message Categories
 
-### Host Commands (0x01-0x0F)
+### Host Commands (0x01-0x7F)
 Commands sent from host devices to configure and control the BLE plugin:
 
 - **Peripheral Management**: Configure device name, UUID, advertising
@@ -52,7 +52,7 @@ Commands sent from host devices to configure and control the BLE plugin:
 - **Data Operations**: Read/write/notify characteristic values
 - **Query Commands**: Get service and characteristic information
 
-### Plugin Responses (0x10+)
+### Plugin Responses (0x80-0xFF)
 Responses and data sent from plugin devices back to hosts:
 
 - **Configuration Responses**: Success/error status for commands
