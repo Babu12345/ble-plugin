@@ -57,7 +57,7 @@ pub trait MessageType {
 
 /// The size in bytes of the length of the sent and received serialized
 /// packet
-const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
+pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 
 /// Communication input and output types
 pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
