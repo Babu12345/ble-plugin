@@ -11,6 +11,35 @@ https://docs.esp-rs.org/book/writing-your-own-application/generate-project/esp-g
 ## Business Docs
 https://docs.google.com/document/d/1Dux7SiKq3yMgd7yeh_1pGXjGcVbrisn82CYdyfDYuJs/edit?tab=t.0
 
+## Code Generation
+
+This project includes an automatic code generation system to maintain consistency between Rust and Python protocol implementations.
+
+### Generate Python Types from Rust Protocol
+
+```bash
+# Generate Python types from Rust protocol definitions
+./scripts/generate-python-types.sh
+```
+
+This script:
+- Parses the Rust protocol library (`protocol/src/`)
+- Generates equivalent Python code in `pc/python/plugin_host/generated_types.py`
+- Ensures MessageTypeId ranges are consistent (host: 0x01-0x7F, plugin: 0x80-0xFF)
+- Provides comprehensive test validation with 41 tests
+
+For detailed documentation, see:
+- **Script Usage**: [`scripts/README.md`](scripts/README.md)
+- **Code Generator**: [`codegen/README.md`](codegen/README.md)
+
+### Testing the Code Generator
+
+```bash
+cd codegen
+cargo test                    # Run all 41 tests
+cargo test --lib              # Unit tests
+cargo test --test validation_tests  # Validation tests
+```
 
 ## Useful commands
 

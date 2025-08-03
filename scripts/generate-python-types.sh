@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Generate Python types from Rust protocol library
+# This script ensures consistency between Rust and Python implementations
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+CODEGEN_DIR="$PROJECT_ROOT/codegen"
+PYTHON_DIR="$PROJECT_ROOT/pc/python/plugin_host"
+
+echo "🔄 Generating Python types from Rust protocol library..."
+
+# Change to codegen directory
+cd "$CODEGEN_DIR"
+
+# Build the codegen tool if needed
+echo "🔨 Building code generator..."
+cargo build --release --bin generate-python
+
+# Generate Python code
+echo "🐍 Generating Python types..."
+cargo run --release --bin generate-python -- \
+    --protocol-path "$PROJECT_ROOT/protocol/src" \
+    --output-dir "$PYTHON_DIR"
+
+# Check if generated file exists
+GENERATED_FILE="$PYTHON_DIR/generated_types.py"
+if [ -f "$GENERATED_FILE" ]; then
+    echo "✅ Generated: $GENERATED_FILE"
+    
+    # Display summary
+    echo ""
+    echo "📊 Generation Summary:"
+    echo "   - Constants: $(grep -c "^[A-Z_]* = " "$GENERATED_FILE" || echo "0")"
+    echo "   - Enums: $(grep -c "^class.*Enum" "$GENERATED_FILE" || echo "0")"
+    echo "   - Structs: $(grep -c "^class.*:" "$GENERATED_FILE" | grep -c "@attr.s" || echo "0")"
+    
+    # Show generated file size
+    FILE_SIZE=$(wc -l < "$GENERATED_FILE")
+    echo "   - Lines: $FILE_SIZE"
+    
+    echo ""
+    echo "💡 Next steps:"
+    echo "   1. Review the generated file: $GENERATED_FILE"
+    echo "   2. Replace or merge with existing types.py"
+    echo "   3. Test your Python code with the new types"
+    echo "   4. Commit the changes if everything looks good"
+    
+else
+    echo "❌ Failed to generate Python types"
+    exit 1
+fi
+
+echo ""
+echo "🎉 Python type generation completed successfully!"
+echo ""
+echo "🧪 To run tests:"
+echo "   cargo test                          # Run all 41 tests"
+echo "   cargo test --lib                    # Unit tests (14)"
+echo "   cargo test --test integration_tests # Integration tests (8)"
+echo "   cargo test --test validation_tests  # Validation tests (6)"
+echo "   cargo test --test error_handling_tests # Error handling tests (7)"
+echo "   cargo test --test regression_tests  # Regression tests (6)"
+echo ""
+echo "🔧 To run a quick test validation:"
+echo "   cargo test --test validation_tests test_message_type_id_ranges"
