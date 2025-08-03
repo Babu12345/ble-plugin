@@ -17,6 +17,7 @@ clap = { version = "4.0", features = ["derive"] }
 anyhow = "1.0"
 askama = "0.12"
 chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
 
 [dependencies.protocol]
 path = "../protocol"

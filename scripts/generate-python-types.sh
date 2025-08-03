@@ -9,6 +9,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 CODEGEN_DIR="$PROJECT_ROOT/codegen"
 PYTHON_DIR="$PROJECT_ROOT/pc/python/plugin_host"
+HASH_CHECK_SCRIPT="$SCRIPT_DIR/check-python-types-hash.sh"
+
+# Check if regeneration is needed
+if [ -f "$HASH_CHECK_SCRIPT" ]; then
+    echo "🔐 Checking if regeneration is needed..."
+    if "$HASH_CHECK_SCRIPT"; then
+        echo "🔄 Protocol changes detected, regenerating..."
+    else
+        echo "✅ Generated types are up to date, skipping regeneration"
+        echo "💡 Use --force flag to regenerate anyway"
+        if [ "$1" != "--force" ]; then
+            exit 0
+        fi
+        echo "🔄 Force regeneration requested..."
+    fi
+fi
 
 echo "🔄 Generating Python types from Rust protocol library..."
 

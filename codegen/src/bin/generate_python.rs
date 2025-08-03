@@ -10,6 +10,7 @@ use codegen::{ConstantDef, ProtocolDef};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use sha2::{Sha256, Digest};
 
 #[derive(Parser)]
 #[command(name = "generate-python")]
@@ -35,6 +36,7 @@ struct PythonTypesTemplate {
     constants: Vec<TemplateConstant>,
     enums: Vec<TemplateEnum>,
     structs: Vec<TemplateStruct>,
+    protocol_hash: String,
 }
 
 /// Template-friendly constant definition  
@@ -92,17 +94,50 @@ fn main() -> Result<()> {
 
     println!("🔍 Parsing Rust protocol library...");
     let protocol_def = parse_protocol_library(&args.protocol_path)?;
+    
+    println!("🔐 Calculating protocol hash...");
+    let protocol_hash = calculate_protocol_hash(&args.protocol_path)?;
 
     if args.validate {
         println!("✅ Validating existing Python code...");
-        validate_python_code(&args.output_dir, &protocol_def)?;
+        validate_python_code(&args.output_dir, &protocol_def, &protocol_hash)?;
     } else {
         println!("🐍 Generating Python code...");
-        generate_python_code(&args.output_dir, &protocol_def)?;
+        generate_python_code(&args.output_dir, &protocol_def, &protocol_hash)?;
         println!("✅ Python code generated successfully!");
     }
 
     Ok(())
+}
+
+/// Calculate hash of all protocol source files
+fn calculate_protocol_hash(protocol_path: &PathBuf) -> Result<String> {
+    let mut hasher = Sha256::new();
+    
+    // Read all .rs files in the protocol directory
+    let mut rs_files = Vec::new();
+    for entry in fs::read_dir(protocol_path)
+        .with_context(|| format!("Failed to read protocol directory {}", protocol_path.display()))?
+    {
+        let entry = entry.with_context(|| "Failed to read directory entry")?;
+        let path = entry.path();
+        
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
+            rs_files.push(path);
+        }
+    }
+    
+    // Sort files by name for consistent hash calculation
+    rs_files.sort();
+    
+    for file_path in &rs_files {
+        let content = fs::read_to_string(file_path)
+            .with_context(|| format!("Failed to read {}", file_path.display()))?;
+        hasher.update(content.as_bytes());
+    }
+    
+    let result = hasher.finalize();
+    Ok(format!("{:x}", result))
 }
 
 /// Parse the Rust protocol library and extract definitions
@@ -203,7 +238,7 @@ fn parse_protocol_library(protocol_path: &PathBuf) -> Result<ProtocolDef> {
 }
 
 /// Generate Python code from protocol definitions
-fn generate_python_code(output_dir: &PathBuf, protocol_def: &ProtocolDef) -> Result<()> {
+fn generate_python_code(output_dir: &PathBuf, protocol_def: &ProtocolDef, protocol_hash: &str) -> Result<()> {
     // Ensure output directory exists
     fs::create_dir_all(output_dir)
         .with_context(|| format!("Failed to create output directory {}", output_dir.display()))?;
@@ -278,6 +313,7 @@ fn generate_python_code(output_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
         constants: template_constants,
         enums: template_enums,
         structs: template_structs,
+        protocol_hash: protocol_hash.to_string(),
     };
 
     let generated_code = template
@@ -348,7 +384,7 @@ Generated at: {}
 }
 
 /// Validate existing Python code against Rust definitions
-fn validate_python_code(python_dir: &PathBuf, protocol_def: &ProtocolDef) -> Result<()> {
+fn validate_python_code(python_dir: &PathBuf, protocol_def: &ProtocolDef, expected_hash: &str) -> Result<()> {
     let types_file = python_dir.join("types.py");
 
     if !types_file.exists() {
@@ -363,6 +399,15 @@ fn validate_python_code(python_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
         .with_context(|| format!("Failed to read {}", types_file.display()))?;
 
     let mut issues = Vec::new();
+
+    // Check protocol hash
+    let hash_pattern = format!("PROTOCOL_HASH = \"{}\"", expected_hash);
+    if !python_content.contains(&hash_pattern) {
+        issues.push(format!(
+            "Protocol hash mismatch or missing. Expected: {}",
+            expected_hash
+        ));
+    }
 
     // Check MessageTypeId enum values
     if let Some(message_type_enum) = protocol_def

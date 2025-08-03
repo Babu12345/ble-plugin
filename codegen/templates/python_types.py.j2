@@ -8,6 +8,10 @@ import attr
 from enum import Enum
 from typing import List, Optional
 
+# ==================== PROTOCOL HASH ====================
+# Hash of all protocol source files - used to detect when regeneration is needed
+PROTOCOL_HASH = "{{ protocol_hash }}"
+
 # ==================== CONSTANTS ====================
 
 {% for constant in constants %}
