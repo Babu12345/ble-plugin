@@ -23,6 +23,14 @@ MAX_NAME_SIZE = 30
 DEFAULT_PACKET_SIZE = 256
 
 
+# Maximum size for characteristic properties
+MAX_PROPERTIES = 4
+
+
+# Maximum characteritics per service
+MAX_CHARACTERISTICS_PER_SERVICE = 16
+
+
 # Derived constants
 MESSAGE_MAGIC_BYTES = 2  # Size in bytes of the magic number field
 MESSAGE_TYPE_ID_BYTES = 1  # Size in bytes of the message type identifier field  
@@ -62,12 +70,210 @@ class MessageTypeId(Enum):
     PluginCharacteristicInfoResponse = 0x83
 
 
+class BLEProperties(Enum):
+    """Properties enumeration for BLE characteristics."""
+    # Read property
+    READ = 0
+    # Write property
+    WRITE = 1
+    # Write without response property
+    WriteNoRsp = 2
+    # Notify property
+    NOTIFY = 3
+    # Indicate property
+    INDICATE = 4
+
+
+class BluetoothAddressType(Enum):
+    """Bluetooth Device address type"""
+    # Public address
+    Public = 0
+    # Random address
+    Random = 1
+    # Public ID address
+    PublicID = 2
+    # Random ID address
+    RandomID = 3
+
+
+class PluginDataSendType(Enum):
+    """Represents the send type of the data. Was it due to a write event (central -&gt;..."""
+    # Notified from the central bluetooth device
+    Notify = "Notify"
+    # Read attempt from the central bluetooth device
+    Read = "Read"
+    # Written from the central bluetooth device
+    Write = "Write"
+
+
+class PluginConfigurationError(Enum):
+    """Represents the error that can occur during plugin configuration"""
+    # The peripheral name is too long
+    PeripheralNameTooLong = "PeripheralNameTooLong"
+    # The peripheral UUID is invalid
+    InvalidPeripheralUuid = "InvalidPeripheralUuid"
+    # The service UUID is invalid
+    InvalidServiceUuid = "InvalidServiceUuid"
+    # The characteristic UUID is invalid
+    InvalidCharacteristicUuid = "InvalidCharacteristicUuid"
+    # Advertisement without proper peripheral configuration
+    AdvertisementWithoutPeripheralConfiguration = "AdvertisementWithoutPeripheralConfiguration"
+    # Service without proper peripheral configuration
+    ServiceWithoutPeripheralConfiguration = "ServiceWithoutPeripheralConfiguration"
+    # Characteristic without proper service configuration
+    CharacteristicWithoutServiceConfiguration = "CharacteristicWithoutServiceConfiguration"
+
+
 # ==================== MESSAGE STRUCTURES ====================
+
+@attr.s(auto_attribs=True)
+class HostCommandConfigurePeripheral:
+    """Host command. Configure peripheral
+    
+    Attributes:
+        name:Peripheral name
+        uuid:Peripheral UUID
+    """
+    name: str
+    uuid: str
+
+@attr.s(auto_attribs=True)
+class HostCommandConfigureService:
+    """Host command. Configure service
+    
+    Attributes:
+        uuid:Service UUID
+    """
+    uuid: str
+
+@attr.s(auto_attribs=True)
+class HostCommandConfigureCharacteristic:
+    """Host command. Configure characteristic
+    
+    Attributes:
+        uuid:Characteristic UUID
+        service_uuid:Service UUID this characteristic belongs to
+        properties:Properties of the characteristic (read, write, notify, etc.)
+    """
+    uuid: str
+    service_uuid: str
+    properties: List[BLEProperties]
+
+@attr.s(auto_attribs=True)
+class HostCommandConfigureCharacteristicRead:
+    """Host command. Configure characteristic read
+    
+    Attributes:
+        uuid:Characteristic UUID
+        service_uuid:Service UUID this characteristic belongs to
+        value:Read value
+    """
+    uuid: str
+    service_uuid: str
+    value: List[int]
+
+@attr.s(auto_attribs=True)
+class HostCommandGetServiceInfo:
+    """Host command. Get service info
+    
+    Attributes:
+        uuid:Service UUID
+    """
+    uuid: str
+
+@attr.s(auto_attribs=True)
+class HostCommandGetCharacteristicInfo:
+    """Host command. Get characteristic info
+    
+    Attributes:
+        characteristic_uuid:Characteristic UUID
+        service_uuid:Service UUID this characteristic belongs to
+    """
+    characteristic_uuid: str
+    service_uuid: str
+
+@attr.s(auto_attribs=True)
+class HostCommandStartAdvertisement:
+    """Host command. Start advertisement
+    
+    Attributes:
+        allow_multi_connect:Allow multiple central connections
+    """
+    allow_multi_connect: bool
+
+@attr.s(auto_attribs=True)
+class HostCommandNotifyCharacteristicValue:
+    """Host command. Notify characteristic value
+    
+    Attributes:
+        address:Device Address.
+        address_type:Address type
+        characteristic_uuid:Characteristic UUID
+        service_uuid:Service UUID this characteristic belongs to
+        value:Value to notify
+    """
+    address: List[int]
+    address_type: BluetoothAddressType
+    characteristic_uuid: str
+    service_uuid: str
+    value: List[int]
+
+@attr.s(auto_attribs=True)
+class PluginData:
+    """Plugin data
+    
+    Attributes:
+        src_id:Source peripheral id that this data is orginating from.
+        send_type:Send type of the data
+        data:Actual command type
+    """
+    src_id: str
+    send_type: PluginDataSendType
+    data: List[int]
+
+@attr.s(auto_attribs=True)
+class PluginServiceInfoResponse:
+    """Service information response
+    
+    Attributes:
+        service_uuid:Service UUID
+        characteristic_uuids:List of characteristic UUIDs in this service
+        exists:Whether the service exists
+    """
+    service_uuid: str
+    characteristic_uuids: List[str]
+    exists: bool
+
+@attr.s(auto_attribs=True)
+class PluginCharacteristicInfoResponse:
+    """Characteristic information response
+    
+    Attributes:
+        characteristic_uuid:Characteristic UUID
+        service_uuid:Service UUID this characteristic belongs to
+        properties:Properties of the characteristic (read, write, notify, etc.)
+        exists:Whether the characteristic exists
+    """
+    characteristic_uuid: str
+    service_uuid: str
+    properties: List[BLEProperties]
+    exists: bool
 
 # ==================== MESSAGE TYPE MAPPING ====================
 
 # Map message types to their type IDs
 MESSAGE_TYPE_MAP = {
+    HostCommandConfigurePeripheral: MessageTypeId.HostCommandConfigurePeripheral,
+    HostCommandConfigureService: MessageTypeId.HostCommandConfigureService,
+    HostCommandConfigureCharacteristic: MessageTypeId.HostCommandConfigureCharacteristic,
+    HostCommandConfigureCharacteristicRead: MessageTypeId.HostCommandConfigureCharacteristicRead,
+    HostCommandGetServiceInfo: MessageTypeId.HostCommandGetServiceInfo,
+    HostCommandGetCharacteristicInfo: MessageTypeId.HostCommandGetCharacteristicInfo,
+    HostCommandStartAdvertisement: MessageTypeId.HostCommandStartAdvertisement,
+    HostCommandNotifyCharacteristicValue: MessageTypeId.HostCommandNotifyCharacteristicValue,
+    PluginData: MessageTypeId.PluginData,
+    PluginServiceInfoResponse: MessageTypeId.PluginServiceInfoResponse,
+    PluginCharacteristicInfoResponse: MessageTypeId.PluginCharacteristicInfoResponse,
 }
 
 # Reverse map for easy lookup

@@ -88,9 +88,12 @@ fn test_unsupported_constructs() -> Result<()> {
     
     let result = parse_rust_source(source_with_unsupported)?;
     
-    // Should extract only the supported items
-    assert_eq!(result.constants.len(), 1);
-    assert_eq!(result.constants[0].name, "VALID_CONST");
+    // Should extract supported items (including those in modules)
+    assert_eq!(result.constants.len(), 2);
+    
+    let constant_names: Vec<_> = result.constants.iter().map(|c| &c.name).collect();
+    assert!(constant_names.contains(&&"VALID_CONST".to_string()));
+    assert!(constant_names.contains(&&"INNER_CONST".to_string()));
     
     assert_eq!(result.enums.len(), 1);
     assert_eq!(result.enums[0].name, "ValidEnum");

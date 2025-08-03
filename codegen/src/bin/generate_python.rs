@@ -131,6 +131,7 @@ fn parse_protocol_library(protocol_path: &PathBuf) -> Result<ProtocolDef> {
     let io_types_def = codegen::parse_rust_source(&io_types_source)?;
     all_enums.extend(io_types_def.enums);
     all_structs.extend(io_types_def.structs);
+    all_constants.extend(io_types_def.constants);
 
     // Add some derived constants that are important for Python
     all_constants.push(ConstantDef {

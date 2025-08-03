@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use syn::{Item, ItemEnum, ItemStruct, ItemConst};
+use syn::{Item, ItemEnum, ItemStruct, ItemConst, ItemMod};
 
 /// Represents a constant definition extracted from Rust code
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -86,6 +86,8 @@ pub fn rust_type_to_python(rust_type: &str) -> String {
         t if t.starts_with("Option<") => {
             format!("Optional[{}]", extract_generic_type(t).map(|inner| rust_type_to_python(&inner)).unwrap_or_else(|| "Any".to_string()))
         },
+        t if t.contains("[u8") => "List[int]".to_string(), // Arrays like [u8; 6] or slices &[u8]
+        t if t.contains("&") && t.contains("[u8]") => "bytes".to_string(), // Slice references &[u8]
         _ => rust_type.to_string(), // For custom types, keep as-is
     }
 }
@@ -177,6 +179,31 @@ pub fn parse_rust_source(source: &str) -> Result<ProtocolDef> {
             Item::Struct(struct_item) => {
                 if let Some(struct_def) = extract_struct(&struct_item)? {
                     structs.push(struct_def);
+                }
+            }
+            Item::Mod(mod_item) => {
+                // Recursively parse items inside modules
+                if let Some((_, items)) = mod_item.content {
+                    for mod_item in items {
+                        match mod_item {
+                            Item::Const(const_item) => {
+                                if let Some(constant) = extract_constant(&const_item)? {
+                                    constants.push(constant);
+                                }
+                            }
+                            Item::Enum(enum_item) => {
+                                if let Some(enum_def) = extract_enum(&enum_item)? {
+                                    enums.push(enum_def);
+                                }
+                            }
+                            Item::Struct(struct_item) => {
+                                if let Some(struct_def) = extract_struct(&struct_item)? {
+                                    structs.push(struct_def);
+                                }
+                            }
+                            _ => {} // Ignore other items in modules
+                        }
+                    }
                 }
             }
             _ => {} // Ignore other items
@@ -608,5 +635,73 @@ mod tests {
         assert_eq!(result.constants[0].name, "MAX_SIZE");
         assert_eq!(result.enums[0].name, "Status");
         assert_eq!(result.structs[0].name, "Item");
+    }
+
+    /// Test parsing of nested modules like those in io_types.rs
+    #[test]
+    fn test_parse_nested_modules() -> Result<()> {
+        let source = r#"
+            /// Top level constant
+            pub const TOP_LEVEL: u32 = 1;
+            
+            /// Host module
+            pub mod host {
+                /// Host constant
+                pub const HOST_CONST: u32 = 2;
+                
+                /// Host enum
+                pub enum HostEnum {
+                    HostVariant = 10,
+                }
+                
+                /// Host struct
+                pub struct HostStruct {
+                    pub field: u32,
+                }
+            }
+            
+            /// Plugin module  
+            pub mod plugin {
+                /// Plugin constant
+                pub const PLUGIN_CONST: u32 = 3;
+                
+                /// Plugin struct
+                pub struct PluginStruct {
+                    pub name: String,
+                    pub data: Vec<u8>,
+                }
+            }
+        "#;
+        
+        let result = parse_rust_source(source)?;
+        
+        // Should find constants from both top-level and modules
+        assert_eq!(result.constants.len(), 3);
+        let constant_names: Vec<_> = result.constants.iter().map(|c| &c.name).collect();
+        assert!(constant_names.contains(&&"TOP_LEVEL".to_string()));
+        assert!(constant_names.contains(&&"HOST_CONST".to_string()));
+        assert!(constant_names.contains(&&"PLUGIN_CONST".to_string()));
+        
+        // Should find enums from modules
+        assert_eq!(result.enums.len(), 1);
+        assert_eq!(result.enums[0].name, "HostEnum");
+        
+        // Should find structs from modules
+        assert_eq!(result.structs.len(), 2);
+        let struct_names: Vec<_> = result.structs.iter().map(|s| &s.name).collect();
+        assert!(struct_names.contains(&&"HostStruct".to_string()));
+        assert!(struct_names.contains(&&"PluginStruct".to_string()));
+        
+        // Check field types are correctly mapped
+        let plugin_struct = result.structs.iter()
+            .find(|s| s.name == "PluginStruct")
+            .expect("Should find PluginStruct");
+        
+        let data_field = plugin_struct.fields.iter()
+            .find(|f| f.name == "data")
+            .expect("Should find data field");
+        assert_eq!(data_field.python_type, "List[int]");
+        
+        Ok(())
     }
 }
