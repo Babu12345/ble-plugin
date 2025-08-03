@@ -3,9 +3,9 @@
 //!
 //! A comprehensive BLE-USB bridge state machine implementation for ESP32-based plugin devices.
 //!
-//! This library provides the core processing logic and state management required to facilitate 
-//! bidirectional data and command transfer between BLE peripherals and USB hosts. It serves as 
-//! the central processing unit for BLE plugin devices, handling USB command processing, BLE 
+//! This library provides the core processing logic and state management required to facilitate
+//! bidirectional data and command transfer between BLE peripherals and USB hosts. It serves as
+//! the central processing unit for BLE plugin devices, handling USB command processing, BLE
 //! device management, and efficient message routing.
 //!
 //! ## Key Features
@@ -21,8 +21,8 @@
 //!
 //! ```text
 //! ┌─────────────┐    USB Commands    ┌─────────────────────┐    BLE Operations    ┌─────────────┐
-//! │   USB Host  │ ──────────────────► │ Plugin State Machine │ ───────────────────► │ BLE Clients │
-//! │             │ ◄────────────────── │                     │ ◄─────────────────── │             │
+//! │   USB Host  │ ──────────────────►│Plugin State Machine │ ───────────────────► │ BLE Clients │
+//! │             │ ◄──────────────────│                     │ ◄─────────────────── │             │
 //! └─────────────┘    USB Responses   └─────────────────────┘    BLE Callbacks     └─────────────┘
 //! ```
 //!
@@ -33,7 +33,7 @@
 //! ```text
 //! ┌─────────────┬─────────────┬─────────────┬─────────────────┐
 //! │   Magic     │   Type ID   │   Length    │     Payload     │
-//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │   (variable)    │
+//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │  (limited size) │
 //! └─────────────┴─────────────┴─────────────┴─────────────────┘
 //! ```
 //!
@@ -41,6 +41,10 @@
 //! - **Type ID**: Enables efficient O(1) command dispatch
 //! - **Length**: Payload size for proper deserialization
 //! - **Payload**: Bincode-serialized command/response data
+//!
+//! **Size Constraints**: The total message size (header + payload) cannot exceed
+//! `DEFAULT_PACKET_SIZE`. With a 5-byte header, the maximum payload
+//! size is `DEFAULT_PACKET_SIZE` - 5 bytes.
 //!
 //! ## Usage Example
 //!
@@ -51,7 +55,7 @@
 //! use protocol::DEFAULT_PACKET_SIZE;
 //!
 //! // Initialize communication channels
-//! let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) = 
+//! let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
 //!     /* your USB channel setup */;
 //! # panic!("This is a documentation example");
 //! let ble_device = BLEDevice::take();
@@ -59,7 +63,7 @@
 //! // Create and run the state machine
 //! let state_machine = PluginStateMachine::new(usb_sender, usb_receiver, ble_device);
 //! let runner = state_machine.runner_fn();
-//! 
+//!
 //! // Typically run in a separate thread
 //! std::thread::spawn(runner);
 //! ```
@@ -113,47 +117,47 @@ pub mod errors;
 
 use errors::Result;
 use errors::StateMachineError;
-use esp_idf_svc::hal::task::block_on;
 use esp32_nimble::BLEAddress;
 use esp32_nimble::BLEAddressType;
-use protocol::MESSAGE_HEADER_SIZE;
+use esp_idf_svc::hal::task::block_on;
 use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
 use protocol::io_types::HostCommandNotifyCharacteristicValue;
 use protocol::io_types::PluginData;
+use protocol::MESSAGE_HEADER_SIZE;
 
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 
-use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
 use esp32_nimble::utilities::BleUuid;
 use esp32_nimble::{BLEDevice, BLEServer, BLEService, NimbleProperties};
+use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use heapless::String;
 use protocol::io_types::{
     HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
     HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
-    HostCommandStartAdvertisement, MAX_CHARACTERISTICS_PER_SERVICE, MAX_PROPERTIES,
-    PluginCharacteristicInfoResponse, PluginConfigurationError, PluginServiceInfoResponse,
+    HostCommandStartAdvertisement, PluginCharacteristicInfoResponse, PluginConfigurationError,
+    PluginServiceInfoResponse, MAX_CHARACTERISTICS_PER_SERVICE, MAX_PROPERTIES,
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
+use protocol::{MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
-use protocol::{MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MessageTypeId};
 
 use std::sync::Arc;
 use uuid::Uuid;
 /// Internal metadata storage for the plugin state machine
-/// 
+///
 /// This structure maintains the current state and configuration of the BLE plugin,
 /// including device name, service-characteristic relationships, and connection information.
 #[derive(Default)]
 struct PluginStateMachineMetadata {
     /// Optional BLE device name for advertising
     ble_name: Option<String<MAX_NAME_SIZE>>,
-    
+
     /// Mapping from service UUIDs to their characteristic UUIDs and properties
-    /// 
+    ///
     /// This enables efficient lookup of characteristics within services and
     /// provides quick access to characteristic properties for validation.
     service_to_characteristic_uuids: HashMap<
@@ -193,16 +197,16 @@ struct PluginStateMachineMetadata {
 pub struct PluginStateMachine {
     /// Thread-safe USB sender for responses and BLE data forwarding
     usb_sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
-    
+
     /// USB receiver for incoming host commands (exclusive access)
     usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
-    
+
     /// ESP32 BLE device instance (static mutable for hardware integration)
     ble_device: &'static mut BLEDevice,
-    
+
     /// Optional BLE server instance (created after peripheral configuration)
     server: Option<&'static mut BLEServer>,
-    
+
     /// Internal state and configuration metadata
     metadata: PluginStateMachineMetadata,
 }
@@ -232,7 +236,7 @@ impl PluginStateMachine {
     /// use esp32_nimble::BLEDevice;
     /// use protocol::DEFAULT_PACKET_SIZE;
     ///
-    /// let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) = 
+    /// let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
     ///     /* your USB channel setup */;
     /// # panic!("Documentation example");
     /// let ble_device = BLEDevice::take();
@@ -334,7 +338,7 @@ impl PluginStateMachine {
     /// # let state_machine = panic!("Documentation example");
     ///
     /// let runner = state_machine.runner_fn();
-    /// 
+    ///
     /// // Run in separate thread
     /// std::thread::spawn(runner);
     ///

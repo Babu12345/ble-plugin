@@ -39,7 +39,7 @@
 //! ```text
 //! ┌─────────────┬─────────────┬─────────────┬─────────────────┐
 //! │   Magic     │   Type ID   │   Length    │     Payload     │
-//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │   (variable)    │
+//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │  (limited size) │
 //! └─────────────┴─────────────┴─────────────┴─────────────────┘
 //! ```
 //!
@@ -47,6 +47,10 @@
 //! - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
 //! - **Length**: Payload size in bytes (little-endian)
 //! - **Payload**: Bincode-serialized message data
+//!
+//! **Size Constraints**: The total message size (header + payload) cannot exceed
+//! [`DEFAULT_PACKET_SIZE`]. With a [`MESSAGE_HEADER_SIZE`] header, the maximum payload
+//! size is [`DEFAULT_PACKET_SIZE`] - [`MESSAGE_HEADER_SIZE`] bytes.
 //!
 //! ## Message Categories
 //!

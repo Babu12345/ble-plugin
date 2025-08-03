@@ -12,9 +12,13 @@
 //! ```text
 //! ┌─────────────┬─────────────┬─────────────┬─────────────────┐
 //! │   Magic     │   Type ID   │   Length    │     Payload     │
-//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │   (variable)    │
+//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │  (limited size) │
 //! └─────────────┴─────────────┴─────────────┴─────────────────┘
 //! ```
+//!
+//! **Size Constraints**: The total message size (header + payload) cannot exceed
+//! [`DEFAULT_PACKET_SIZE`]. With a [`MESSAGE_HEADER_SIZE`] header, the maximum payload
+//! size is [`DEFAULT_PACKET_SIZE`] - [`MESSAGE_HEADER_SIZE`] bytes.
 //!
 //! ## Key Features
 //!
@@ -43,7 +47,7 @@
 //!
 //! // Now MyCommand automatically implements IO trait
 //! let cmd = MyCommand { data: 42 };
-//! let serialized = cmd.to_bytes::<256>()?;
+//! let serialized = cmd.to_bytes::<DEFAULT_PACKET_SIZE>()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
@@ -187,9 +191,10 @@ pub trait MessageType {
 /// Size in bytes of the payload length field
 ///
 /// The length field is a 2-byte little-endian value specifying the size
-/// of the serialized payload data following the header. This allows for
-/// payloads up to 65,535 bytes, though practical limits are imposed by
-/// USB packet size constraints.
+/// of the serialized payload data following the header. While the field
+/// theoretically allows payloads up to 65,535 bytes, the practical limit
+/// is [`DEFAULT_PACKET_SIZE`] - [`MESSAGE_HEADER_SIZE`] bytes due to the USB
+/// packet size constraint of [`DEFAULT_PACKET_SIZE`].
 pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 
 /// Core I/O trait for protocol message serialization and deserialization

@@ -86,13 +86,15 @@ The state machine processes incoming USB commands using message type IDs for eff
 The state machine uses a 5-byte message header format:
 
 ```
-[Magic (2 bytes)][Type ID (1 byte)][Length (2 bytes)][Payload (variable)]
+[Magic (2 bytes)][Type ID (1 byte)][Length (2 bytes)][Payload (limited size)]
 ```
 
 - **Magic Number**: 0xDEAD for message integrity validation
-- **Type ID**: Efficient command routing (0x01-0x0F for host commands, 0x10+ for plugin responses)
+- **Type ID**: Efficient command routing (0x01-0x7F for host commands, 0x80-0xFF for plugin responses)
 - **Length**: Payload size for proper deserialization
 - **Payload**: Serialized command/response data using bincode
+
+**Size Constraints**: The total message size (header + payload) cannot exceed `DEFAULT_PACKET_SIZE`. With a 5-byte header, the maximum payload size is `DEFAULT_PACKET_SIZE` - 5 bytes.
 
 ## Error Handling
 

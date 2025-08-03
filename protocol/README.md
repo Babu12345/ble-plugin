@@ -32,7 +32,7 @@ All messages use a standardized 5-byte header followed by serialized payload:
 ```text
 ┌─────────────┬─────────────┬─────────────┬─────────────────┐
 │   Magic     │   Type ID   │   Length    │     Payload     │
-│  (2 bytes)  │  (1 byte)   │  (2 bytes)  │   (variable)    │
+│  (2 bytes)  │  (1 byte)   │  (2 bytes)  │  (limited size) │
 └─────────────┴─────────────┴─────────────┴─────────────────┘
 ```
 
@@ -40,6 +40,8 @@ All messages use a standardized 5-byte header followed by serialized payload:
 - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
 - **Length**: Payload size in bytes (little-endian)
 - **Payload**: Bincode-serialized message data
+
+**Size Constraints**: The total message size (header + payload) cannot exceed `DEFAULT_PACKET_SIZE`. With a `MESSAGE_HEADER_SIZE` header, the maximum payload size is `DEFAULT_PACKET_SIZE` - `MESSAGE_HEADER_SIZE` bytes.
 
 ## Message Categories
 
@@ -132,9 +134,10 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Protocol Constants
 
 - `MAX_NAME_SIZE`: Maximum length for device names (30 characters)
-- `DEFAULT_PACKET_SIZE`: Standard USB packet size (256 bytes)
-- `MESSAGE_HEADER_SIZE`: Protocol header size (5 bytes)
+- `DEFAULT_PACKET_SIZE`: Standard USB packet size
+- `MESSAGE_HEADER_SIZE`: Protocol header size
 - `MESSAGE_MAGIC`: Magic number for validation (0xDEAD)
+- **Maximum Payload Size**: `DEFAULT_PACKET_SIZE` - `MESSAGE_HEADER_SIZE` bytes
 
 ## Dependencies
 
