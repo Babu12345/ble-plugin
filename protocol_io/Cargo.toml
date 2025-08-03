@@ -17,6 +17,8 @@ categories = [
 rust-version = "1.70"
 
 [lib]
+doctest = false
+
 proc-macro = true
 
 [dependencies]
