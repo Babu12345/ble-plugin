@@ -19,7 +19,11 @@ USB_TIMEOUT_MS = 1000
 DEFAULT_PACKET_SIZE = 256
 
 # Protocol Configuration
-DATA_BYTES_LENGTH_IN_BYTES = 2  # First 2 bytes contain the length of the serialized data
+from plugin_host.types import (
+    MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MESSAGE_TYPE_ID_BYTES, 
+    DATA_BYTES_LENGTH_IN_BYTES, MESSAGE_HEADER_SIZE, 
+    MESSAGE_TYPE_MAP, TYPE_ID_TO_MESSAGE_TYPE, MessageTypeId
+)
 
 class USBCommunicationError(Exception):
     """Exception for USB communication errors"""
@@ -77,33 +81,49 @@ class USBDevice:
 
 def serialize_command(command: Any) -> bytes:
     """
-    Serialize a protocol command object to bytes using attrs2bin with length prefix
+    Serialize a protocol command object to bytes using attrs2bin with full message header
     
-    Format: [2-byte little-endian length][serialized data][padding to DEFAULT_PACKET_SIZE]
+    Format: [2-byte magic][1-byte type_id][2-byte length][serialized data][padding to DEFAULT_PACKET_SIZE]
     
     Args:
         command: Any command object with attr.s decoration
         
     Returns:
-        bytes: Serialized command data with length prefix and padding
+        bytes: Serialized command data with full message header and padding
         
     Raises:
         USBCommunicationError: If serialization fails
     """
     try:
+        # Get message type ID for this command
+        command_type = type(command)
+        if command_type not in MESSAGE_TYPE_MAP:
+            raise USBCommunicationError(f"Unknown message type: {command_type}")
+        
+        message_type_id = MESSAGE_TYPE_MAP[command_type]
+        
         # Use attrs2bin to serialize the command
         serialized_data = attrs2bin.serialize(command)
         data_length = len(serialized_data)
         
-        # Ensure the data fits within the packet size (accounting for length prefix)
-        if data_length + DATA_BYTES_LENGTH_IN_BYTES > DEFAULT_PACKET_SIZE:
-            raise USBCommunicationError(f"Command size ({data_length}) + length prefix exceeds packet size ({DEFAULT_PACKET_SIZE})")
+        # Ensure the data fits within the packet size (accounting for full header)
+        if data_length + MESSAGE_HEADER_SIZE > DEFAULT_PACKET_SIZE:
+            raise USBCommunicationError(f"Command size ({data_length}) + header ({MESSAGE_HEADER_SIZE}) exceeds packet size ({DEFAULT_PACKET_SIZE})")
         
-        # Create length prefix (2-byte little-endian)
-        length_prefix = struct.pack('<H', data_length)
+        # Create message header
+        header = bytearray()
         
-        # Combine length prefix with serialized data
-        complete_data = length_prefix + serialized_data
+        # Add magic bytes (0xDEAD, little-endian)
+        header.extend(struct.pack('<H', MESSAGE_MAGIC))
+        
+        # Add message type ID
+        header.append(message_type_id.value)
+        
+        # Add length (2-byte little-endian)
+        header.extend(struct.pack('<H', data_length))
+        
+        # Combine header with serialized data
+        complete_data = bytes(header) + serialized_data
         
         # Pad to packet size for consistent USB transfers
         padded_data = complete_data + b'\x00' * (DEFAULT_PACKET_SIZE - len(complete_data))
@@ -112,15 +132,15 @@ def serialize_command(command: Any) -> bytes:
     except Exception as e:
         raise USBCommunicationError(f"Failed to serialize command: {e}")
 
-def deserialize_response(data: bytes, response_type: type) -> Any:
+def deserialize_response(data: bytes, response_type: type = None) -> Any:
     """
-    Deserialize bytes to a protocol response object using attrs2bin with length prefix
+    Deserialize bytes to a protocol response object using attrs2bin with full message header
     
-    Format: [2-byte little-endian length][serialized data][padding]
+    Format: [2-byte magic][1-byte type_id][2-byte length][serialized data][padding]
     
     Args:
         data: Raw bytes received from USB
-        response_type: The expected response type class
+        response_type: Optional expected response type class (if None, auto-detect from type ID)
         
     Returns:
         Any: Deserialized response object
@@ -129,24 +149,45 @@ def deserialize_response(data: bytes, response_type: type) -> Any:
         USBCommunicationError: If deserialization fails
     """
     try:
-        # Extract length from first 2 bytes (little-endian)
-        if len(data) < DATA_BYTES_LENGTH_IN_BYTES:
-            raise USBCommunicationError(f"Data too short to contain length prefix: {len(data)} bytes")
+        # Check minimum header size
+        if len(data) < MESSAGE_HEADER_SIZE:
+            raise USBCommunicationError(f"Data too short to contain message header: {len(data)} bytes")
         
-        data_length = struct.unpack('<H', data[:DATA_BYTES_LENGTH_IN_BYTES])[0]
+        # Verify magic number
+        magic = struct.unpack('<H', data[:MESSAGE_MAGIC_BYTES])[0]
+        if magic != MESSAGE_MAGIC:
+            raise USBCommunicationError(f"Invalid magic number: expected 0x{MESSAGE_MAGIC:04X}, got 0x{magic:04X}")
+        
+        # Extract message type ID
+        type_id_byte = data[MESSAGE_MAGIC_BYTES]
+        try:
+            message_type_id = MessageTypeId(type_id_byte)
+        except ValueError:
+            raise USBCommunicationError(f"Unknown message type ID: 0x{type_id_byte:02X}")
+        
+        # Extract data length
+        length_start = MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES
+        length_end = length_start + DATA_BYTES_LENGTH_IN_BYTES
+        data_length = struct.unpack('<H', data[length_start:length_end])[0]
         
         # Validate length
         if data_length > DEFAULT_PACKET_SIZE:
             raise USBCommunicationError(f"Data length ({data_length}) exceeds packet size ({DEFAULT_PACKET_SIZE})")
         
+        # Determine response type from message ID if not provided
+        if response_type is None:
+            if message_type_id not in TYPE_ID_TO_MESSAGE_TYPE:
+                raise USBCommunicationError(f"No handler for message type ID: {message_type_id}")
+            response_type = TYPE_ID_TO_MESSAGE_TYPE[message_type_id]
+        
         # Extract the actual serialized data using the length
-        start_idx = DATA_BYTES_LENGTH_IN_BYTES
-        end_idx = start_idx + data_length
+        data_start = MESSAGE_HEADER_SIZE
+        data_end = data_start + data_length
         
-        if end_idx > len(data):
-            raise USBCommunicationError(f"Insufficient data: expected {data_length} bytes, got {len(data) - DATA_BYTES_LENGTH_IN_BYTES}")
+        if data_end > len(data):
+            raise USBCommunicationError(f"Insufficient data: expected {data_length} bytes, got {len(data) - MESSAGE_HEADER_SIZE}")
         
-        serialized_data = data[start_idx:end_idx]
+        serialized_data = data[data_start:data_end]
         
         # Use attrs2bin to deserialize the response
         response = attrs2bin.deserialize(serialized_data, response_type)
@@ -176,13 +217,13 @@ def usb_send_command(device: USBDevice, command: Any) -> bool:
     except Exception as e:
         raise USBCommunicationError(f"Failed to send command: {e}")
 
-def usb_receive_response(device: USBDevice, response_type: type) -> Any:
+def usb_receive_response(device: USBDevice, response_type: type = None) -> Any:
     """
     Receive and deserialize a protocol response over USB
     
     Args:
         device: Connected USB device
-        response_type: Expected response type class
+        response_type: Optional expected response type class (auto-detected if None)
         
     Returns:
         Any: Deserialized response object
@@ -197,14 +238,14 @@ def usb_receive_response(device: USBDevice, response_type: type) -> Any:
     except Exception as e:
         raise USBCommunicationError(f"Failed to receive response: {e}")
 
-def usb_send_and_receive(device: USBDevice, command: Any, response_type: type) -> Any:
+def usb_send_and_receive(device: USBDevice, command: Any, response_type: type = None) -> Any:
     """
     Send a command and receive response in one operation
     
     Args:
         device: Connected USB device
         command: Protocol command object to send
-        response_type: Expected response type class
+        response_type: Optional expected response type class (auto-detected if None)
         
     Returns:
         Any: Deserialized response object
@@ -413,12 +454,12 @@ class USBHostDevice:
         """
         usb_send_command(self.usb_device, command)
     
-    def receive_response(self, response_type: type) -> Any:
+    def receive_response(self, response_type: type = None) -> Any:
         """
         Receive and deserialize a protocol response
         
         Args:
-            response_type: Expected response type class
+            response_type: Optional expected response type class (auto-detected if None)
             
         Returns:
             Any: Deserialized response object
@@ -428,13 +469,13 @@ class USBHostDevice:
         """
         return usb_receive_response(self.usb_device, response_type)
     
-    def send_and_receive(self, command: Any, response_type: type) -> Any:
+    def send_and_receive(self, command: Any, response_type: type = None) -> Any:
         """
         Send a command and receive response with automatic serialization/deserialization
         
         Args:
             command: Protocol command object to send
-            response_type: Expected response type class
+            response_type: Optional expected response type class (auto-detected if None)
             
         Returns:
             Any: Deserialized response object
@@ -458,21 +499,12 @@ class USBHostDevice:
 
 
 class MessageDecoder:
-    """Utility class to decode incoming plugin messages by trying different message types"""
-    
-    # List of possible plugin response/data types to try when decoding
-    # Order matters - more specific types first
-    PLUGIN_MESSAGE_TYPES = [
-        PluginServiceInfoResponse,
-        PluginCharacteristicInfoResponse,
-        PluginConfigurationError,
-        PluginData,  # Most generic, try last
-    ]
+    """Utility class to decode incoming plugin messages using message type IDs"""
     
     @classmethod
     def decode_message(cls, raw_data: bytes) -> Optional[Any]:
         """
-        Try to decode raw bytes as different plugin message types
+        Decode raw bytes using message type ID for fast and accurate dispatch
         
         Args:
             raw_data: Raw bytes received from USB device
@@ -480,20 +512,44 @@ class MessageDecoder:
         Returns:
             Decoded message object or None if decoding failed
         """
-        for message_type in cls.PLUGIN_MESSAGE_TYPES:
-            try:
-                decoded = deserialize_response(raw_data, message_type)
-                return decoded
-            except Exception:
-                # Try next message type
-                continue
-        
-        return None
+        try:
+            # Use the updated deserialize_response which auto-detects type from header
+            decoded = deserialize_response(raw_data)
+            return decoded
+        except Exception:
+            # Return None if decoding failed
+            return None
     
     @classmethod
     def get_message_type_name(cls, message: Any) -> str:
         """Get human-readable name for message type"""
         return type(message).__name__
+    
+    @classmethod
+    def extract_message_type_id(cls, raw_data: bytes) -> Optional[MessageTypeId]:
+        """
+        Extract message type ID from raw bytes without full deserialization
+        
+        Args:
+            raw_data: Raw bytes received from USB device
+            
+        Returns:
+            MessageTypeId or None if extraction failed
+        """
+        try:
+            if len(raw_data) < MESSAGE_HEADER_SIZE:
+                return None
+            
+            # Verify magic number
+            magic = struct.unpack('<H', raw_data[:MESSAGE_MAGIC_BYTES])[0]
+            if magic != MESSAGE_MAGIC:
+                return None
+            
+            # Extract message type ID
+            type_id_byte = raw_data[MESSAGE_MAGIC_BYTES]
+            return MessageTypeId(type_id_byte)
+        except (ValueError, struct.error):
+            return None
 
 
 class USBDataListener:
