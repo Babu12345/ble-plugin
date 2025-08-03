@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "29f4837e430e593bf27ec52b0244986eb9786d75a41aa9bdcad9bfb94e93d49d"
+PROTOCOL_HASH = "baa3340cf131d2cde03cde23fcc5a002198407c865a6c7d412dae2cdf157b450"
 
 # ==================== CONSTANTS ====================
 
@@ -72,6 +72,8 @@ class MessageTypeId(Enum):
     PluginServiceInfoResponse: attrs2bin.U8 = 0x82
     # Characteristic information response with properties
     PluginCharacteristicInfoResponse: attrs2bin.U8 = 0x83
+    # Authentication completed response from plugin
+    PluginAuthenticationCompletedResponse: attrs2bin.U8 = 0x84
 
 
 class BLEProperties(Enum):
@@ -263,6 +265,17 @@ class PluginCharacteristicInfoResponse:
     properties: List[BLEProperties]
     exists: bool
 
+@attr.s(auto_attribs=True)
+class PluginAuthenticationCompletedResponse:
+    """Plugin authentication completed response
+    
+    Attributes:
+        peripheral_uuid:Peripheral UUID
+        success:Whether the authentication was successful
+    """
+    peripheral_uuid: str
+    success: bool
+
 # ==================== MESSAGE TYPE MAPPING ====================
 
 # Map message types to their type IDs
@@ -278,6 +291,7 @@ MESSAGE_TYPE_MAP = {
     PluginData: MessageTypeId.PluginData,
     PluginServiceInfoResponse: MessageTypeId.PluginServiceInfoResponse,
     PluginCharacteristicInfoResponse: MessageTypeId.PluginCharacteristicInfoResponse,
+    PluginAuthenticationCompletedResponse: MessageTypeId.PluginAuthenticationCompletedResponse,
 }
 
 # Reverse map for easy lookup

@@ -281,4 +281,21 @@ pub mod plugin {
             MessageTypeId::PluginCharacteristicInfoResponse
         }
     }
+
+    /// Plugin authentication completed response
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    pub struct PluginAuthenticationCompletedResponse {
+        /// Address of the device that was authenticated
+        pub address: [u8; 6],
+        /// Address type
+        pub address_type: BluetoothAddressType,
+        /// Whether the authentication was successful
+        pub success: bool,
+    }
+
+    impl MessageType for PluginAuthenticationCompletedResponse {
+        fn message_type_id() -> MessageTypeId {
+            MessageTypeId::PluginAuthenticationCompletedResponse
+        }
+    }
 }

@@ -123,6 +123,7 @@ use esp_idf_svc::hal::task::block_on;
 use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
 use protocol::io_types::HostCommandNotifyCharacteristicValue;
+use protocol::io_types::PluginAuthenticationCompletedResponse;
 use protocol::io_types::PluginData;
 use protocol::MESSAGE_HEADER_SIZE;
 
@@ -592,6 +593,25 @@ impl PluginStateMachine {
                 server.on_disconnect(move |_desc, reason| {
                     log::info!("Client disconnected ({:?})", reason);
                 });
+
+                let usb_sender = self.usb_sender.clone();
+                server.on_authentication_complete(move |_, desc, status| {
+                    log::info!("Authentication completed for client: {:?}", desc);
+                    let response = PluginAuthenticationCompletedResponse {
+                        address: desc.address().as_be_bytes(),
+                        address_type: Self::ble_address_type_to_bluetooth_address_type(
+                            desc.address().addr_type(),
+                        ),
+                        success: status.is_ok(),
+                    };
+                    usb_sender
+                        .send(response)
+                        .map_err(|e| {
+                            log::error!("Failed to send authentication response: {:?}", e);
+                            StateMachineError::UsbSendError
+                        })
+                        .ok();
+                });
                 log::info!("Successfully configured BLE server callbacks");
             }
             None => {
@@ -848,7 +868,7 @@ impl PluginStateMachine {
             true => {
                 let char_uuid_write = cmd.uuid;
                 let service_uuid_write = cmd.service_uuid;
-                let usb_sender = Arc::clone(&self.usb_sender);
+                let usb_sender = self.usb_sender.clone();
                 characteristic.lock().on_write(move |args| {
                     log::info!(
                         "BLE write received for characteristic {} in service {}: {:?} bytes",
@@ -876,7 +896,7 @@ impl PluginStateMachine {
 
         match nimble_properties.contains(NimbleProperties::READ) {
             true => {
-                let usb_sender = Arc::clone(&self.usb_sender);
+                let usb_sender = self.usb_sender.clone();
                 characteristic.lock().on_read(move |characteristics, _| {
                     log::info!(
                         "BLE read requested for characteristic {} in service {}",
@@ -1010,6 +1030,17 @@ impl PluginStateMachine {
             protocol::io_types::BluetoothAddressType::Random => BLEAddressType::Random,
             protocol::io_types::BluetoothAddressType::PublicID => BLEAddressType::PublicID,
             protocol::io_types::BluetoothAddressType::RandomID => BLEAddressType::RandomID,
+        }
+    }
+
+    fn ble_address_type_to_bluetooth_address_type(
+        address_type: BLEAddressType,
+    ) -> protocol::io_types::BluetoothAddressType {
+        match address_type {
+            BLEAddressType::Public => protocol::io_types::BluetoothAddressType::Public,
+            BLEAddressType::Random => protocol::io_types::BluetoothAddressType::Random,
+            BLEAddressType::PublicID => protocol::io_types::BluetoothAddressType::PublicID,
+            BLEAddressType::RandomID => protocol::io_types::BluetoothAddressType::RandomID,
         }
     }
 }

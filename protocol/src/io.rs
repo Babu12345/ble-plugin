@@ -154,6 +154,9 @@ pub enum MessageTypeId {
 
     /// Characteristic information response with properties
     PluginCharacteristicInfoResponse = 0x83,
+
+    /// Authentication completed response from plugin
+    PluginAuthenticationCompletedResponse = 0x84,
 }
 
 /// Trait for associating types with their message type identifiers
