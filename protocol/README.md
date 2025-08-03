@@ -4,7 +4,7 @@ A comprehensive communication protocol library for BLE-USB bridge systems, defin
 
 ## Overview
 
-This library provides the complete communication protocol between host devices (PCs, mobile devices) and BLE plugin devices (ESP32-based bridge devices). It ensures reliable, type-safe communication across the USB-BLE bridge with efficient binary serialization and protocol validation.
+This library provides the complete communication protocol between host devices (PCs, mobile devices, embedded devices) and BLE plugin devices (ESP32-based bridge devices). It ensures reliable, type-safe communication across the USB-BLE bridge with efficient binary serialization and protocol validation.
 
 ## Architecture
 

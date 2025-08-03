@@ -5,7 +5,7 @@
 //!
 //! ## Overview
 //!
-//! This library defines the complete communication protocol between host devices (PCs, mobile devices)
+//! This library defines the complete communication protocol between host devices (PCs, mobile devices, embedded devices)
 //! and BLE plugin devices (ESP32-based bridge devices). It provides type-safe message definitions,
 //! efficient serialization, and protocol validation to ensure reliable communication across the
 //! USB-BLE bridge.
@@ -17,10 +17,11 @@
 //! ## Architecture
 //!
 //! ```text
-//! ┌─────────────────┐     USB Commands     ┌─────────────────┐     BLE Operations     ┌─────────────┐
-//! │   Host Device   │ ──────────────────► │  Plugin Device  │ ──────────────────────► │ BLE Clients │
-//! │  (PC/Mobile)    │ ◄────────────────── │   (ESP32 + BLE) │ ◄────────────────────── │             │
-//! └─────────────────┘     USB Responses   └─────────────────┘     BLE Callbacks      └─────────────┘
+//! ┌─────────────────┐     USB Commands     ┌─────────────────┐     BLE Operations      ┌─────────────┐
+//! │   Host Device   │ ──────────────────►  │  Plugin Device  │ ──────────────────────► │ BLE Clients │
+//! │  (PC/Mobile/    │ ◄──────────────────  │  (ESP32 + BLE)  │ ◄────────────────────── │             │
+//! │   Embedded)     │     USB Responses    └─────────────────┘     BLE Callbacks       └─────────────┘
+//! └─────────────────┘
 //! ```
 //!
 //! ## Protocol Features
