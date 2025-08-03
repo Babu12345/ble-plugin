@@ -108,21 +108,6 @@ pub struct PluginConfigurationError {
     pub context: Option<String>,
 }
 
-/// Response to service information query
-pub struct PluginServiceInfoResponse {
-    /// Service UUID
-    pub service_uuid: String,
-    
-    /// Service name
-    pub service_name: String,
-    
-    /// List of characteristic information
-    pub characteristics: Vec<CharacteristicInfo>,
-    
-    /// Whether service is currently active
-    pub is_active: bool,
-}
-
 /// Information about a BLE characteristic
 pub struct CharacteristicInfo {
     /// Characteristic UUID
@@ -136,4 +121,19 @@ pub struct CharacteristicInfo {
     
     /// Whether notifications are enabled
     pub notifications_enabled: bool,
+}
+
+/// Response to service information query
+pub struct PluginServiceInfoResponse {
+    /// Service UUID
+    pub service_uuid: String,
+    
+    /// Service name
+    pub service_name: String,
+    
+    /// List of characteristic information
+    pub characteristics: Vec<CharacteristicInfo>,
+    
+    /// Whether service is currently active
+    pub is_active: bool,
 }

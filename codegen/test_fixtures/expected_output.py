@@ -82,7 +82,7 @@ class PluginData:
     """Data message from plugin to host"""
     connection_id: int  # Connection handle
     characteristic_uuid: str  # Characteristic UUID that received data
-    data: List[int]  # The actual data payload
+    data: List[attrs2bin.U8]  # The actual data payload
     timestamp: int  # Timestamp when data was received
 
 @attr.s(auto_attribs=True)
@@ -93,20 +93,20 @@ class PluginConfigurationError:
     context: Optional[str]  # Optional context about what was being configured
 
 @attr.s(auto_attribs=True)
+class CharacteristicInfo:
+    """Information about a BLE characteristic"""
+    uuid: str  # Characteristic UUID
+    properties: BLEProperties  # Characteristic properties
+    current_value: Optional[List[attrs2bin.U8]]  # Current value if readable
+    notifications_enabled: bool  # Whether notifications are enabled
+
+@attr.s(auto_attribs=True)
 class PluginServiceInfoResponse:
     """Response to service information query"""
     service_uuid: str  # Service UUID
     service_name: str  # Service name
     characteristics: List[CharacteristicInfo]  # List of characteristic information
     is_active: bool  # Whether service is currently active
-
-@attr.s(auto_attribs=True)
-class CharacteristicInfo:
-    """Information about a BLE characteristic"""
-    uuid: str  # Characteristic UUID
-    properties: BLEProperties  # Characteristic properties
-    current_value: Optional[List[int]]  # Current value if readable
-    notifications_enabled: bool  # Whether notifications are enabled
 
 # ==================== MESSAGE TYPE MAPPING ====================
 
