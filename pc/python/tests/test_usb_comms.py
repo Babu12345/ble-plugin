@@ -4,7 +4,7 @@ from plugin_host.comms import (
     deserialize_response,
     DEFAULT_PACKET_SIZE
 )
-from plugin_host.types import (
+from plugin_host.generated_types import (
     HostCommandConfigurePeripheral,
     HostCommandGetServiceInfo,
     PluginServiceInfoResponse,

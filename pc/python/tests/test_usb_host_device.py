@@ -1,13 +1,12 @@
 import pytest
 from unittest.mock import Mock, patch
 from plugin_host.comms import USBHostDevice, USBCommunicationError
-from plugin_host.types import (
+from plugin_host.generated_types import (
     HostCommandConfigurePeripheral,
     HostCommandGetServiceInfo,
     PluginServiceInfoResponse,
-    PluginCharacteristicInfoResponse,
     BLEProperties,
-    BluetoothAddressType
+    BluetoothAddressType,
 )
 
 class TestUSBHostDevice:

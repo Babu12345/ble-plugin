@@ -94,5 +94,5 @@ The library uses a custom USB protocol with length-prefixed messages:
 All commands and responses are automatically serialized/deserialized using attrs2bin.
 """
 
-from .types import *
+from .generated_types import *
 from .comms import *

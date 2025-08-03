@@ -6,7 +6,7 @@ import threading
 import time
 import queue
 from typing import Any, Optional
-from plugin_host.types import *
+from plugin_host.generated_types import *
 
 # Communicate between the host (PC) and the usb plugin
 
@@ -19,7 +19,7 @@ USB_TIMEOUT_MS = 1000
 DEFAULT_PACKET_SIZE = 256
 
 # Protocol Configuration
-from plugin_host.types import (
+from plugin_host.generated_types import (
     MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MESSAGE_TYPE_ID_BYTES, 
     DATA_BYTES_LENGTH_IN_BYTES, MESSAGE_HEADER_SIZE, 
     MESSAGE_TYPE_MAP, TYPE_ID_TO_MESSAGE_TYPE, MessageTypeId

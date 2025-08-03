@@ -10,7 +10,7 @@ from plugin_host.comms import (
     USBCommunicationError,
     serialize_command
 )
-from plugin_host.types import (
+from plugin_host.generated_types import (
     PluginData,
     PluginServiceInfoResponse,
     PluginDataSendType,

@@ -1,7 +1,7 @@
 import attrs2bin
 from enum import Enum
 from collections import namedtuple
-from plugin_host.types import *
+from plugin_host.generated_types import *
 
 def test_type_serialization() -> None:
     cmd = HostCommandConfigurePeripheral(uuid="123", name="Default peripheral")

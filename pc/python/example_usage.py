@@ -10,7 +10,7 @@ This example demonstrates how to use the USBHostDevice class to:
 """
 
 from plugin_host.comms import USBHostDevice, USBCommunicationError
-from plugin_host.types import BLEProperties, BluetoothAddressType
+from plugin_host.generated_types import BLEProperties, BluetoothAddressType
 
 def main():
     """Main example function"""

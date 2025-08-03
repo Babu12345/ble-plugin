@@ -16,7 +16,7 @@ from plugin_host.comms import (
     USBMessageHandler,
     USBCommunicationError
 )
-from plugin_host.types import (
+from plugin_host.generated_types import (
     PluginData,
     PluginServiceInfoResponse,
     PluginCharacteristicInfoResponse,
