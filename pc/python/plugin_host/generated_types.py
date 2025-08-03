@@ -45,83 +45,83 @@ MESSAGE_HEADER_SIZE = MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES + DATA_BYTES_L
 class MessageTypeId(Enum):
     """Message type identifiers for efficient command dispatch  This enum defines un..."""
     # Configure BLE peripheral device with name and UUID
-    HostCommandConfigurePeripheral = 0x01
+    HostCommandConfigurePeripheral: attrs2bin.U8 = 0x01
     # Create a new BLE service with specified UUID
-    HostCommandConfigureService = 0x02
+    HostCommandConfigureService: attrs2bin.U8 = 0x02
     # Create a BLE characteristic with properties
-    HostCommandConfigureCharacteristic = 0x03
+    HostCommandConfigureCharacteristic: attrs2bin.U8 = 0x03
     # Configure characteristic for read operations with default value
-    HostCommandConfigureCharacteristicRead = 0x04
+    HostCommandConfigureCharacteristicRead: attrs2bin.U8 = 0x04
     # Query information about a BLE service
-    HostCommandGetServiceInfo = 0x05
+    HostCommandGetServiceInfo: attrs2bin.U8 = 0x05
     # Query information about a BLE characteristic
-    HostCommandGetCharacteristicInfo = 0x06
+    HostCommandGetCharacteristicInfo: attrs2bin.U8 = 0x06
     # Start BLE advertising with optional multi-connect support
-    HostCommandStartAdvertisement = 0x07
+    HostCommandStartAdvertisement: attrs2bin.U8 = 0x07
     # Send notification/indication to connected BLE client
-    HostCommandNotifyCharacteristicValue = 0x08
+    HostCommandNotifyCharacteristicValue: attrs2bin.U8 = 0x08
     # Data forwarded from BLE client to host
-    PluginData = 0x80
+    PluginData: attrs2bin.U8 = 0x80
     # Configuration error response from plugin
-    PluginConfigurationError = 0x81
+    PluginConfigurationError: attrs2bin.U8 = 0x81
     # Service information response with characteristic list
-    PluginServiceInfoResponse = 0x82
+    PluginServiceInfoResponse: attrs2bin.U8 = 0x82
     # Characteristic information response with properties
-    PluginCharacteristicInfoResponse = 0x83
+    PluginCharacteristicInfoResponse: attrs2bin.U8 = 0x83
 
 
 class BLEProperties(Enum):
     """Properties enumeration for BLE characteristics."""
     # Read property
-    READ = 0
+    READ: attrs2bin.U8 = 0
     # Write property
-    WRITE = 1
+    WRITE: attrs2bin.U8 = 1
     # Write without response property
-    WriteNoRsp = 2
+    WriteNoRsp: attrs2bin.U8 = 2
     # Notify property
-    NOTIFY = 3
+    NOTIFY: attrs2bin.U8 = 3
     # Indicate property
-    INDICATE = 4
+    INDICATE: attrs2bin.U8 = 4
 
 
 class BluetoothAddressType(Enum):
     """Bluetooth Device address type"""
     # Public address
-    Public = 0
+    Public: attrs2bin.U8 = 0
     # Random address
-    Random = 1
+    Random: attrs2bin.U8 = 1
     # Public ID address
-    PublicID = 2
+    PublicID: attrs2bin.U8 = 2
     # Random ID address
-    RandomID = 3
+    RandomID: attrs2bin.U8 = 3
 
 
 class PluginDataSendType(Enum):
     """Represents the send type of the data. Was it due to a write event (central -&gt;..."""
     # Notified from the central bluetooth device
-    Notify = "Notify"
+    Notify: attrs2bin.U8 = 0
     # Read attempt from the central bluetooth device
-    Read = "Read"
+    Read: attrs2bin.U8 = 1
     # Written from the central bluetooth device
-    Write = "Write"
+    Write: attrs2bin.U8 = 2
 
 
 class PluginConfigurationError(Enum):
     """Represents the error that can occur during plugin configuration"""
     # The peripheral name is too long
-    PeripheralNameTooLong = "PeripheralNameTooLong"
+    PeripheralNameTooLong: attrs2bin.U8 = 0
     # The peripheral UUID is invalid
-    InvalidPeripheralUuid = "InvalidPeripheralUuid"
+    InvalidPeripheralUuid: attrs2bin.U8 = 1
     # The service UUID is invalid
-    InvalidServiceUuid = "InvalidServiceUuid"
+    InvalidServiceUuid: attrs2bin.U8 = 2
     # The characteristic UUID is invalid
-    InvalidCharacteristicUuid = "InvalidCharacteristicUuid"
+    InvalidCharacteristicUuid: attrs2bin.U8 = 3
     # Advertisement without proper peripheral configuration
-    AdvertisementWithoutPeripheralConfiguration = "AdvertisementWithoutPeripheralConfiguration"
+    AdvertisementWithoutPeripheralConfiguration: attrs2bin.U8 = 4
     # Service without proper peripheral configuration
-    ServiceWithoutPeripheralConfiguration = "ServiceWithoutPeripheralConfiguration"
+    ServiceWithoutPeripheralConfiguration: attrs2bin.U8 = 5
     # Characteristic without proper service configuration
-    CharacteristicWithoutServiceConfiguration = "CharacteristicWithoutServiceConfiguration"
+    CharacteristicWithoutServiceConfiguration: attrs2bin.U8 = 6
 
 
 # ==================== MESSAGE STRUCTURES ====================

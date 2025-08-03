@@ -193,11 +193,11 @@ pub mod plugin {
     #[repr(u8)]
     pub enum PluginDataSendType {
         /// Notified from the central bluetooth device
-        Notify,
+        Notify = 0,
         /// Read attempt from the central bluetooth device
-        Read,
+        Read = 1,
         /// Written from the central bluetooth device
-        Write,
+        Write = 2,
     }
 
     /// Plugin data
@@ -222,19 +222,19 @@ pub mod plugin {
     #[repr(u8)]
     pub enum PluginConfigurationError {
         /// The peripheral name is too long
-        PeripheralNameTooLong,
+        PeripheralNameTooLong = 0,
         /// The peripheral UUID is invalid
-        InvalidPeripheralUuid,
+        InvalidPeripheralUuid = 1,
         /// The service UUID is invalid
-        InvalidServiceUuid,
+        InvalidServiceUuid = 2,
         /// The characteristic UUID is invalid
-        InvalidCharacteristicUuid,
+        InvalidCharacteristicUuid = 3,
         /// Advertisement without proper peripheral configuration
-        AdvertisementWithoutPeripheralConfiguration,
+        AdvertisementWithoutPeripheralConfiguration = 4,
         /// Service without proper peripheral configuration
-        ServiceWithoutPeripheralConfiguration,
+        ServiceWithoutPeripheralConfiguration = 5,
         /// Characteristic without proper service configuration
-        CharacteristicWithoutServiceConfiguration,
+        CharacteristicWithoutServiceConfiguration = 6,
     }
 
     impl MessageType for PluginConfigurationError {

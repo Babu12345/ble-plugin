@@ -61,6 +61,7 @@ struct TemplateEnum {
     variants: Vec<TemplateEnumVariant>,
     doc_comment: String,
     repr: String, // Always present, empty if None
+    is_int_enum: bool, // True if enum has integer values (not string values)
 }
 
 /// Template-friendly struct field
@@ -205,15 +206,28 @@ fn generate_python_code(output_dir: &PathBuf, protocol_def: &ProtocolDef) -> Res
         }).collect();
 
     let template_enums: Vec<TemplateEnum> = protocol_def.enums.iter()
-        .map(|e| TemplateEnum {
-            name: e.name.clone(),
-            variants: e.variants.iter().map(|v| TemplateEnumVariant {
+        .map(|e| {
+            let variants: Vec<TemplateEnumVariant> = e.variants.iter().map(|v| TemplateEnumVariant {
                 name: v.name.clone(),
                 value: v.value.clone().unwrap_or_default(),
                 doc_comment: v.doc_comment.clone(),
-            }).collect(),
-            doc_comment: e.doc_comment.clone(),
-            repr: e.repr.clone().unwrap_or_default(),
+            }).collect();
+            
+            // Determine if this is an integer enum by checking if any variant has a numeric value
+            let is_int_enum = variants.iter().any(|v| {
+                !v.value.is_empty() && 
+                !v.value.starts_with('"') && 
+                !v.value.starts_with('\'') &&
+                (v.value.parse::<i64>().is_ok() || v.value.starts_with("0x"))
+            });
+            
+            TemplateEnum {
+                name: e.name.clone(),
+                variants,
+                doc_comment: e.doc_comment.clone(),
+                repr: e.repr.clone().unwrap_or_default(),
+                is_int_enum,
+            }
         }).collect();
 
     let template_structs: Vec<TemplateStruct> = protocol_def.structs.iter()

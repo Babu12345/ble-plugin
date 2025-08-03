@@ -37,9 +37,9 @@ class {{ enum.name }}(Enum):
     # {{ variant.doc_comment }}
     {%- endif %}
     {%- if !variant.value.is_empty() %}
-    {{ variant.name }} = {{ variant.value }}
+    {{ variant.name }}{%- if enum.is_int_enum %}: attrs2bin.U8{%- endif %} = {{ variant.value }}
     {%- else %}
-    {{ variant.name }} = "{{ variant.name }}"
+    {{ variant.name }}{%- if enum.is_int_enum %}: attrs2bin.U8{%- endif %} = "{{ variant.name }}"
     {%- endif %}
 {%- endfor %}
 
