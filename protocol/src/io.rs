@@ -31,21 +31,17 @@
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use protocol::{IO, MessageType, MessageTypeId};
+//! use protocol_io::HostIO;
 //! use serde::{Serialize, Deserialize};
+//! use protocol::{IO, MessageTypeId, DEFAULT_PACKET_SIZE};
 //!
 //! #[derive(Serialize, Deserialize)]
+//! #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
 //! struct MyCommand {
 //!     data: u32,
 //! }
 //!
-//! impl MessageType for MyCommand {
-//!     fn message_type_id() -> MessageTypeId {
-//!         MessageTypeId::HostCommandConfigurePeripheral
-//!     }
-//! }
-//!
-//! // Now MyCommand automatically implements IO trait
+//! // IO trait methods are now automatically available
 //! let cmd = MyCommand { data: 42 };
 //! let serialized = cmd.to_bytes::<DEFAULT_PACKET_SIZE>()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
@@ -209,8 +205,33 @@ pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 ///
 /// ## Automatic Implementation
 ///
-/// Any type that implements `Serialize`, `Deserialize`, and `MessageType` automatically
-/// gets the full `IO` trait implementation. No manual implementation required.
+/// The `IO` trait contains default implementations for all serialization and deserialization
+/// methods. Types automatically gain full `IO` functionality by implementing the required
+/// prerequisite traits through attribute macros.
+///
+/// ### Prerequisite Traits
+///
+/// To use the `IO` trait, your type must implement:
+/// - `Serialize` and `Deserialize` from serde (for data serialization)
+/// - `MessageType` (for message type identification)
+///
+/// ### Automatic Implementation via Macros
+///
+/// The easiest way to implement these traits is using the `#[HostIO(...)]` or `#[PluginIO(...)]`
+/// attribute macros from the `protocol_io` crate, which automatically implement all required traits:
+///
+/// ```rust,no_run  
+/// use protocol_io::HostIO;
+/// use serde::{Serialize, Deserialize};
+/// use protocol::MessageTypeId;
+///
+/// #[derive(Serialize, Deserialize)]
+/// #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
+/// struct MyCommand {
+///     data: u32,
+/// }
+/// // Now MyCommand automatically has all IO trait methods available
+/// ```
 ///
 /// ## Features
 ///

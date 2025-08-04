@@ -148,7 +148,7 @@
 
 pub mod errors;
 pub mod host;
-mod io;
+pub mod io;
 pub mod io_types;
 pub mod plugin;
 pub use io::*;
