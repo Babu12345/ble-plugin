@@ -29,57 +29,47 @@ protocol = { path = "../protocol" }
 serde = { version = "1.0", features = ["derive"] }
 ```
 
-## Derive Macros
+## Attribute Macros
 
-### `#[derive(HostIO)]`
+### `#[HostIO(...)]`
 
-Implements `IO<'a>` and `HostIO<'a>` traits for message types sent from hosts to plugins. Use this for command messages that configure or control the BLE plugin device.
+Implements `IO<'a>`, `HostIO<'a>`, and `MessageType` traits for message types sent from hosts to plugins. Use this for command messages that configure or control the BLE plugin device.
 
-**Example:**
+**Syntax:**
 ```rust
 use protocol_io::HostIO;
 use serde::{Serialize, Deserialize};
-use protocol::{MessageType, MessageTypeId};
+use protocol::MessageTypeId;
 
-#[derive(Serialize, Deserialize, HostIO)]
+#[derive(Serialize, Deserialize)]
+#[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
 struct ConfigurePeripheralCommand {
     name: String,
     uuid: String,
 }
 
-impl MessageType for ConfigurePeripheralCommand {
-    fn message_type_id() -> MessageTypeId {
-        MessageTypeId::HostCommandConfigurePeripheral
-    }
-}
-
-// Now automatically implements IO<'a> and HostIO<'a>
+// Automatically implements IO<'a>, HostIO<'a>, and MessageType
 ```
 
-### `#[derive(PluginIO)]`
+### `#[PluginIO(...)]`
 
-Implements `IO<'a>` and `PluginIO<'a>` traits for message types sent from plugins to hosts. Use this for response messages, data forwarding, and error notifications.
+Implements `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits for message types sent from plugins to hosts. Use this for response messages, data forwarding, and error notifications.
 
-**Example:**
+**Syntax:**
 ```rust
 use protocol_io::PluginIO;
 use serde::{Serialize, Deserialize};
-use protocol::{MessageType, MessageTypeId};
+use protocol::MessageTypeId;
 
-#[derive(Serialize, Deserialize, PluginIO)]
+#[derive(Serialize, Deserialize)]
+#[PluginIO(MessageTypeId::PluginServiceInfoResponse)]
 struct ServiceInfoResponse {
     service_uuid: String,
     characteristics: Vec<String>,
     exists: bool,
 }
 
-impl MessageType for ServiceInfoResponse {
-    fn message_type_id() -> MessageTypeId {
-        MessageTypeId::PluginServiceInfoResponse
-    }
-}
-
-// Now automatically implements IO<'a> and PluginIO<'a>
+// Automatically implements IO<'a>, PluginIO<'a>, and MessageType
 ```
 
 ## Advanced Usage

@@ -18,7 +18,8 @@ pub mod host {
     use uuid::Uuid;
 
     /// Host command. Configure peripheral
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
     pub struct HostCommandConfigurePeripheral {
         /// Peripheral name
         pub name: String<MAX_NAME_SIZE>,
@@ -26,23 +27,12 @@ pub mod host {
         pub uuid: Uuid,
     }
 
-    impl MessageType for HostCommandConfigurePeripheral {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandConfigurePeripheral
-        }
-    }
-
     /// Host command. Configure service
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandConfigureService)]
     pub struct HostCommandConfigureService {
         /// Service UUID
         pub uuid: Uuid,
-    }
-
-    impl MessageType for HostCommandConfigureService {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandConfigureService
-        }
     }
 
     /// Properties enumeration for BLE characteristics.
@@ -65,7 +55,8 @@ pub mod host {
     pub const MAX_PROPERTIES: usize = 4;
 
     /// Host command. Configure characteristic
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandConfigureCharacteristic)]
     pub struct HostCommandConfigureCharacteristic {
         /// Characteristic UUID
         pub uuid: Uuid,
@@ -75,14 +66,9 @@ pub mod host {
         pub properties: heapless::Vec<BLEProperties, MAX_PROPERTIES>, // Assuming max 4 properties per characteristic
     }
 
-    impl MessageType for HostCommandConfigureCharacteristic {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandConfigureCharacteristic
-        }
-    }
-
     /// Host command. Configure characteristic read
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandConfigureCharacteristicRead)]
     pub struct HostCommandConfigureCharacteristicRead {
         /// Characteristic UUID
         pub uuid: Uuid,
@@ -92,27 +78,17 @@ pub mod host {
         pub value: Vec<u8, MAX_NAME_SIZE>,
     }
 
-    impl MessageType for HostCommandConfigureCharacteristicRead {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandConfigureCharacteristicRead
-        }
-    }
-
     /// Host command. Get service info
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandGetServiceInfo)]
     pub struct HostCommandGetServiceInfo {
         /// Service UUID
         pub uuid: Uuid,
     }
 
-    impl MessageType for HostCommandGetServiceInfo {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandGetServiceInfo
-        }
-    }
-
     /// Host command. Get characteristic info
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandGetCharacteristicInfo)]
     pub struct HostCommandGetCharacteristicInfo {
         /// Characteristic UUID
         pub characteristic_uuid: Uuid,
@@ -120,23 +96,12 @@ pub mod host {
         pub service_uuid: Uuid,
     }
 
-    impl MessageType for HostCommandGetCharacteristicInfo {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandGetCharacteristicInfo
-        }
-    }
-
     /// Host command. Start advertisement
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandStartAdvertisement)]
     pub struct HostCommandStartAdvertisement {
         /// Allow multiple central connections
         pub allow_multi_connect: bool,
-    }
-
-    impl MessageType for HostCommandStartAdvertisement {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandStartAdvertisement
-        }
     }
 
     /// Bluetooth Device address type
@@ -154,7 +119,8 @@ pub mod host {
     }
 
     /// Host command. Notify characteristic value
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, HostIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandNotifyCharacteristicValue)]
     pub struct HostCommandNotifyCharacteristicValue {
         /// Device Address.
         pub address: [u8; 6],
@@ -166,12 +132,6 @@ pub mod host {
         pub service_uuid: Uuid,
         /// Value to notify
         pub value: Vec<u8, MAX_NAME_SIZE>,
-    }
-
-    impl MessageType for HostCommandNotifyCharacteristicValue {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::HostCommandNotifyCharacteristicValue
-        }
     }
 }
 
@@ -201,7 +161,8 @@ pub mod plugin {
     }
 
     /// Plugin data
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[PluginIO(MessageTypeId::PluginData)]
     pub struct PluginData<'a> {
         /// Source peripheral id that this data is orginating from.
         pub src_id: Uuid,
@@ -211,14 +172,9 @@ pub mod plugin {
         pub data: &'a [u8],
     }
 
-    impl<'a> MessageType for PluginData<'a> {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::PluginData
-        }
-    }
-
     /// Represents the error that can occur during plugin configuration
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[PluginIO(MessageTypeId::PluginConfigurationError)]
     #[repr(u8)]
     pub enum PluginConfigurationError {
         /// The peripheral name is too long
@@ -237,17 +193,12 @@ pub mod plugin {
         CharacteristicWithoutServiceConfiguration = 6,
     }
 
-    impl MessageType for PluginConfigurationError {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::PluginConfigurationError
-        }
-    }
-
     /// Maximum characteritics per service
     pub const MAX_CHARACTERISTICS_PER_SERVICE: usize = 16;
 
     /// Service information response
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[PluginIO(MessageTypeId::PluginServiceInfoResponse)]
     pub struct PluginServiceInfoResponse {
         /// Service UUID
         pub service_uuid: Uuid,
@@ -257,14 +208,9 @@ pub mod plugin {
         pub exists: bool,
     }
 
-    impl MessageType for PluginServiceInfoResponse {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::PluginServiceInfoResponse
-        }
-    }
-
     /// Characteristic information response
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[PluginIO(MessageTypeId::PluginCharacteristicInfoResponse)]
     pub struct PluginCharacteristicInfoResponse {
         /// Characteristic UUID
         pub characteristic_uuid: Uuid,
@@ -276,14 +222,9 @@ pub mod plugin {
         pub exists: bool,
     }
 
-    impl MessageType for PluginCharacteristicInfoResponse {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::PluginCharacteristicInfoResponse
-        }
-    }
-
     /// Plugin authentication completed response
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, PluginIO)]
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[PluginIO(MessageTypeId::PluginAuthenticationCompletedResponse)]
     pub struct PluginAuthenticationCompletedResponse {
         /// Address of the device that was authenticated
         pub address: [u8; 6],
@@ -291,11 +232,5 @@ pub mod plugin {
         pub address_type: BluetoothAddressType,
         /// Whether the authentication was successful
         pub success: bool,
-    }
-
-    impl MessageType for PluginAuthenticationCompletedResponse {
-        fn message_type_id() -> MessageTypeId {
-            MessageTypeId::PluginAuthenticationCompletedResponse
-        }
     }
 }

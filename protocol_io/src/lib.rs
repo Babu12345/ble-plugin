@@ -144,31 +144,25 @@
 use proc_macro::TokenStream;
 
 use quote::quote;
-use syn::{DeriveInput, GenericParam, parse_macro_input};
+use syn::{parse_macro_input, DeriveInput, Expr, GenericParam};
 
-/// Derive macro for implementing HostIO traits
+/// Attribute macro for implementing HostIO traits
 ///
-/// This macro automatically implements both `IO<'a>` and `HostIO<'a>` traits for types
-/// that represent messages sent from host devices to plugin devices. It handles both
-/// simple types and generic types with lifetime parameters.
+/// This macro automatically implements `IO<'a>`, `HostIO<'a>`, and `MessageType` traits
+/// for types that represent messages sent from host devices to plugin devices.
 ///
 /// ## Usage
 ///
 /// ```rust
 /// use protocol_io::HostIO;
 /// use serde::{Serialize, Deserialize};
-/// use protocol::{MessageType, MessageTypeId};
+/// use protocol::MessageTypeId;
 ///
-/// #[derive(Serialize, Deserialize, HostIO)]
+/// #[derive(Serialize, Deserialize)]
+/// #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
 /// struct MyHostCommand {
 ///     data: u32,
 ///     flag: bool,
-/// }
-///
-/// impl MessageType for MyHostCommand {
-///     fn message_type_id() -> MessageTypeId {
-///         MessageTypeId::HostCommandConfigurePeripheral
-///     }
 /// }
 /// ```
 ///
@@ -179,38 +173,16 @@ use syn::{DeriveInput, GenericParam, parse_macro_input};
 /// ```rust,ignore
 /// impl<'a> IO<'a> for MyHostCommand {}
 /// impl<'a> HostIO<'a> for MyHostCommand {}
-/// ```
-///
-/// ## Lifetime Handling
-///
-/// For types with existing lifetime parameters, the macro correctly uses the first
-/// lifetime parameter:
-///
-/// ```rust
-/// use protocol_io::HostIO;
-/// use serde::{Serialize, Deserialize};
-///
-/// #[derive(Serialize, Deserialize, HostIO)]
-/// struct CommandWithLifetime<'a> {
-///     data: &'a [u8],
+/// impl MessageType for MyHostCommand {
+///     fn message_type_id() -> MessageTypeId {
+///         MessageTypeId::HostCommandConfigurePeripheral
+///     }
 /// }
 /// ```
-///
-/// This generates:
-///
-/// ```rust,ignore
-/// impl<'a> IO<'a> for CommandWithLifetime<'a> {}
-/// impl<'a> HostIO<'a> for CommandWithLifetime<'a> {}
-/// ```
-///
-/// ## Requirements
-///
-/// The target type must:
-/// - Implement `Serialize` and `Deserialize`
-/// - Implement `MessageType`
-/// - Be used for host-to-plugin communication
-#[proc_macro_derive(HostIO)]
-pub fn derive_host_io(input: TokenStream) -> TokenStream {
+#[proc_macro_attribute]
+#[allow(non_snake_case)]
+pub fn HostIO(args: TokenStream, input: TokenStream) -> TokenStream {
+    let message_type_id = parse_macro_input!(args as Expr);
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
     let generics = &input.generics;
@@ -223,19 +195,16 @@ pub fn derive_host_io(input: TokenStream) -> TokenStream {
         }
     });
 
-    let expanded = match lifetimes.next() {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let io_impl = match lifetimes.next() {
         None => {
-            // Generate the trait implementation
             quote! {
                 impl<'a> IO<'a> for #name {}
                 impl<'a> HostIO<'a> for #name {}
             }
         }
         Some(first_lt) => {
-            // Extract existing generics and add the lifetime parameter
-            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-            // Generate the trait implementation
             quote! {
                 impl #impl_generics IO<#first_lt> for #name #ty_generics #where_clause {}
                 impl #impl_generics HostIO<#first_lt> for #name #ty_generics #where_clause {}
@@ -243,32 +212,42 @@ pub fn derive_host_io(input: TokenStream) -> TokenStream {
         }
     };
 
+    // Always generate MessageType implementation with the provided ID
+    let message_type_impl = quote! {
+        impl #impl_generics MessageType for #name #ty_generics #where_clause {
+            fn message_type_id() -> MessageTypeId {
+                #message_type_id
+            }
+        }
+    };
+
+    let expanded = quote! {
+        #input
+
+        #io_impl
+        #message_type_impl
+    };
+
     TokenStream::from(expanded)
 }
 
-/// Derive macro for implementing PluginIO traits
+/// Attribute macro for implementing PluginIO traits
 ///
-/// This macro automatically implements both `IO<'a>` and `PluginIO<'a>` traits for types
-/// that represent messages sent from plugin devices to host devices. It handles both
-/// simple types and generic types with lifetime parameters.
+/// This macro automatically implements `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits
+/// for types that represent messages sent from plugin devices to host devices.
 ///
 /// ## Usage
 ///
 /// ```rust
 /// use protocol_io::PluginIO;
 /// use serde::{Serialize, Deserialize};
-/// use protocol::{MessageType, MessageTypeId};
+/// use protocol::MessageTypeId;
 ///
-/// #[derive(Serialize, Deserialize, PluginIO)]
+/// #[derive(Serialize, Deserialize)]
+/// #[PluginIO(MessageTypeId::PluginServiceInfoResponse)]
 /// struct MyPluginResponse {
 ///     status: String,
 ///     data: Vec<u8>,
-/// }
-///
-/// impl MessageType for MyPluginResponse {
-///     fn message_type_id() -> MessageTypeId {
-///         MessageTypeId::PluginServiceInfoResponse
-///     }
 /// }
 /// ```
 ///
@@ -279,46 +258,16 @@ pub fn derive_host_io(input: TokenStream) -> TokenStream {
 /// ```rust,ignore
 /// impl<'a> IO<'a> for MyPluginResponse {}
 /// impl<'a> PluginIO<'a> for MyPluginResponse {}
-/// ```
-///
-/// ## Lifetime Handling
-///
-/// For types with existing lifetime parameters, the macro correctly uses the first
-/// lifetime parameter:
-///
-/// ```rust
-/// use protocol_io::PluginIO;
-/// use serde::{Serialize, Deserialize};
-///
-/// #[derive(Serialize, Deserialize, PluginIO)]
-/// struct ResponseWithLifetime<'a> {
-///     message: &'a str,
+/// impl MessageType for MyPluginResponse {
+///     fn message_type_id() -> MessageTypeId {
+///         MessageTypeId::PluginServiceInfoResponse
+///     }
 /// }
 /// ```
-///
-/// This generates:
-///
-/// ```rust,ignore
-/// impl<'a> IO<'a> for ResponseWithLifetime<'a> {}
-/// impl<'a> PluginIO<'a> for ResponseWithLifetime<'a> {}
-/// ```
-///
-/// ## Use Cases
-///
-/// This derive is appropriate for:
-/// - Configuration responses (success/error status)
-/// - Data forwarding from BLE clients to host
-/// - Service and characteristic information responses
-/// - Error notifications and status updates
-///
-/// ## Requirements
-///
-/// The target type must:
-/// - Implement `Serialize` and `Deserialize`
-/// - Implement `MessageType`
-/// - Be used for plugin-to-host communication
-#[proc_macro_derive(PluginIO)]
-pub fn derive_plugin_io(input: TokenStream) -> TokenStream {
+#[proc_macro_attribute]
+#[allow(non_snake_case)]
+pub fn PluginIO(args: TokenStream, input: TokenStream) -> TokenStream {
+    let message_type_id = parse_macro_input!(args as Expr);
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
     let generics = &input.generics;
@@ -331,24 +280,37 @@ pub fn derive_plugin_io(input: TokenStream) -> TokenStream {
         }
     });
 
-    let expanded = match lifetimes.next() {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let io_impl = match lifetimes.next() {
         None => {
-            // Generate the trait implementation
             quote! {
                 impl<'a> IO<'a> for #name {}
                 impl<'a> PluginIO<'a> for #name {}
             }
         }
         Some(first_lt) => {
-            // Extract existing generics and add the lifetime parameter
-            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-            // Generate the trait implementation
             quote! {
                 impl #impl_generics IO<#first_lt> for #name #ty_generics #where_clause {}
                 impl #impl_generics PluginIO<#first_lt> for #name #ty_generics #where_clause {}
             }
         }
+    };
+
+    // Always generate MessageType implementation with the provided ID
+    let message_type_impl = quote! {
+        impl #impl_generics MessageType for #name #ty_generics #where_clause {
+            fn message_type_id() -> MessageTypeId {
+                #message_type_id
+            }
+        }
+    };
+
+    let expanded = quote! {
+        #input
+
+        #io_impl
+        #message_type_impl
     };
 
     TokenStream::from(expanded)
