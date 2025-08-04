@@ -37,6 +37,7 @@ test_rust_crates() {
     local rust_crates=(
         "lib_utils"
         "protocol"
+        "protocol_io"
         "codegen"
     )
     
@@ -101,7 +102,6 @@ compile_selected_crates() {
     
     # Additional crates to check for compilation only
     local compile_crates=(
-        "protocol_io"
         "host-std"
         "plugin-echo-example"
         "plugin-no-std"
