@@ -5,13 +5,13 @@
 //!
 //! This crate provides convenient attribute macros for implementing protocol I/O traits
 //! in the BLE plugin communication system. It automatically generates trait implementations
-//! for `HostIO`, `PluginIO`, and `MessageType`, reducing boilerplate and ensuring consistent 
+//! for `HostIO`, `PluginIO`, and `MessageType`, reducing boilerplate and ensuring consistent
 //! protocol handling.
 //!
 //! ## Overview
 //!
 //! The BLE plugin protocol distinguishes between two types of communication:
-//! - **Host I/O**: Messages sent from host devices (PCs, mobile) to plugin devices
+//! - **Host I/O**: Messages sent from host devices (PCs, mobile devices, embedded devices) to plugin devices
 //! - **Plugin I/O**: Messages sent from plugin devices back to host devices
 //!
 //! This crate provides attribute macros that automatically implement the appropriate
@@ -30,11 +30,11 @@
 //! ## Attribute Macros
 //!
 //! ### `#[HostIO(MessageTypeId)]`
-//! Implements `IO<'a>`, `HostIO<'a>`, and `MessageType` traits for message types sent from 
+//! Implements `IO<'a>`, `HostIO<'a>`, and `MessageType` traits for message types sent from
 //! hosts to plugins. Use this for command messages that configure or control the BLE plugin device.
 //!
 //! ### `#[PluginIO(MessageTypeId)]`
-//! Implements `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits for message types sent from 
+//! Implements `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits for message types sent from
 //! plugins to hosts. Use this for response messages, data forwarding, and error notifications.
 //!
 //! ## Usage Examples
