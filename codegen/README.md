@@ -22,7 +22,6 @@ This tool addresses the critical issue of maintaining consistency between Rust a
 
 - **AST Parsing**: Directly parses Rust source code using `syn` to extract definitions
 - **Template Generation**: Uses Askama templates for clean Python code generation
-- **Validation Mode**: Can validate existing Python code against Rust definitions
 - **Type Mapping**: Automatically maps Rust types to Python equivalents
 - **Documentation Preservation**: Carries over documentation comments from Rust
 
@@ -41,14 +40,6 @@ cargo run --bin generate-python -- --output-dir /path/to/output
 cargo run --bin generate-python -- --protocol-path /path/to/protocol/src
 ```
 
-### Validate Existing Code
-
-```bash
-# Validate existing Python code against Rust definitions
-cargo run --bin generate-python -- --validate
-
-# This will report inconsistencies without generating new code
-```
 
 ## Generated Content
 
@@ -125,14 +116,6 @@ Uses Askama templates for clean separation between parsing logic and output gene
 - Comprehensive documentation is preserved and formatted for Python
 - Type mappings are generated automatically
 
-### Validation
-
-The validation mode compares existing Python code against Rust definitions:
-
-- Checks constant values for correctness
-- Verifies enum variant values match
-- Reports missing or incorrect definitions
-- Provides actionable feedback for fixes
 
 ## Dependencies
 

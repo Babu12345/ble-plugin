@@ -24,9 +24,6 @@ struct Args {
     #[arg(short, long, default_value = "../pc/python/plugin_host")]
     output_dir: PathBuf,
 
-    /// Validate existing Python code against Rust definitions
-    #[arg(short, long)]
-    validate: bool,
 }
 
 /// Template-friendly struct for generation
@@ -98,14 +95,9 @@ fn main() -> Result<()> {
     println!("🔐 Calculating protocol hash...");
     let protocol_hash = calculate_protocol_hash(&args.protocol_path)?;
 
-    if args.validate {
-        println!("✅ Validating existing Python code...");
-        validate_python_code(&args.output_dir, &protocol_def, &protocol_hash)?;
-    } else {
-        println!("🐍 Generating Python code...");
-        generate_python_code(&args.output_dir, &protocol_def, &protocol_hash)?;
-        println!("✅ Python code generated successfully!");
-    }
+    println!("🐍 Generating Python code...");
+    generate_python_code(&args.output_dir, &protocol_def, &protocol_hash)?;
+    println!("✅ Python code generated successfully!");
 
     Ok(())
 }
@@ -383,71 +375,3 @@ Generated at: {}
     Ok(())
 }
 
-/// Validate existing Python code against Rust definitions
-fn validate_python_code(python_dir: &PathBuf, protocol_def: &ProtocolDef, expected_hash: &str) -> Result<()> {
-    let types_file = python_dir.join("types.py");
-
-    if !types_file.exists() {
-        println!(
-            "⚠️  Python types.py file not found at {}",
-            types_file.display()
-        );
-        return Ok(());
-    }
-
-    let python_content = fs::read_to_string(&types_file)
-        .with_context(|| format!("Failed to read {}", types_file.display()))?;
-
-    let mut issues = Vec::new();
-
-    // Check protocol hash
-    let hash_pattern = format!("PROTOCOL_HASH = \"{}\"", expected_hash);
-    if !python_content.contains(&hash_pattern) {
-        issues.push(format!(
-            "Protocol hash mismatch or missing. Expected: {}",
-            expected_hash
-        ));
-    }
-
-    // Check MessageTypeId enum values
-    if let Some(message_type_enum) = protocol_def
-        .enums
-        .iter()
-        .find(|e| e.name == "MessageTypeId")
-    {
-        for variant in &message_type_enum.variants {
-            if let Some(value) = &variant.value {
-                let expected_line = format!("{} = {}", variant.name, value);
-                if !python_content.contains(&expected_line) {
-                    issues.push(format!(
-                        "Missing or incorrect MessageTypeId.{} = {}",
-                        variant.name, value
-                    ));
-                }
-            }
-        }
-    }
-
-    // Check constants
-    for constant in &protocol_def.constants {
-        let expected_line = format!("{} = {}", constant.name, constant.value);
-        if !python_content.contains(&expected_line) {
-            issues.push(format!(
-                "Missing or incorrect constant {} = {}",
-                constant.name, constant.value
-            ));
-        }
-    }
-
-    if issues.is_empty() {
-        println!("✅ Python code validation passed!");
-    } else {
-        println!("❌ Python code validation found {} issues:", issues.len());
-        for issue in issues {
-            println!("  - {}", issue);
-        }
-        println!("\n💡 Run without --validate to generate corrected Python code.");
-    }
-
-    Ok(())
-}
