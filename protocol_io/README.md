@@ -5,7 +5,7 @@ A procedural macro crate providing convenient derive macros for implementing pro
 ## Overview
 
 The BLE plugin protocol distinguishes between two types of communication:
-- **Host I/O**: Messages sent from host devices (PCs, mobile) to plugin devices
+- **Host I/O**: Messages sent from host devices (PCs, mobile devices, embedded devices) to plugin devices
 - **Plugin I/O**: Messages sent from plugin devices back to host devices
 
 This crate provides derive macros that automatically implement the appropriate I/O traits based on the message direction, handling lifetime parameters and generic constraints correctly.
