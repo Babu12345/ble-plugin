@@ -383,7 +383,11 @@ impl PluginStateMachine {
                             let result = match message_type {
                                 MessageTypeId::HostCommandConfigurePeripheral => {
                                     match data.decode::<HostCommandConfigurePeripheral>() {
-                                        Ok(cmd) => self.handle_configure_peripheral(cmd),
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
+                                            self.handle_configure_peripheral(cmd)
+                                        }
                                         Err(e) => {
                                             log::error!(
                                                 "Failed to decode HostCommandConfigurePeripheral: {:?}",
@@ -397,6 +401,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigureService>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
                                             self.handle_configure_service(cmd)
                                         }
                                         Err(e) => {
@@ -412,6 +417,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigureCharacteristic>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
                                             self.handle_configure_characteristic(cmd)
                                         }
                                         Err(e) => {
@@ -427,6 +433,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigureCharacteristicRead>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
                                             self.handle_configure_characteristic_read(cmd)
                                         }
                                         Err(e) => {
@@ -442,6 +449,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandNotifyCharacteristicValue>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
                                             self.handle_notify_characteristic_value(cmd)
                                         }
                                         Err(e) => {
@@ -457,6 +465,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandGetServiceInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
                                             self.handle_get_service_info(cmd)
                                         }
                                         Err(e) => {
@@ -472,6 +481,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandGetCharacteristicInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
                                             self.handle_get_characteristic_info(cmd)
                                         }
                                         Err(e) => {
@@ -485,7 +495,11 @@ impl PluginStateMachine {
                                 }
                                 MessageTypeId::HostCommandStartAdvertisement => {
                                     match data.decode::<HostCommandStartAdvertisement>() {
-                                        Ok(cmd) => self.handle_start_advertisement(cmd),
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.indicate_toggle();
+                                            self.handle_start_advertisement(cmd)
+                                        }
                                         Err(e) => {
                                             log::error!(
                                                 "Failed to decode HostCommandStartAdvertisement: {:?}",
@@ -523,6 +537,12 @@ impl PluginStateMachine {
                     continue;
                 }
             }
+        }
+    }
+
+    fn indicate_toggle(&mut self) {
+        if let Err(e) = self.indicator.toggle() {
+            log::error!("Failed to toggle indicator: {:?}", e);
         }
     }
 
