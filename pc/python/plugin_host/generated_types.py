@@ -141,7 +141,7 @@ class HostCommandConfigurePeripheral:
         uuid:Peripheral UUID
     """
     name: str
-    uuid: str
+    uuid: bytes
 
 @attr.s(auto_attribs=True)
 class HostCommandConfigureService:
@@ -150,7 +150,7 @@ class HostCommandConfigureService:
     Attributes:
         uuid:Service UUID
     """
-    uuid: str
+    uuid: bytes
 
 @attr.s(auto_attribs=True)
 class HostCommandConfigureCharacteristic:
@@ -161,8 +161,8 @@ class HostCommandConfigureCharacteristic:
         service_uuid:Service UUID this characteristic belongs to
         properties:Properties of the characteristic (read, write, notify, etc.)
     """
-    uuid: str
-    service_uuid: str
+    uuid: bytes
+    service_uuid: bytes
     properties: List[BLEProperties]
 
 @attr.s(auto_attribs=True)
@@ -174,8 +174,8 @@ class HostCommandConfigureCharacteristicRead:
         service_uuid:Service UUID this characteristic belongs to
         value:Read value
     """
-    uuid: str
-    service_uuid: str
+    uuid: bytes
+    service_uuid: bytes
     value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
@@ -185,7 +185,7 @@ class HostCommandGetServiceInfo:
     Attributes:
         uuid:Service UUID
     """
-    uuid: str
+    uuid: bytes
 
 @attr.s(auto_attribs=True)
 class HostCommandGetCharacteristicInfo:
@@ -195,8 +195,8 @@ class HostCommandGetCharacteristicInfo:
         characteristic_uuid:Characteristic UUID
         service_uuid:Service UUID this characteristic belongs to
     """
-    characteristic_uuid: str
-    service_uuid: str
+    characteristic_uuid: bytes
+    service_uuid: bytes
 
 @attr.s(auto_attribs=True)
 class HostCommandStartAdvertisement:
@@ -220,8 +220,8 @@ class HostCommandNotifyCharacteristicValue:
     """
     address: List[attrs2bin.U8]
     address_type: BluetoothAddressType
-    characteristic_uuid: str
-    service_uuid: str
+    characteristic_uuid: bytes
+    service_uuid: bytes
     value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
@@ -233,7 +233,7 @@ class PluginData:
         send_type:Send type of the data
         data:Actual command type
     """
-    src_id: str
+    src_id: bytes
     send_type: PluginDataSendType
     data: bytes
 
@@ -246,8 +246,8 @@ class PluginServiceInfoResponse:
         characteristic_uuids:List of characteristic UUIDs in this service
         exists:Whether the service exists
     """
-    service_uuid: str
-    characteristic_uuids: List[str]
+    service_uuid: bytes
+    characteristic_uuids: List[bytes]
     exists: bool
 
 @attr.s(auto_attribs=True)
@@ -260,8 +260,8 @@ class PluginCharacteristicInfoResponse:
         properties:Properties of the characteristic (read, write, notify, etc.)
         exists:Whether the characteristic exists
     """
-    characteristic_uuid: str
-    service_uuid: str
+    characteristic_uuid: bytes
+    service_uuid: bytes
     properties: List[BLEProperties]
     exists: bool
 

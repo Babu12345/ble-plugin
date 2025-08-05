@@ -71,7 +71,7 @@ pub fn rust_type_to_python(rust_type: &str) -> String {
         "f32" | "f64" => "float".to_string(),
         "bool" => "bool".to_string(),
         "String" => "str".to_string(),
-        "Uuid" => "str".to_string(),
+        "Uuid" => "bytes".to_string(),
         t if t.starts_with("Vec<") || t.starts_with("heapless::Vec<") => {
             // For heapless::Vec<T, N>, we only care about the first type parameter T
             let inner_type = extract_generic_type(t)
@@ -390,7 +390,7 @@ mod tests {
         assert_eq!(rust_type_to_python("f64"), "float");
         assert_eq!(rust_type_to_python("bool"), "bool");
         assert_eq!(rust_type_to_python("String"), "str");
-        assert_eq!(rust_type_to_python("Uuid"), "str");
+        assert_eq!(rust_type_to_python("Uuid"), "bytes");
     }
 
     #[test]

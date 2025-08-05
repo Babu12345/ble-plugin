@@ -76,13 +76,13 @@ The tool automatically converts Rust types to Python equivalents:
 | `f32`, `f64` | `float` |
 | `bool` | `bool` |
 | `String`, `&str` | `str` |
-| `Uuid` | `str` |
+| `Uuid` | `bytes` |
 | `Vec<u8>` | `List[attrs2bin.U8]` |
 | `Vec<T>`, `heapless::Vec<T>` (T ≠ u8) | `List[T]` |
 | `Option<T>` | `Optional[T]` |
 | `heapless::String<N>` | `str` |
 
-**Note**: `u8` and `Vec<u8>` are mapped to `attrs2bin.U8` and `List[attrs2bin.U8]` respectively to support proper binary serialization through the attrs2bin library. Other integer types (`u16`, `u32`, `u64`) are mapped to Python's `int` type.
+**Note**: `u8` and `Vec<u8>` are mapped to `attrs2bin.U8` and `List[attrs2bin.U8]` respectively to support proper binary serialization through the attrs2bin library. Other integer types (`u16`, `u32`, `u64`) are mapped to Python's `int` type. `Uuid` is mapped to `bytes` to represent the 16-byte UUID as a Python bytes object.
 
 ## File Structure
 
@@ -152,7 +152,7 @@ class MessageTypeId(Enum):
 @attr.s(auto_attribs=True)
 class HostCommandConfigurePeripheral:
     name: str
-    uuid: str
+    uuid: bytes
     max_connections: Optional[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)

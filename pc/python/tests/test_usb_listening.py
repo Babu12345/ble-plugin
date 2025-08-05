@@ -1,6 +1,7 @@
 import pytest
 import time
 import threading
+import uuid as uuid_module
 from unittest.mock import Mock, patch, MagicMock
 from plugin_host.comms import (
     MessageDecoder,
@@ -16,6 +17,12 @@ from plugin_host.generated_types import (
     PluginDataSendType,
 )
 
+def uuid_str_to_bytes(uuid_str: str) -> bytes:
+    """Convert UUID string to bytes"""
+    # Parse UUID and get bytes
+    uuid_obj = uuid_module.UUID(uuid_str)
+    return uuid_obj.bytes
+
 class TestMessageDecoder:
     """Test suite for MessageDecoder class"""
     
@@ -23,7 +30,7 @@ class TestMessageDecoder:
         """Test decoding PluginData messages"""
         # Create a test PluginData message
         original_message = PluginData(
-            src_id="test-peripheral",
+            src_id=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc"),
             data=b"test_data",
             send_type=PluginDataSendType.Notify
         )
@@ -43,8 +50,10 @@ class TestMessageDecoder:
     def test_decode_service_info_response(self) -> None:
         """Test decoding PluginServiceInfoResponse messages"""
         original_message = PluginServiceInfoResponse(
-            service_uuid="test-service",
-            characteristic_uuids=["char1", "char2"],
+            service_uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc"),
+            characteristic_uuids=[
+                uuid_str_to_bytes("11111111-1111-1111-1111-111111111111")
+            ],
             exists=True
         )
         
@@ -201,7 +210,7 @@ class TestUSBDataListener:
         """Test the listening loop with valid messages"""
         # Create a valid message
         test_message = PluginData(
-            src_id="test",
+            src_id=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc"),
             data=b"test",
             send_type=PluginDataSendType.Notify
         )
@@ -407,7 +416,7 @@ class TestUSBMessageHandler:
         # Process different message type
         service_info = {
             'message_type': 'PluginServiceInfoResponse',
-            'message': PluginServiceInfoResponse(service_uuid="test", characteristic_uuids=[], exists=True),
+            'message': PluginServiceInfoResponse(service_uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789123"), characteristic_uuids=[], exists=True),
             'decoded': True
         }
         self.handler.handle_message(service_info)

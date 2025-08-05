@@ -5,8 +5,15 @@ import struct
 import threading
 import time
 import queue
+import uuid as uuid_module
 from typing import Any, Optional
 from plugin_host.generated_types import *
+
+def uuid_str_to_bytes(uuid_str: str) -> bytes:
+    """Convert UUID string to bytes"""
+    # Parse UUID and get bytes
+    uuid_obj = uuid_module.UUID(uuid_str)
+    return uuid_obj.bytes
 
 # Communicate between the host (PC) and the usb plugin
 
@@ -312,7 +319,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigurePeripheral(name=name, uuid=uuid)
+        cmd = HostCommandConfigurePeripheral(name=name, uuid=uuid_str_to_bytes(uuid))
         usb_send_command(self.usb_device, cmd)
     
     def configure_service(self, uuid: str) -> None:
@@ -325,7 +332,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigureService(uuid=uuid)
+        cmd = HostCommandConfigureService(uuid=uuid_str_to_bytes(uuid))
         usb_send_command(self.usb_device, cmd)
     
     def configure_characteristic(self, uuid: str, service_uuid: str, properties: list) -> None:
@@ -341,8 +348,8 @@ class USBHostDevice:
             USBCommunicationError: If sending fails
         """
         cmd = HostCommandConfigureCharacteristic(
-            uuid=uuid,
-            service_uuid=service_uuid,
+            uuid=uuid_str_to_bytes(uuid),
+            service_uuid=uuid_str_to_bytes(service_uuid),
             properties=properties
         )
         usb_send_command(self.usb_device, cmd)
@@ -360,8 +367,8 @@ class USBHostDevice:
             USBCommunicationError: If sending fails
         """
         cmd = HostCommandConfigureCharacteristicRead(
-            uuid=uuid,
-            service_uuid=service_uuid,
+            uuid=uuid_str_to_bytes(uuid),
+            service_uuid=uuid_str_to_bytes(service_uuid),
             value=value
         )
         usb_send_command(self.usb_device, cmd)
@@ -379,7 +386,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If communication fails
         """
-        cmd = HostCommandGetServiceInfo(uuid=uuid)
+        cmd = HostCommandGetServiceInfo(uuid=uuid_str_to_bytes(uuid))
         return usb_send_and_receive(self.usb_device, cmd, PluginServiceInfoResponse)
     
     def get_characteristic_info(self, characteristic_uuid: str, service_uuid: str) -> PluginCharacteristicInfoResponse:
@@ -397,8 +404,8 @@ class USBHostDevice:
             USBCommunicationError: If communication fails
         """
         cmd = HostCommandGetCharacteristicInfo(
-            characteristic_uuid=characteristic_uuid,
-            service_uuid=service_uuid
+            characteristic_uuid=uuid_str_to_bytes(characteristic_uuid),
+            service_uuid=uuid_str_to_bytes(service_uuid)
         )
         return usb_send_and_receive(self.usb_device, cmd, PluginCharacteristicInfoResponse)
     
@@ -433,8 +440,8 @@ class USBHostDevice:
         cmd = HostCommandNotifyCharacteristicValue(
             address=address,
             address_type=address_type,
-            characteristic_uuid=characteristic_uuid,
-            service_uuid=service_uuid,
+            characteristic_uuid=uuid_str_to_bytes(characteristic_uuid),
+            service_uuid=uuid_str_to_bytes(service_uuid),
             value=value
         )
         usb_send_command(self.usb_device, cmd)

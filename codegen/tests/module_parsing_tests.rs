@@ -161,6 +161,11 @@ fn test_modules_with_complex_types() -> Result<()> {
         .expect("Should find ComplexStruct");
     
     // Check field type conversions
+    let id_field = complex_struct.fields.iter()
+        .find(|f| f.name == "id")
+        .expect("Should find id field");
+    assert_eq!(id_field.python_type, "bytes");
+    
     let data_field = complex_struct.fields.iter()
         .find(|f| f.name == "data")
         .expect("Should find data field");
@@ -391,7 +396,7 @@ fn test_io_types_like_structure() -> Result<()> {
     let uuids_field = service_info.fields.iter()
         .find(|f| f.name == "characteristic_uuids")
         .expect("Should find characteristic_uuids field");
-    assert_eq!(uuids_field.python_type, "List[str]");
+    assert_eq!(uuids_field.python_type, "List[bytes]");
     
     Ok(())
 }

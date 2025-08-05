@@ -1,4 +1,5 @@
 import struct
+import uuid as uuid_module
 from plugin_host.comms import (
     serialize_command,
     deserialize_response,
@@ -15,12 +16,18 @@ from plugin_host.generated_types import (
     MESSAGE_HEADER_SIZE
 )
 
+def uuid_str_to_bytes(uuid_str: str) -> bytes:
+    """Convert UUID string to bytes"""
+    # Parse UUID and get bytes
+    uuid_obj = uuid_module.UUID(uuid_str)
+    return uuid_obj.bytes
+
 def test_command_serialization_with_message_header() -> None:
     """Test serialization of protocol commands with full message header"""
     # Test HostCommandConfigurePeripheral
     cmd = HostCommandConfigurePeripheral(
         name="TestDevice",
-        uuid="12345678-1234-1234-1234-123456789abc"
+        uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc")
     )
     
     # Serialize command
@@ -47,7 +54,7 @@ def test_command_serialization_with_message_header() -> None:
 def test_service_command_serialization() -> None:
     """Test serialization of service info command"""
     service_cmd = HostCommandGetServiceInfo(
-        uuid="87654321-4321-4321-4321-cba987654321"
+        uuid=uuid_str_to_bytes("87654321-4321-4321-4321-cba987654321")
     )
     
     serialized_service = serialize_command(service_cmd)
@@ -73,8 +80,10 @@ def test_response_deserialization() -> None:
     """Test deserializing a mock response"""
     # Create a mock response
     mock_response = PluginServiceInfoResponse(
-        service_uuid="87654321-4321-4321-4321-cba987654321",
-        characteristic_uuids=["char1-uuid", "char2-uuid"],
+        service_uuid=uuid_str_to_bytes("87654321-4321-4321-4321-cba987654321"),
+        characteristic_uuids=[
+            uuid_str_to_bytes("11111111-1111-1111-1111-111111111111")
+        ],
         exists=True
     )
     
@@ -92,7 +101,7 @@ def test_response_deserialization() -> None:
 def test_message_header_protocol_roundtrip() -> None:
     """Test the message header protocol with round-trip serialization"""
     # Create a simple command
-    cmd = HostCommandGetServiceInfo(uuid="test-uuid-123")
+    cmd = HostCommandGetServiceInfo(uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789123"))
     
     # Serialize
     serialized = serialize_command(cmd)
