@@ -11,18 +11,17 @@ from plugin_host.generated_types import *
 # Communicate between the host (PC) and the usb plugin
 
 # USB Configuration
-USB_VENDOR_ID = 0x1234
-USB_PRODUCT_ID = 0x5678
-USB_ENDPOINT_OUT = 0x01
+USB_VENDOR_ID = 0xffff
+USB_PRODUCT_ID = 0xffff
+USB_ENDPOINT_OUT = 0x02
 USB_ENDPOINT_IN = 0x81
 USB_TIMEOUT_MS = 1000
-DEFAULT_PACKET_SIZE = 256
 
 # Protocol Configuration
 from plugin_host.generated_types import (
     MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MESSAGE_TYPE_ID_BYTES, 
     DATA_BYTES_LENGTH_IN_BYTES, MESSAGE_HEADER_SIZE, 
-    MESSAGE_TYPE_MAP, TYPE_ID_TO_MESSAGE_TYPE, MessageTypeId
+    MESSAGE_TYPE_MAP, TYPE_ID_TO_MESSAGE_TYPE, MessageTypeId, DEFAULT_PACKET_SIZE
 )
 
 class USBCommunicationError(Exception):
