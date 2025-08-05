@@ -14,14 +14,15 @@ opt-level = "z"
 [dependencies]
 # Custom
 protocol = { path = "../protocol" }
+lib_utils = { path = "../lib_utils" }
 
 # Crates
-log = {version = "0.4.27", default-features = false}
+log = { version = "0.4.27", default-features = false }
 esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
 static_cell = "2"
 embassy-futures = "0.1.1"
-ringbuffer = {version = "0.15.0", default-features = false}
+ringbuffer = { version = "0.15.0", default-features = false }
 embassy-sync = "0.7.0"
 esp-idf-svc = { version = "0.51", default-features = false }
 thiserror-no-std = "2.0.2"

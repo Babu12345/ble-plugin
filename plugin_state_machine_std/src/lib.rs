@@ -119,6 +119,9 @@ use errors::Result;
 use errors::StateMachineError;
 use esp32_nimble::BLEAddress;
 use esp32_nimble::BLEAddressType;
+use esp_idf_svc::hal::gpio::AnyOutputPin;
+use esp_idf_svc::hal::gpio::Output;
+use esp_idf_svc::hal::gpio::PinDriver;
 use esp_idf_svc::hal::task::block_on;
 use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
@@ -210,6 +213,9 @@ pub struct PluginStateMachine {
 
     /// Internal state and configuration metadata
     metadata: PluginStateMachineMetadata,
+
+    /// Output pin for LED control (e.g., status indication)
+    indicator: &'static mut PinDriver<'static, AnyOutputPin, Output>,
 }
 
 impl PluginStateMachine {
@@ -248,8 +254,10 @@ impl PluginStateMachine {
         usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
         usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
         ble_device: &'static mut BLEDevice,
+        indicator: &'static mut PinDriver<'static, AnyOutputPin, Output>,
     ) -> Self {
         Self {
+            indicator,
             usb_sender: Arc::new(usb_sender),
             usb_receiver,
             ble_device,

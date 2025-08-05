@@ -28,8 +28,9 @@ use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
 };
-use crate::{AlignedBuffer, concat_n_arrays, mk_static};
+use crate::{AlignedBuffer, concat_n_arrays};
 use crate::{Error, Result};
+use lib_utils::mk_static;
 
 use std::ptr;
 use std::sync::LazyLock;
