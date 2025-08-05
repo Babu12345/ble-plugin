@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread::Scope;
+use std::time::Duration;
 
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
@@ -45,7 +46,7 @@ const SIZE: usize = DEFAULT_PACKET_SIZE;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-static mut READ_BUFFER: AlignedBuffer<64> = AlignedBuffer::new();
+static mut READ_BUFFER: AlignedBuffer<DEFAULT_PACKET_SIZE> = AlignedBuffer::new();
 static mut INPUT: [u8; SIZE] = [0; SIZE];
 
 /// Sending and receiving type
@@ -137,7 +138,7 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
     #![allow(static_mut_refs)]
     unsafe {
-        INPUT = [0; SIZE];
+        INPUT.fill(0);
         (&mut INPUT[..nbytes as usize]).copy_from_slice(&READ_BUFFER.get_data()[..nbytes as usize]);
     }
 
@@ -304,7 +305,7 @@ impl CdcAcmDevice<POSTINIT> {
                                 min(data.len() as u32, SIZE as u32),
                             )
                         } {
-                            x if x < 0 => ::log::error!("Failed to send via usb device"),
+                            x if x < 0 => ::log::error!("Failed to send via usb device: {data:?}"),
                             _ => {}
                         }
                     }
@@ -337,6 +338,12 @@ impl CdcAcmDevice<POSTINIT> {
             usbd_cdc_acm_set_dtr(busid, intf, dtr);
         }
 
+        self
+    }
+
+    /// Sleep for a specified duration
+    pub fn sleep(self, duration: Duration) -> Self {
+        std::thread::sleep(duration);
         self
     }
 }

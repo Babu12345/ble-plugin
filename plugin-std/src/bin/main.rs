@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use device_cherry::CdcAcmDevice;
 use esp32_nimble::BLEDevice;
 use esp_idf_svc::hal::{
@@ -24,7 +26,8 @@ fn main() -> Result<()> {
     let usb_device = CdcAcmDevice::new()
         .init(0, ESP_USBD_BASE)
         .map_err(|_| PluginError::UsbDeviceInitError("Failed to initialize USB device"))?
-        .set_dtr(0, true);
+        .set_dtr(0, true)
+        .sleep(Duration::from_millis(500));
 
     std::thread::scope(move |scope| {
         let usb_processors = usb_device.processors(scope, 20).unwrap();
