@@ -109,7 +109,7 @@ def main():
     # Method 3: Generic command sending
     print("3. Generic Command Usage:")
     
-    from plugin_host.types import HostCommandGetServiceInfo
+    from plugin_host.generated_types import HostCommandGetServiceInfo
     
     host = USBHostDevice()
     try:

@@ -23,6 +23,10 @@ fn main() -> Result<()> {
             .map_err(|_| PluginError::GpioInitError("GPIO21"))?
     );
 
+    indicator
+        .set_high()
+        .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO low"))?;
+
     let usb_device = CdcAcmDevice::new()
         .init(0, ESP_USBD_BASE)
         .map_err(|_| PluginError::UsbDeviceInitError("Failed to initialize USB device"))?

@@ -186,7 +186,7 @@ pub const MAX_NAME_SIZE: usize = 30;
 ///
 /// let buffer: [u8; DEFAULT_PACKET_SIZE] = [0; DEFAULT_PACKET_SIZE];
 /// ```
-pub const DEFAULT_PACKET_SIZE: usize = 256;
+pub const DEFAULT_PACKET_SIZE: usize = 64;
 
 #[cfg(test)]
 mod tests {

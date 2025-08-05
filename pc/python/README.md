@@ -8,7 +8,11 @@ source /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python/bin/activate
 # Installations
 pip install git+https://github.com/Babu12345/attrs2bin
 pip install pyusb
+pip install libusb
 pip install pytest
+
+brew install libusb # Make sure that this is run
+
 then add these lines to pytest.ini
 ```
 [pytest]

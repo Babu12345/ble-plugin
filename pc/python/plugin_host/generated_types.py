@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "168fbfe9e0b74c4133e07a53f59f840df103486bc3628909375c3b751dfd7d9e"
+PROTOCOL_HASH = "854806a82b5b7e80a1b6a114963ada0636798cf4271525c058faa17bf193e0a1"
 
 # ==================== CONSTANTS ====================
 
@@ -24,7 +24,7 @@ MAX_NAME_SIZE = 30
 
 
 # Default USB packet size for communication  This represents the standard trans...
-DEFAULT_PACKET_SIZE = 256
+DEFAULT_PACKET_SIZE = 64
 
 
 # Maximum size for characteristic properties
