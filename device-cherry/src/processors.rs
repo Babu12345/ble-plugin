@@ -41,7 +41,7 @@ const CDC_INT_EP: u8 = 0x83; // 0x85
 const USB_CONFIG_SIZE: u32 = 9 + CDC_ACM_DESCRIPTOR_LEN;
 const USBD_VID: u16 = 0xFFFF;
 const USBD_PID: u16 = 0xFFFF;
-const USBD_MAX_POWER: u32 = 100; // 2mA * 100 = 100 mA
+const USBD_MAX_POWER: u32 = 100; // 100 mA
 const SIZE: usize = DEFAULT_PACKET_SIZE;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
