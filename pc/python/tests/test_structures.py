@@ -17,30 +17,30 @@ U8 = attrs2bin.U8
 
 # ====== TEST ENUMS ======
 
-class TestBLEProperties(Enum):
-    """Test enum for BLE properties - mirrors Rust TestBLEProperties"""
+class BLEPropertiesTest(Enum):
+    """Test enum for BLE properties - mirrors Rust BLEPropertiesTest"""
     TestRead: U8 = 10
     TestWrite: U8 = 11
     TestNotify: U8 = 12
     TestIndicate: U8 = 13
 
 
-class TestBluetoothAddressType(Enum):
-    """Test enum for bluetooth address types - mirrors Rust TestBluetoothAddressType"""
+class BluetoothAddressTypeTest(Enum):
+    """Test enum for bluetooth address types - mirrors Rust BluetoothAddressTypeTest"""
     TestPublic: U8 = 20
     TestRandom: U8 = 21
     TestResolvable: U8 = 22
 
 
-class TestDataSendType(Enum):
-    """Test enum for data send types - mirrors Rust TestDataSendType"""
+class DataSendTypeTest(Enum):
+    """Test enum for data send types - mirrors Rust DataSendTypeTest"""
     TestNotification: U8 = 30
     TestRead: U8 = 31
     TestWrite: U8 = 32
 
 
-class TestConfigurationError(Enum):
-    """Test enum for configuration errors - mirrors Rust TestConfigurationError"""
+class ConfigurationErrorTest(Enum):
+    """Test enum for configuration errors - mirrors Rust ConfigurationErrorTest"""
     TestNameTooLong: U8 = 40
     TestInvalidUuid: U8 = 41
     TestServiceMissing: U8 = 42
@@ -50,7 +50,7 @@ class TestConfigurationError(Enum):
 # ====== TEST HOST COMMAND STRUCTURES ======
 
 @attr.s(auto_attribs=True)
-class TestHostCommandConfigurePeripheral:
+class HostCommandConfigurePeripheralTest:
     """Test host command for peripheral configuration - mirrors Rust struct"""
     test_name: str  # HeaplessString<20> in Rust
     test_uuid: bytes  # Uuid in Rust (16 bytes)
@@ -59,7 +59,7 @@ class TestHostCommandConfigurePeripheral:
 
 
 @attr.s(auto_attribs=True)
-class TestHostCommandConfigureService:
+class HostCommandConfigureServiceTest:
     """Test host command for service configuration - mirrors Rust struct"""
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
     test_priority: U8  # u8 in Rust - use U8 for compatibility
@@ -67,16 +67,16 @@ class TestHostCommandConfigureService:
 
 
 @attr.s(auto_attribs=True)
-class TestHostCommandConfigureCharacteristic:
+class HostCommandConfigureCharacteristicTest:
     """Test host command for characteristic configuration - mirrors Rust struct"""
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
-    test_properties: List[TestBLEProperties]  # HeaplessVec<TestBLEProperties, 3> in Rust
+    test_properties: List[BLEPropertiesTest]  # HeaplessVec<BLEPropertiesTest, 3> in Rust
     test_security_level: U8  # u8 in Rust - keep U8
 
 
 @attr.s(auto_attribs=True)
-class TestHostCommandConfigureCharacteristicRead:
+class HostCommandConfigureCharacteristicReadTest:
     """Test host command for characteristic read configuration - mirrors Rust struct"""
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
@@ -85,14 +85,14 @@ class TestHostCommandConfigureCharacteristicRead:
 
 
 @attr.s(auto_attribs=True)
-class TestHostCommandGetServiceInfo:
+class HostCommandGetServiceInfoTest:
     """Test host command for service info query - mirrors Rust struct"""
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
     test_include_characteristics: bool
 
 
 @attr.s(auto_attribs=True)
-class TestHostCommandGetCharacteristicInfo:
+class HostCommandGetCharacteristicInfoTest:
     """Test host command for characteristic info query - mirrors Rust struct"""
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
@@ -100,7 +100,7 @@ class TestHostCommandGetCharacteristicInfo:
 
 
 @attr.s(auto_attribs=True)
-class TestHostCommandStartAdvertisement:
+class HostCommandStartAdvertisementTest:
     """Test host command for advertisement start - mirrors Rust struct"""
     test_allow_multi_connect: bool
     test_advertisement_interval: U8  # u8 in Rust - use U8 for compatibility
@@ -108,10 +108,10 @@ class TestHostCommandStartAdvertisement:
 
 
 @attr.s(auto_attribs=True)
-class TestHostCommandNotifyCharacteristicValue:
+class HostCommandNotifyCharacteristicValueTest:
     """Test host command for characteristic value notification - mirrors Rust struct"""
     test_device_address: List[U8]  # [u8; 6] in Rust
-    test_address_type: TestBluetoothAddressType
+    test_address_type: BluetoothAddressTypeTest
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
     test_notification_value: List[U8]  # HeaplessVec<u8, 20> in Rust
@@ -121,25 +121,25 @@ class TestHostCommandNotifyCharacteristicValue:
 # ====== TEST PLUGIN RESPONSE STRUCTURES ======
 
 @attr.s(auto_attribs=True)
-class TestPluginData:
+class PluginDataTest:
     """Test plugin response for data forwarding - mirrors Rust struct"""
     test_source_id: bytes  # Uuid in Rust (16 bytes)
-    test_send_type: TestDataSendType
+    test_send_type: DataSendTypeTest
     test_payload: bytes  # &[u8] in Rust
     test_timestamp: U8  # u8 in Rust - use U8 for compatibility
     test_connection_handle: U8  # u8 in Rust - use U8 for compatibility
 
 
 @attr.s(auto_attribs=True)
-class TestPluginConfigurationError:
+class PluginConfigurationErrorTest:
     """Test plugin configuration error response - mirrors Rust struct"""
-    test_error_type: TestConfigurationError
+    test_error_type: ConfigurationErrorTest
     test_error_code: U8  # u8 in Rust - use U8 for compatibility
     test_error_description: str  # HeaplessString<32> in Rust
 
 
 @attr.s(auto_attribs=True)
-class TestPluginServiceInfoResponse:
+class PluginServiceInfoResponseTest:
     """Test plugin service info response - mirrors Rust struct"""
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
     test_characteristic_uuids: List[bytes]  # HeaplessVec<Uuid, 8> in Rust
@@ -149,21 +149,21 @@ class TestPluginServiceInfoResponse:
 
 
 @attr.s(auto_attribs=True)
-class TestPluginCharacteristicInfoResponse:
+class PluginCharacteristicInfoResponseTest:
     """Test plugin characteristic info response - mirrors Rust struct"""
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
-    test_properties: List[TestBLEProperties]  # HeaplessVec<TestBLEProperties, 3> in Rust
+    test_properties: List[BLEPropertiesTest]  # HeaplessVec<BLEPropertiesTest, 3> in Rust
     test_char_exists: bool
     test_value_length: U8  # u8 in Rust - use U8 for compatibility
     test_client_config: U8  # u8 in Rust - use U8 for compatibility
 
 
 @attr.s(auto_attribs=True)
-class TestPluginAuthenticationCompletedResponse:
+class PluginAuthenticationCompletedResponseTest:
     """Test plugin authentication completed response - mirrors Rust struct"""
     test_device_address: List[U8]  # [u8; 6] in Rust
-    test_address_type: TestBluetoothAddressType
+    test_address_type: BluetoothAddressTypeTest
     test_auth_success: bool
     test_auth_level: U8  # u8 in Rust - keep U8
     test_bond_created: bool
@@ -181,27 +181,27 @@ def uuid_bytes_to_str(uuid_bytes: bytes) -> str:
 
 def validate_test_enum_values():
     """Validate that test enum values match expected values from Rust."""
-    # TestBLEProperties
-    assert TestBLEProperties.TestRead.value == 10
-    assert TestBLEProperties.TestWrite.value == 11
-    assert TestBLEProperties.TestNotify.value == 12
-    assert TestBLEProperties.TestIndicate.value == 13
+    # BLEPropertiesTest
+    assert BLEPropertiesTest.TestRead.value == 10
+    assert BLEPropertiesTest.TestWrite.value == 11
+    assert BLEPropertiesTest.TestNotify.value == 12
+    assert BLEPropertiesTest.TestIndicate.value == 13
     
-    # TestBluetoothAddressType
-    assert TestBluetoothAddressType.TestPublic.value == 20
-    assert TestBluetoothAddressType.TestRandom.value == 21
-    assert TestBluetoothAddressType.TestResolvable.value == 22
+    # BluetoothAddressTypeTest
+    assert BluetoothAddressTypeTest.TestPublic.value == 20
+    assert BluetoothAddressTypeTest.TestRandom.value == 21
+    assert BluetoothAddressTypeTest.TestResolvable.value == 22
     
-    # TestDataSendType
-    assert TestDataSendType.TestNotification.value == 30
-    assert TestDataSendType.TestRead.value == 31
-    assert TestDataSendType.TestWrite.value == 32
+    # DataSendTypeTest
+    assert DataSendTypeTest.TestNotification.value == 30
+    assert DataSendTypeTest.TestRead.value == 31
+    assert DataSendTypeTest.TestWrite.value == 32
     
-    # TestConfigurationError
-    assert TestConfigurationError.TestNameTooLong.value == 40
-    assert TestConfigurationError.TestInvalidUuid.value == 41
-    assert TestConfigurationError.TestServiceMissing.value == 42
-    assert TestConfigurationError.TestCharacteristicMissing.value == 43
+    # ConfigurationErrorTest
+    assert ConfigurationErrorTest.TestNameTooLong.value == 40
+    assert ConfigurationErrorTest.TestInvalidUuid.value == 41
+    assert ConfigurationErrorTest.TestServiceMissing.value == 42
+    assert ConfigurationErrorTest.TestCharacteristicMissing.value == 43
 
 
 if __name__ == "__main__":

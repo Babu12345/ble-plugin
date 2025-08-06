@@ -20,17 +20,17 @@ import attrs2bin
 # Import test structures for deserialization validation
 from test_structures import (
     # Test enums
-    TestBLEProperties,
-    TestDataSendType,
+    BLEPropertiesTest,
+    DataSendTypeTest,
     
     # Test host command structures
-    TestHostCommandConfigurePeripheral,
-    TestHostCommandConfigureService,
-    TestHostCommandConfigureCharacteristic,
+    HostCommandConfigurePeripheralTest,
+    HostCommandConfigureServiceTest,
+    HostCommandConfigureCharacteristicTest,
     
     # Test plugin response structures
-    TestPluginData,
-    TestPluginServiceInfoResponse,
+    PluginDataTest,
+    PluginServiceInfoResponseTest,
     
     # Utility functions
     validate_test_enum_values,
@@ -113,7 +113,7 @@ class TestCrossLanguageCompatibility:
     
     def test_rust_to_python_deserialization(self):
         """Test deserialization of Rust-generated binary data into Python structures."""
-        # Test TestHostCommandConfigurePeripheral from Rust binary data
+        # Test HostCommandConfigurePeripheralTest from Rust binary data
         binary_data = load_binary_test_file("test_host_configure_peripheral.bin")
         header = parse_protocol_header(binary_data)
         
@@ -121,7 +121,7 @@ class TestCrossLanguageCompatibility:
         verify_protocol_header(header, MessageTypeId.HostCommandConfigurePeripheral)
         
         # Deserialize payload using Python test structure
-        result = attrs2bin.deserialize(header['payload'], TestHostCommandConfigurePeripheral)
+        result = attrs2bin.deserialize(header['payload'], HostCommandConfigurePeripheralTest)
         
         # Validate deserialized data matches expected Rust values
         assert result.test_name == "TestPeripheral", f"Expected 'TestPeripheral', got '{result.test_name}'"
@@ -136,10 +136,10 @@ class TestCrossLanguageCompatibility:
     def test_multiple_message_types_deserialization(self):
         """Test that multiple message types can be deserialized correctly."""
         test_cases = [
-            ("test_host_configure_peripheral.bin", MessageTypeId.HostCommandConfigurePeripheral, TestHostCommandConfigurePeripheral),
-            ("test_host_configure_service.bin", MessageTypeId.HostCommandConfigureService, TestHostCommandConfigureService),
-            ("test_plugin_data.bin", MessageTypeId.PluginData, TestPluginData),
-            ("test_plugin_service_info_response.bin", MessageTypeId.PluginServiceInfoResponse, TestPluginServiceInfoResponse),
+            ("test_host_configure_peripheral.bin", MessageTypeId.HostCommandConfigurePeripheral, HostCommandConfigurePeripheralTest),
+            ("test_host_configure_service.bin", MessageTypeId.HostCommandConfigureService, HostCommandConfigureServiceTest),
+            ("test_plugin_data.bin", MessageTypeId.PluginData, PluginDataTest),
+            ("test_plugin_service_info_response.bin", MessageTypeId.PluginServiceInfoResponse, PluginServiceInfoResponseTest),
         ]
         
         for filename, expected_type_id, struct_class in test_cases:
@@ -169,11 +169,11 @@ class TestCrossLanguageCompatibility:
         # Load Rust-generated data
         binary_data = load_binary_test_file("test_host_configure_peripheral.bin")
         header = parse_protocol_header(binary_data)
-        rust_result = attrs2bin.deserialize(header['payload'], TestHostCommandConfigurePeripheral)
+        rust_result = attrs2bin.deserialize(header['payload'], HostCommandConfigurePeripheralTest)
         
         # Create equivalent Python data
         python_result, _ = create_python_test_data_and_deserialize(
-            TestHostCommandConfigurePeripheral,
+            HostCommandConfigurePeripheralTest,
             test_name=expected_name,
             test_uuid=expected_uuid.bytes,
             test_enabled=expected_enabled,
@@ -206,15 +206,15 @@ class TestPythonStructures:
         
         # Test multiple structures
         test_cases = [
-            (TestHostCommandConfigureService, {
+            (HostCommandConfigureServiceTest, {
                 'test_service_uuid': uuid_module.uuid4().bytes,
                 'test_priority': attrs2bin.U8(100),
                 'test_visible': True
             }),
-            (TestHostCommandConfigureCharacteristic, {
+            (HostCommandConfigureCharacteristicTest, {
                 'test_char_uuid': uuid_module.uuid4().bytes,
                 'test_service_uuid': uuid_module.uuid4().bytes,
-                'test_properties': [TestBLEProperties.TestRead, TestBLEProperties.TestWrite],
+                'test_properties': [BLEPropertiesTest.TestRead, BLEPropertiesTest.TestWrite],
                 'test_security_level': attrs2bin.U8(2)
             }),
         ]
@@ -231,16 +231,16 @@ class TestPythonStructures:
     
     def test_enum_serialization_consistency(self):
         """Test that enum serialization works correctly within Python."""
-        # Test TestBLEProperties enum
-        for prop in TestBLEProperties:
+        # Test BLEPropertiesTest enum
+        for prop in BLEPropertiesTest:
             serialized = attrs2bin.serialize(prop)
-            deserialized = attrs2bin.deserialize(serialized, TestBLEProperties)
+            deserialized = attrs2bin.deserialize(serialized, BLEPropertiesTest)
             assert prop == deserialized, f"Enum round-trip failed for {prop}"
         
-        # Test TestDataSendType enum
-        for send_type in TestDataSendType:
+        # Test DataSendTypeTest enum
+        for send_type in DataSendTypeTest:
             serialized = attrs2bin.serialize(send_type)
-            deserialized = attrs2bin.deserialize(serialized, TestDataSendType)
+            deserialized = attrs2bin.deserialize(serialized, DataSendTypeTest)
             assert send_type == deserialized, f"Enum round-trip failed for {send_type}"
         
         print("✅ All test enums pass Python round-trip serialization")

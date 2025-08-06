@@ -20,7 +20,7 @@ const TEST_MAX_CHARACTERISTICS: usize = 8;
 /// Test enum for BLE properties - independent of main codebase
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
-pub enum TestBLEProperties {
+pub enum BLEPropertiesTest {
     TestRead = 10,
     TestWrite = 11,
     TestNotify = 12,
@@ -30,7 +30,7 @@ pub enum TestBLEProperties {
 /// Test enum for bluetooth address types - independent of main codebase
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
-pub enum TestBluetoothAddressType {
+pub enum BluetoothAddressTypeTest {
     TestPublic = 20,
     TestRandom = 21,
     TestResolvable = 22,
@@ -39,7 +39,7 @@ pub enum TestBluetoothAddressType {
 /// Test enum for data send types - independent of main codebase
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[repr(u8)]
-pub enum TestDataSendType {
+pub enum DataSendTypeTest {
     TestNotification = 30,
     TestRead = 31,
     TestWrite = 32,
@@ -48,7 +48,7 @@ pub enum TestDataSendType {
 /// Test enum for configuration errors - independent of main codebase
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[repr(u8)]
-pub enum TestConfigurationError {
+pub enum ConfigurationErrorTest {
     TestNameTooLong = 40,
     TestInvalidUuid = 41,
     TestServiceMissing = 42,
@@ -60,7 +60,7 @@ pub enum TestConfigurationError {
 /// Test host command for peripheral configuration
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandConfigurePeripheral)]
-pub struct TestHostCommandConfigurePeripheral {
+pub struct HostCommandConfigurePeripheralTest {
     pub test_name: HeaplessString<TEST_MAX_NAME_SIZE>,
     pub test_uuid: Uuid,
     pub test_enabled: bool,
@@ -70,7 +70,7 @@ pub struct TestHostCommandConfigurePeripheral {
 /// Test host command for service configuration
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandConfigureService)]
-pub struct TestHostCommandConfigureService {
+pub struct HostCommandConfigureServiceTest {
     pub test_service_uuid: Uuid,
     pub test_priority: u8,
     pub test_visible: bool,
@@ -79,17 +79,17 @@ pub struct TestHostCommandConfigureService {
 /// Test host command for characteristic configuration
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandConfigureCharacteristic)]
-pub struct TestHostCommandConfigureCharacteristic {
+pub struct HostCommandConfigureCharacteristicTest {
     pub test_char_uuid: Uuid,
     pub test_service_uuid: Uuid,
-    pub test_properties: HeaplessVec<TestBLEProperties, TEST_MAX_PROPERTIES>,
+    pub test_properties: HeaplessVec<BLEPropertiesTest, TEST_MAX_PROPERTIES>,
     pub test_security_level: u8,
 }
 
 /// Test host command for characteristic read configuration
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandConfigureCharacteristicRead)]
-pub struct TestHostCommandConfigureCharacteristicRead {
+pub struct HostCommandConfigureCharacteristicReadTest {
     pub test_char_uuid: Uuid,
     pub test_service_uuid: Uuid,
     pub test_default_value: HeaplessVec<u8, 16>,
@@ -99,7 +99,7 @@ pub struct TestHostCommandConfigureCharacteristicRead {
 /// Test host command for service info query
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandGetServiceInfo)]
-pub struct TestHostCommandGetServiceInfo {
+pub struct HostCommandGetServiceInfoTest {
     pub test_service_uuid: Uuid,
     pub test_include_characteristics: bool,
 }
@@ -107,7 +107,7 @@ pub struct TestHostCommandGetServiceInfo {
 /// Test host command for characteristic info query
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandGetCharacteristicInfo)]
-pub struct TestHostCommandGetCharacteristicInfo {
+pub struct HostCommandGetCharacteristicInfoTest {
     pub test_char_uuid: Uuid,
     pub test_service_uuid: Uuid,
     pub test_detailed_info: bool,
@@ -116,7 +116,7 @@ pub struct TestHostCommandGetCharacteristicInfo {
 /// Test host command for advertisement start
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandStartAdvertisement)]
-pub struct TestHostCommandStartAdvertisement {
+pub struct HostCommandStartAdvertisementTest {
     pub test_allow_multi_connect: bool,
     pub test_advertisement_interval: u8,
     pub test_tx_power: u8,
@@ -125,9 +125,9 @@ pub struct TestHostCommandStartAdvertisement {
 /// Test host command for characteristic value notification
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandNotifyCharacteristicValue)]
-pub struct TestHostCommandNotifyCharacteristicValue {
+pub struct HostCommandNotifyCharacteristicValueTest {
     pub test_device_address: [u8; 6],
-    pub test_address_type: TestBluetoothAddressType,
+    pub test_address_type: BluetoothAddressTypeTest,
     pub test_char_uuid: Uuid,
     pub test_service_uuid: Uuid,
     pub test_notification_value: HeaplessVec<u8, 20>,
@@ -139,9 +139,9 @@ pub struct TestHostCommandNotifyCharacteristicValue {
 /// Test plugin response for data forwarding
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[PluginIOMacro(MessageTypeId::PluginData)]
-pub struct TestPluginData<'a> {
+pub struct PluginDataTest<'a> {
     pub test_source_id: Uuid,
-    pub test_send_type: TestDataSendType,
+    pub test_send_type: DataSendTypeTest,
     pub test_payload: &'a [u8],
     pub test_timestamp: u8,
     pub test_connection_handle: u8,
@@ -150,8 +150,8 @@ pub struct TestPluginData<'a> {
 /// Test plugin configuration error response
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[PluginIOMacro(MessageTypeId::PluginConfigurationError)]
-pub struct TestPluginConfigurationError {
-    pub test_error_type: TestConfigurationError,
+pub struct PluginConfigurationErrorTest {
+    pub test_error_type: ConfigurationErrorTest,
     pub test_error_code: u8,
     pub test_error_description: HeaplessString<32>,
 }
@@ -159,7 +159,7 @@ pub struct TestPluginConfigurationError {
 /// Test plugin service info response
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[PluginIOMacro(MessageTypeId::PluginServiceInfoResponse)]
-pub struct TestPluginServiceInfoResponse {
+pub struct PluginServiceInfoResponseTest {
     pub test_service_uuid: Uuid,
     pub test_characteristic_uuids: HeaplessVec<Uuid, TEST_MAX_CHARACTERISTICS>,
     pub test_service_exists: bool,
@@ -170,10 +170,10 @@ pub struct TestPluginServiceInfoResponse {
 /// Test plugin characteristic info response
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[PluginIOMacro(MessageTypeId::PluginCharacteristicInfoResponse)]
-pub struct TestPluginCharacteristicInfoResponse {
+pub struct PluginCharacteristicInfoResponseTest {
     pub test_char_uuid: Uuid,
     pub test_service_uuid: Uuid,
-    pub test_properties: HeaplessVec<TestBLEProperties, TEST_MAX_PROPERTIES>,
+    pub test_properties: HeaplessVec<BLEPropertiesTest, TEST_MAX_PROPERTIES>,
     pub test_char_exists: bool,
     pub test_value_length: u8,
     pub test_client_config: u8,
@@ -182,9 +182,9 @@ pub struct TestPluginCharacteristicInfoResponse {
 /// Test plugin authentication completed response
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[PluginIOMacro(MessageTypeId::PluginAuthenticationCompletedResponse)]
-pub struct TestPluginAuthenticationCompletedResponse {
+pub struct PluginAuthenticationCompletedResponseTest {
     pub test_device_address: [u8; 6],
-    pub test_address_type: TestBluetoothAddressType,
+    pub test_address_type: BluetoothAddressTypeTest,
     pub test_auth_success: bool,
     pub test_auth_level: u8,
     pub test_bond_created: bool,
@@ -196,7 +196,7 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     let mut test_data = Vec::new();
     
     // Test peripheral configuration command
-    let test_peripheral_cmd = TestHostCommandConfigurePeripheral {
+    let test_peripheral_cmd = HostCommandConfigurePeripheralTest {
         test_name: HeaplessString::try_from("TestPeripheral").unwrap(),
         test_uuid: Uuid::parse_str("12345678-1234-5678-9abc-123456789abc").unwrap(),
         test_enabled: true,
@@ -206,7 +206,7 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     test_data.push(("host_configure_peripheral".to_string(), serialized.to_vec()));
 
     // Test service configuration command
-    let test_service_cmd = TestHostCommandConfigureService {
+    let test_service_cmd = HostCommandConfigureServiceTest {
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_priority: 100,
         test_visible: true,
@@ -216,11 +216,11 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
 
     // Test characteristic configuration command
     let mut properties = HeaplessVec::new();
-    properties.push(TestBLEProperties::TestRead).unwrap();
-    properties.push(TestBLEProperties::TestWrite).unwrap();
-    properties.push(TestBLEProperties::TestNotify).unwrap();
+    properties.push(BLEPropertiesTest::TestRead).unwrap();
+    properties.push(BLEPropertiesTest::TestWrite).unwrap();
+    properties.push(BLEPropertiesTest::TestNotify).unwrap();
     
-    let test_characteristic_cmd = TestHostCommandConfigureCharacteristic {
+    let test_characteristic_cmd = HostCommandConfigureCharacteristicTest {
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_properties: properties,
@@ -233,7 +233,7 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     let mut default_value = HeaplessVec::new();
     default_value.extend_from_slice(&[0x48, 0x65, 0x6c, 0x6c, 0x6f]).unwrap(); // "Hello"
     
-    let test_char_read_cmd = TestHostCommandConfigureCharacteristicRead {
+    let test_char_read_cmd = HostCommandConfigureCharacteristicReadTest {
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_default_value: default_value,
@@ -243,7 +243,7 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     test_data.push(("host_configure_characteristic_read".to_string(), serialized.to_vec()));
 
     // Test service info query command
-    let test_service_info_cmd = TestHostCommandGetServiceInfo {
+    let test_service_info_cmd = HostCommandGetServiceInfoTest {
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_include_characteristics: true,
     };
@@ -251,7 +251,7 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     test_data.push(("host_get_service_info".to_string(), serialized.to_vec()));
 
     // Test characteristic info query command
-    let test_char_info_cmd = TestHostCommandGetCharacteristicInfo {
+    let test_char_info_cmd = HostCommandGetCharacteristicInfoTest {
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_detailed_info: true,
@@ -260,7 +260,7 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     test_data.push(("host_get_characteristic_info".to_string(), serialized.to_vec()));
 
     // Test advertisement start command
-    let test_adv_cmd = TestHostCommandStartAdvertisement {
+    let test_adv_cmd = HostCommandStartAdvertisementTest {
         test_allow_multi_connect: false,
         test_advertisement_interval: 100,
         test_tx_power: 50,
@@ -272,9 +272,9 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     let mut notification_value = HeaplessVec::new();
     notification_value.extend_from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
     
-    let test_notify_cmd = TestHostCommandNotifyCharacteristicValue {
+    let test_notify_cmd = HostCommandNotifyCharacteristicValueTest {
         test_device_address: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
-        test_address_type: TestBluetoothAddressType::TestPublic,
+        test_address_type: BluetoothAddressTypeTest::TestPublic,
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_notification_value: notification_value,
@@ -291,9 +291,9 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
     
     // Test plugin data response
     let payload_data = b"Test data";
-    let test_plugin_data = TestPluginData {
+    let test_plugin_data = PluginDataTest {
         test_source_id: Uuid::parse_str("fedcba09-8765-4321-0fed-cba987654321").unwrap(),
-        test_send_type: TestDataSendType::TestWrite,
+        test_send_type: DataSendTypeTest::TestWrite,
         test_payload: payload_data,
         test_timestamp: 123,
         test_connection_handle: 1,
@@ -302,8 +302,8 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
     test_data.push(("plugin_data".to_string(), serialized.to_vec()));
 
     // Test plugin configuration error response
-    let test_config_error = TestPluginConfigurationError {
-        test_error_type: TestConfigurationError::TestInvalidUuid,
+    let test_config_error = PluginConfigurationErrorTest {
+        test_error_type: ConfigurationErrorTest::TestInvalidUuid,
         test_error_code: 41,
         test_error_description: HeaplessString::try_from("Invalid UUID").unwrap(),
     };
@@ -315,7 +315,7 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
     char_uuids.push(Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap()).unwrap();
     char_uuids.push(Uuid::parse_str("11111111-2222-3333-4444-555555555555").unwrap()).unwrap();
     
-    let test_service_info = TestPluginServiceInfoResponse {
+    let test_service_info = PluginServiceInfoResponseTest {
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_characteristic_uuids: char_uuids,
         test_service_exists: true,
@@ -327,10 +327,10 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
 
     // Test plugin characteristic info response
     let mut char_properties = HeaplessVec::new();
-    char_properties.push(TestBLEProperties::TestRead).unwrap();
-    char_properties.push(TestBLEProperties::TestNotify).unwrap();
+    char_properties.push(BLEPropertiesTest::TestRead).unwrap();
+    char_properties.push(BLEPropertiesTest::TestNotify).unwrap();
     
-    let test_char_info = TestPluginCharacteristicInfoResponse {
+    let test_char_info = PluginCharacteristicInfoResponseTest {
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_properties: char_properties,
@@ -342,9 +342,9 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
     test_data.push(("plugin_characteristic_info_response".to_string(), serialized.to_vec()));
 
     // Test plugin authentication completed response
-    let test_auth_completed = TestPluginAuthenticationCompletedResponse {
+    let test_auth_completed = PluginAuthenticationCompletedResponseTest {
         test_device_address: [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff],
-        test_address_type: TestBluetoothAddressType::TestRandom,
+        test_address_type: BluetoothAddressTypeTest::TestRandom,
         test_auth_success: true,
         test_auth_level: 3,
         test_bond_created: true,
