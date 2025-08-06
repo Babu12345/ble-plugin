@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "854806a82b5b7e80a1b6a114963ada0636798cf4271525c058faa17bf193e0a1"
+PROTOCOL_HASH = "a45696c97884a829a89a0db17db0d0e049aed458577875b485bc78193ea0ef10"
 
 # ==================== CONSTANTS ====================
 
@@ -64,7 +64,7 @@ class MessageTypeId(Enum):
     HostCommandStartAdvertisement: attrs2bin.U8 = 0x07
     # Send notification/indication to connected BLE client
     HostCommandNotifyCharacteristicValue: attrs2bin.U8 = 0x08
-    # Data forwarded from BLE client to host
+    # Data forwarded from BLE client to BLE plugin
     PluginData: attrs2bin.U8 = 0x80
     # Configuration error response from plugin
     PluginConfigurationError: attrs2bin.U8 = 0x81
