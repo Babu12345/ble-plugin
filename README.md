@@ -144,11 +144,13 @@ python3 -m venv /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python
 ### Activate the virtual environment
 source /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python/bin/activate
 
-### Installations
+### Installations - for the pc/python host libraries
 pip install git+https://github.com/Babu12345/attrs2bin
 pip install pyusb
 pip install pytest
 then add these lines to pytest.ini
+
+brew install libusb # Make sure that this is run
 ```
 [pytest]
 pythonpath = .
