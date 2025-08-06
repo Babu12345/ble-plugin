@@ -13,6 +13,13 @@ import attrs2bin
 
 # Type aliases for cleaner code - use basic types compatible with attrs2bin
 U8 = attrs2bin.U8
+U16 = attrs2bin.U16
+U32 = attrs2bin.U32
+I8 = attrs2bin.I8
+I16 = attrs2bin.I16
+I32 = attrs2bin.I32
+U64 = attrs2bin.UnsignedInt  # unsigned int corresponds to U64
+I64 = attrs2bin.SignedInt    # signed int corresponds to I64
 
 
 # ====== TEST ENUMS ======
@@ -167,6 +174,42 @@ class PluginAuthenticationCompletedResponseTest:
     test_auth_success: bool
     test_auth_level: U8  # u8 in Rust - keep U8
     test_bond_created: bool
+
+
+# ====== INTEGER TYPE REGRESSION TEST STRUCTURES ======
+
+@attr.s(auto_attribs=True)
+class IntegerTypesTestSmall:
+    """Small test struct with all integer types - fits in 64 bytes"""
+    test_u8: U8
+    test_u16: U16
+    test_u32: U32
+    test_i8: I8
+    test_i16: I16
+    test_i32: I32
+    # Total so far: 1 + 2 + 4 + 1 + 2 + 4 = 14 bytes
+
+
+@attr.s(auto_attribs=True)
+class IntegerTypesTestWithU64I64:
+    """Test struct with U64/I64 types - designed to fit in 64 bytes"""
+    test_u64: U64
+    test_i64: I64
+    test_u16: U16
+    test_i16: I16
+    test_enabled: bool
+    # Total: 8 + 8 + 2 + 2 + 1 = 21 bytes
+
+
+@attr.s(auto_attribs=True)
+class IntegerTypesTestMixed:
+    """Mixed integer types test - compact for 64 bytes"""
+    test_u8: U8
+    test_i8: I8
+    test_u16: U16
+    test_i16: I16
+    test_bool: bool
+    # Total: 1 + 1 + 2 + 2 + 1 = 7 bytes
 
 
 # ====== UTILITY FUNCTIONS ======

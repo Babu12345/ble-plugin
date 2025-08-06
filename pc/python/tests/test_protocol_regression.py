@@ -32,6 +32,11 @@ from test_structures import (
     PluginDataTest,
     PluginServiceInfoResponseTest,
     
+    # Integer type test structures
+    IntegerTypesTestSmall,
+    IntegerTypesTestWithU64I64,
+    IntegerTypesTestMixed,
+    
     # Utility functions
     validate_test_enum_values,
 )
@@ -244,6 +249,103 @@ class TestPythonStructures:
             assert send_type == deserialized, f"Enum round-trip failed for {send_type}"
         
         print("✅ All test enums pass Python round-trip serialization")
+    
+    def test_integer_types_round_trip(self):
+        """Test round-trip serialization for all integer types."""
+        # Test IntegerTypesTestSmall
+        small_test = IntegerTypesTestSmall(
+            test_u8=attrs2bin.U8(255),
+            test_u16=attrs2bin.U16(65535),
+            test_u32=attrs2bin.U32(4294967295),
+            test_i8=attrs2bin.I8(-128),
+            test_i16=attrs2bin.I16(-32768),
+            test_i32=attrs2bin.I32(-2147483648),
+        )
+        serialized = attrs2bin.serialize(small_test)
+        deserialized = attrs2bin.deserialize(serialized, IntegerTypesTestSmall)
+        assert small_test == deserialized, "Integer types small round-trip failed"
+        
+        # Test IntegerTypesTestWithU64I64
+        u64_i64_test = IntegerTypesTestWithU64I64(
+            test_u64=attrs2bin.UnsignedInt(18446744073709551615),  # Max U64
+            test_i64=attrs2bin.SignedInt(-9223372036854775808),    # Min I64
+            test_u16=attrs2bin.U16(12345),
+            test_i16=attrs2bin.I16(-12345),
+            test_enabled=True,
+        )
+        serialized = attrs2bin.serialize(u64_i64_test)
+        deserialized = attrs2bin.deserialize(serialized, IntegerTypesTestWithU64I64)
+        assert u64_i64_test == deserialized, "Integer types U64/I64 round-trip failed"
+        
+        # Test IntegerTypesTestMixed
+        mixed_test = IntegerTypesTestMixed(
+            test_u8=attrs2bin.U8(42),
+            test_i8=attrs2bin.I8(-42),
+            test_u16=attrs2bin.U16(1234),
+            test_i16=attrs2bin.I16(-1234),
+            test_bool=True,
+        )
+        serialized = attrs2bin.serialize(mixed_test)
+        deserialized = attrs2bin.deserialize(serialized, IntegerTypesTestMixed)
+        assert mixed_test == deserialized, "Integer types mixed round-trip failed"
+        
+        print("✅ All integer types pass Python round-trip serialization")
+    
+    def test_integer_types_cross_language_compatibility(self):
+        """Test that Python can deserialize Rust-generated integer type data."""
+        # Test IntegerTypesTestSmall
+        try:
+            small_data = load_binary_test_file("test_integer_types_small.bin")
+            header = parse_protocol_header(small_data)
+            small_result = attrs2bin.deserialize(header['payload'], IntegerTypesTestSmall)
+            
+            # Validate values match what Rust generates
+            assert small_result.test_u8 == 255
+            assert small_result.test_u16 == 65535
+            assert small_result.test_u32 == 4294967295
+            assert small_result.test_i8 == -128
+            assert small_result.test_i16 == -32768
+            assert small_result.test_i32 == -2147483648
+            
+            print("✅ IntegerTypesTestSmall cross-language compatibility verified")
+        except FileNotFoundError:
+            pytest.skip("Integer types small test data not generated yet")
+        
+        # Test IntegerTypesTestWithU64I64
+        try:
+            u64_i64_data = load_binary_test_file("test_integer_types_u64_i64.bin")
+            header = parse_protocol_header(u64_i64_data)
+            u64_i64_result = attrs2bin.deserialize(header['payload'], IntegerTypesTestWithU64I64)
+            
+            # Validate values match what Rust generates
+            assert u64_i64_result.test_u64 == 18446744073709551615  # Max U64
+            assert u64_i64_result.test_i64 == -9223372036854775808   # Min I64
+            assert u64_i64_result.test_u16 == 12345
+            assert u64_i64_result.test_i16 == -12345
+            assert u64_i64_result.test_enabled is True
+            
+            print("✅ IntegerTypesTestWithU64I64 cross-language compatibility verified")
+        except FileNotFoundError:
+            pytest.skip("Integer types U64/I64 test data not generated yet")
+        
+        # Test IntegerTypesTestMixed
+        try:
+            mixed_data = load_binary_test_file("test_integer_types_mixed.bin")
+            header = parse_protocol_header(mixed_data)
+            mixed_result = attrs2bin.deserialize(header['payload'], IntegerTypesTestMixed)
+            
+            # Validate values match what Rust generates
+            assert mixed_result.test_u8 == 42
+            assert mixed_result.test_i8 == -42
+            assert mixed_result.test_u16 == 1234
+            assert mixed_result.test_i16 == -1234
+            assert mixed_result.test_bool is True
+            
+            print("✅ IntegerTypesTestMixed cross-language compatibility verified")
+        except FileNotFoundError:
+            pytest.skip("Integer types mixed test data not generated yet")
+        
+        print("✅ All integer types cross-language compatibility verified")
 
 
 class TestBinaryDataIntegrity:

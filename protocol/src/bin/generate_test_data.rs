@@ -190,6 +190,42 @@ pub struct PluginAuthenticationCompletedResponseTest {
     pub test_bond_created: bool,
 }
 
+// ====== INTEGER TYPE REGRESSION TEST STRUCTURES ======
+
+/// Small test struct with all integer types - fits in 64 bytes
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[HostIOMacro(MessageTypeId::HostCommandGetServiceInfo)]
+pub struct IntegerTypesTestSmall {
+    pub test_u8: u8,
+    pub test_u16: u16,
+    pub test_u32: u32,
+    pub test_i8: i8,
+    pub test_i16: i16,
+    pub test_i32: i32,
+}
+
+/// Test struct with U64/I64 types - designed to fit in 64 bytes
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[PluginIOMacro(MessageTypeId::PluginConfigurationError)]
+pub struct IntegerTypesTestWithU64I64 {
+    pub test_u64: u64,
+    pub test_i64: i64,
+    pub test_u16: u16,
+    pub test_i16: i16,
+    pub test_enabled: bool,
+}
+
+/// Mixed integer types test - compact for 64 bytes
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[HostIOMacro(MessageTypeId::HostCommandGetCharacteristicInfo)]
+pub struct IntegerTypesTestMixed {
+    pub test_u8: u8,
+    pub test_i8: i8,
+    pub test_u16: u16,
+    pub test_i16: i16,
+    pub test_bool: bool,
+}
+
 // ====== TEST DATA GENERATION FUNCTIONS ======
 
 fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
@@ -355,6 +391,46 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
     test_data
 }
 
+fn create_integer_type_test_data() -> Vec<(String, Vec<u8>)> {
+    let mut test_data = Vec::new();
+    
+    // Test IntegerTypesTestSmall
+    let small_test = IntegerTypesTestSmall {
+        test_u8: 255,
+        test_u16: 65535,
+        test_u32: 4294967295,
+        test_i8: -128,
+        test_i16: -32768,
+        test_i32: -2147483648,
+    };
+    let serialized: [u8; DEFAULT_PACKET_SIZE] = small_test.to_bytes().unwrap();
+    test_data.push(("integer_types_small".to_string(), serialized.to_vec()));
+    
+    // Test IntegerTypesTestWithU64I64
+    let u64_i64_test = IntegerTypesTestWithU64I64 {
+        test_u64: 18446744073709551615, // Max U64
+        test_i64: -9223372036854775808,  // Min I64
+        test_u16: 12345,
+        test_i16: -12345,
+        test_enabled: true,
+    };
+    let serialized: [u8; DEFAULT_PACKET_SIZE] = u64_i64_test.to_bytes().unwrap();
+    test_data.push(("integer_types_u64_i64".to_string(), serialized.to_vec()));
+    
+    // Test IntegerTypesTestMixed
+    let mixed_test = IntegerTypesTestMixed {
+        test_u8: 42,
+        test_i8: -42,
+        test_u16: 1234,
+        test_i16: -1234,
+        test_bool: true,
+    };
+    let serialized: [u8; DEFAULT_PACKET_SIZE] = mixed_test.to_bytes().unwrap();
+    test_data.push(("integer_types_mixed".to_string(), serialized.to_vec()));
+    
+    test_data
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Generating test data for protocol regression tests...");
     
@@ -378,10 +454,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Generated: {} ({} bytes)", file_path.display(), data.len());
     }
     
+    // Generate integer type test data
+    let integer_tests = create_integer_type_test_data();
+    for (name, data) in integer_tests {
+        let file_path = output_dir.join(format!("test_{}.bin", name));
+        fs::write(&file_path, &data)?;
+        println!("Generated: {} ({} bytes)", file_path.display(), data.len());
+    }
+    
     println!("Test data generation completed successfully!");
-    println!("Generated {} host command files and {} plugin response files", 
+    println!("Generated {} host command files, {} plugin response files, and {} integer type test files", 
              create_test_host_commands().len(),
-             create_test_plugin_responses().len());
+             create_test_plugin_responses().len(),
+             create_integer_type_test_data().len());
     
     Ok(())
 }
