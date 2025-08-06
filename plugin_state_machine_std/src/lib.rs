@@ -473,7 +473,7 @@ impl PluginStateMachine {
                                             log::info!("Received USB command: {:?}", cmd);
                                             self.handle_start_advertisement(cmd)
                                         }
-                                        Err(e) => Err(StateMachineError::FailedToDecodeMessage(
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
                                             "HostCommandStartAdvertisement",
                                         )),
                                     }
