@@ -29,6 +29,7 @@
 //! }
 //! ```
 
+use protocol::MessageTypeId;
 use thiserror_no_std::Error;
 
 /// Comprehensive error types for plugin state machine operations
@@ -112,6 +113,14 @@ pub enum StateMachineError {
     /// - Corrupted data transmission
     #[error("Invalid USB message format - check magic number and header structure")]
     InvalidMessageFormat,
+
+    /// Failure to decode USB message into expected command type
+    #[error("Failed to decode USB message into command type: {0}")]
+    FailedToDecodeMessage(&'static str),
+
+    /// Unhandled message type received from host
+    #[error("Unhandled message type received from host")]
+    UnhandledMessageType(MessageTypeId),
 
     /// Unknown or unsupported message type ID
     ///

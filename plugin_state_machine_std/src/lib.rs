@@ -394,145 +394,103 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigurePeripheral>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_configure_peripheral(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandConfigurePeripheral: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandConfigurePeripheral",
+                                        )),
                                     }
                                 }
                                 MessageTypeId::HostCommandConfigureService => {
                                     match data.decode::<HostCommandConfigureService>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_configure_service(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandConfigureService: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandConfigureService",
+                                        )),
                                     }
                                 }
                                 MessageTypeId::HostCommandConfigureCharacteristic => {
                                     match data.decode::<HostCommandConfigureCharacteristic>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_configure_characteristic(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandConfigureCharacteristic: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandConfigureCharacteristic",
+                                        )),
                                     }
                                 }
                                 MessageTypeId::HostCommandConfigureCharacteristicRead => {
                                     match data.decode::<HostCommandConfigureCharacteristicRead>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_configure_characteristic_read(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandConfigureCharacteristicRead: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandConfigureCharacteristicRead",
+                                        )),
                                     }
                                 }
                                 MessageTypeId::HostCommandNotifyCharacteristicValue => {
                                     match data.decode::<HostCommandNotifyCharacteristicValue>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_notify_characteristic_value(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandNotifyCharacteristicValue: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandNotifyCharacteristicValue",
+                                        )),
                                     }
                                 }
                                 MessageTypeId::HostCommandGetServiceInfo => {
                                     match data.decode::<HostCommandGetServiceInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_get_service_info(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandGetServiceInfo: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandGetServiceInfo",
+                                        )),
                                     }
                                 }
                                 MessageTypeId::HostCommandGetCharacteristicInfo => {
                                     match data.decode::<HostCommandGetCharacteristicInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_get_characteristic_info(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandGetCharacteristicInfo: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandGetCharacteristicInfo",
+                                        )),
                                     }
                                 }
                                 MessageTypeId::HostCommandStartAdvertisement => {
                                     match data.decode::<HostCommandStartAdvertisement>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.blink_indication(BlinkState::Success);
                                             self.handle_start_advertisement(cmd)
                                         }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Failed to decode HostCommandStartAdvertisement: {:?}",
-                                                e
-                                            );
-                                            continue;
-                                        }
+                                        Err(e) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandStartAdvertisement",
+                                        )),
                                     }
                                 }
-                                _ => {
-                                    log::warn!(
-                                        "Received message type ID that is not handled in plugin: {:?}",
-                                        message_type
-                                    );
-                                    continue;
-                                }
+                                _ => Err(StateMachineError::UnhandledMessageType(message_type)),
                             };
 
                             if let Err(e) = result {
                                 log::error!("Failed to handle command {:?}: {:?}", message_type, e);
+                                self.blink_indication(BlinkState::Failure);
+                            } else {
+                                log::info!("Successfully handled command: {:?}", message_type);
+                                self.blink_indication(BlinkState::Success);
                             }
                         }
                         Err(e) => {
-                            log::error!("Failed to extract message type ID: {:?}", e);
+                            log::error!("Failed to extract message type ID: {e}");
                             log::warn!(
                                 "Received unrecognized command data from USB, raw data length: {} bytes",
                                 data.size()
@@ -545,7 +503,6 @@ impl PluginStateMachine {
                     log::error!("Failed to receive data from USB: {:?}", e);
                     std::thread::sleep(Duration::from_millis(100));
                     self.blink_indication(BlinkState::Failure);
-                    continue;
                 }
             }
         }
