@@ -140,7 +140,7 @@ pub enum MessageTypeId {
     HostCommandNotifyCharacteristicValue = 0x08,
 
     // Plugin Responses (0x80+)
-    /// Data forwarded from BLE client to host
+    /// Data forwarded from BLE client to BLE plugin
     PluginData = 0x80,
 
     /// Configuration error response from plugin
