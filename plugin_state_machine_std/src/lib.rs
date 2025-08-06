@@ -132,6 +132,7 @@ use protocol::MESSAGE_HEADER_SIZE;
 
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
@@ -215,7 +216,7 @@ pub struct PluginStateMachine {
     metadata: PluginStateMachineMetadata,
 
     /// Output pin for LED control (e.g., status indication)
-    indicator: &'static mut PinDriver<'static, AnyOutputPin, Output>,
+    indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>,
 }
 
 impl PluginStateMachine {
@@ -254,7 +255,7 @@ impl PluginStateMachine {
         usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
         usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
         ble_device: &'static mut BLEDevice,
-        indicator: &'static mut PinDriver<'static, AnyOutputPin, Output>,
+        indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>,
     ) -> Self {
         Self {
             indicator,
@@ -375,7 +376,7 @@ impl PluginStateMachine {
         loop {
             match self.usb_receiver.receive() {
                 Ok(data) => {
-                    log::debug!("Received USB data: {} bytes", data.size());
+                    log::debug!("Received USB data of length : {} bytes", data.size());
 
                     // Extract message type ID for efficient dispatch
                     match Self::extract_message_type_id(data.raw_bytes()) {
@@ -385,7 +386,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigurePeripheral>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_configure_peripheral(cmd)
                                         }
                                         Err(e) => {
@@ -401,7 +402,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigureService>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_configure_service(cmd)
                                         }
                                         Err(e) => {
@@ -417,7 +418,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigureCharacteristic>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_configure_characteristic(cmd)
                                         }
                                         Err(e) => {
@@ -433,7 +434,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandConfigureCharacteristicRead>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_configure_characteristic_read(cmd)
                                         }
                                         Err(e) => {
@@ -449,7 +450,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandNotifyCharacteristicValue>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_notify_characteristic_value(cmd)
                                         }
                                         Err(e) => {
@@ -465,7 +466,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandGetServiceInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_get_service_info(cmd)
                                         }
                                         Err(e) => {
@@ -481,7 +482,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandGetCharacteristicInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_get_characteristic_info(cmd)
                                         }
                                         Err(e) => {
@@ -497,7 +498,7 @@ impl PluginStateMachine {
                                     match data.decode::<HostCommandStartAdvertisement>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
-                                            self.indicate_toggle();
+                                            self.blink_indication();
                                             self.handle_start_advertisement(cmd)
                                         }
                                         Err(e) => {
@@ -540,10 +541,24 @@ impl PluginStateMachine {
         }
     }
 
-    fn indicate_toggle(&mut self) {
-        if let Err(e) = self.indicator.toggle() {
-            log::error!("Failed to toggle indicator: {:?}", e);
-        }
+    fn blink_indication(&mut self) {
+        let indicator = self.indicator.clone();
+        std::thread::spawn(move || {
+            for _ in 0..2 {
+                let indicator = indicator
+                    .lock()
+                    .map_err(|_| {
+                        log::error!("Failed to lock GPIO for blinking indication");
+                    })
+                    .ok();
+                if let Some(mut indicator) = indicator {
+                    if let Err(e) = indicator.toggle() {
+                        log::error!("Failed to set GPIO low: {:?}", e);
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+            }
+        });
     }
 
     fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) -> Result<()> {
