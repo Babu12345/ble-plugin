@@ -20,6 +20,8 @@ I16 = attrs2bin.I16
 I32 = attrs2bin.I32
 U64 = attrs2bin.UnsignedInt  # unsigned int corresponds to U64
 I64 = attrs2bin.SignedInt    # signed int corresponds to I64
+F32 = attrs2bin.Float32      # f32 floating-point
+F64 = attrs2bin.Float64      # f64 floating-point
 
 
 # ====== TEST ENUMS ======
@@ -187,7 +189,9 @@ class IntegerTypesTestSmall:
     test_i8: I8
     test_i16: I16
     test_i32: I32
-    # Total so far: 1 + 2 + 4 + 1 + 2 + 4 = 14 bytes
+    test_f32: F32
+    test_f64: F64
+    # Total so far: 1 + 2 + 4 + 1 + 2 + 4 + 4 + 8 = 26 bytes
 
 
 @attr.s(auto_attribs=True)
@@ -208,8 +212,9 @@ class IntegerTypesTestMixed:
     test_i8: I8
     test_u16: U16
     test_i16: I16
+    test_f32: F32
     test_bool: bool
-    # Total: 1 + 1 + 2 + 2 + 1 = 7 bytes
+    # Total: 1 + 1 + 2 + 2 + 4 + 1 = 11 bytes
 
 
 # ====== UTILITY FUNCTIONS ======

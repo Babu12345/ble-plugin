@@ -260,10 +260,23 @@ class TestPythonStructures:
             test_i8=attrs2bin.I8(-128),
             test_i16=attrs2bin.I16(-32768),
             test_i32=attrs2bin.I32(-2147483648),
+            test_f32=attrs2bin.Float32(3.14159),
+            test_f64=attrs2bin.Float64(2.718281828459045),
         )
         serialized = attrs2bin.serialize(small_test)
         deserialized = attrs2bin.deserialize(serialized, IntegerTypesTestSmall)
-        assert small_test == deserialized, "Integer types small round-trip failed"
+        
+        # Check integer fields for exact equality
+        assert small_test.test_u8 == deserialized.test_u8
+        assert small_test.test_u16 == deserialized.test_u16  
+        assert small_test.test_u32 == deserialized.test_u32
+        assert small_test.test_i8 == deserialized.test_i8
+        assert small_test.test_i16 == deserialized.test_i16
+        assert small_test.test_i32 == deserialized.test_i32
+        
+        # Check floating-point fields with approximate equality
+        assert abs(small_test.test_f32 - deserialized.test_f32) < 1e-5
+        assert abs(small_test.test_f64 - deserialized.test_f64) < 1e-14
         
         # Test IntegerTypesTestWithU64I64
         u64_i64_test = IntegerTypesTestWithU64I64(
@@ -283,11 +296,21 @@ class TestPythonStructures:
             test_i8=attrs2bin.I8(-42),
             test_u16=attrs2bin.U16(1234),
             test_i16=attrs2bin.I16(-1234),
+            test_f32=attrs2bin.Float32(1.414213562373095),  # sqrt(2)
             test_bool=True,
         )
         serialized = attrs2bin.serialize(mixed_test)
         deserialized = attrs2bin.deserialize(serialized, IntegerTypesTestMixed)
-        assert mixed_test == deserialized, "Integer types mixed round-trip failed"
+        
+        # Check integer and bool fields for exact equality
+        assert mixed_test.test_u8 == deserialized.test_u8
+        assert mixed_test.test_i8 == deserialized.test_i8
+        assert mixed_test.test_u16 == deserialized.test_u16
+        assert mixed_test.test_i16 == deserialized.test_i16
+        assert mixed_test.test_bool == deserialized.test_bool
+        
+        # Check floating-point field with approximate equality
+        assert abs(mixed_test.test_f32 - deserialized.test_f32) < 1e-5
         
         print("✅ All integer types pass Python round-trip serialization")
     
@@ -306,6 +329,8 @@ class TestPythonStructures:
             assert small_result.test_i8 == -128
             assert small_result.test_i16 == -32768
             assert small_result.test_i32 == -2147483648
+            assert abs(small_result.test_f32 - 3.14159) < 1e-5  # f32 precision
+            assert abs(small_result.test_f64 - 2.718281828459045) < 1e-14  # f64 precision
             
             print("✅ IntegerTypesTestSmall cross-language compatibility verified")
         except FileNotFoundError:
@@ -339,6 +364,7 @@ class TestPythonStructures:
             assert mixed_result.test_i8 == -42
             assert mixed_result.test_u16 == 1234
             assert mixed_result.test_i16 == -1234
+            assert abs(mixed_result.test_f32 - 1.414213562373095) < 1e-5  # f32 precision
             assert mixed_result.test_bool is True
             
             print("✅ IntegerTypesTestMixed cross-language compatibility verified")

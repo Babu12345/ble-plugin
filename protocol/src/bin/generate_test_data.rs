@@ -202,6 +202,8 @@ pub struct IntegerTypesTestSmall {
     pub test_i8: i8,
     pub test_i16: i16,
     pub test_i32: i32,
+    pub test_f32: f32,
+    pub test_f64: f64,
 }
 
 /// Test struct with U64/I64 types - designed to fit in 64 bytes
@@ -223,6 +225,7 @@ pub struct IntegerTypesTestMixed {
     pub test_i8: i8,
     pub test_u16: u16,
     pub test_i16: i16,
+    pub test_f32: f32,
     pub test_bool: bool,
 }
 
@@ -402,6 +405,8 @@ fn create_integer_type_test_data() -> Vec<(String, Vec<u8>)> {
         test_i8: -128,
         test_i16: -32768,
         test_i32: -2147483648,
+        test_f32: 3.14159,
+        test_f64: 2.718281828459045,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = small_test.to_bytes().unwrap();
     test_data.push(("integer_types_small".to_string(), serialized.to_vec()));
@@ -423,6 +428,7 @@ fn create_integer_type_test_data() -> Vec<(String, Vec<u8>)> {
         test_i8: -42,
         test_u16: 1234,
         test_i16: -1234,
+        test_f32: 1.414213562373095, // sqrt(2)
         test_bool: true,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = mixed_test.to_bytes().unwrap();
