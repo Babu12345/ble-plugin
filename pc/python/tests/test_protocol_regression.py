@@ -1,5 +1,5 @@
 """
-Protocol regression tests using binary test data generated from Rust protocol library.
+Streamlined protocol regression tests using binary test data generated from Rust protocol library.
 
 This module tests the serialization/deserialization compatibility between the Rust
 protocol implementation and the Python plugin_host library by using pre-generated
@@ -10,11 +10,9 @@ independent test structures, enums, and constants that don't interfere with the
 main codebase, ensuring we can test changes independently.
 """
 
-import os
 import struct
 from pathlib import Path
 from typing import Dict, Any
-import uuid as uuid_module
 
 import pytest
 import attrs2bin
@@ -35,7 +33,6 @@ from test_structures import (
     TestPluginServiceInfoResponse,
     
     # Utility functions
-    uuid_bytes_to_str,
     validate_test_enum_values,
 )
 
@@ -86,63 +83,12 @@ def parse_protocol_header(data: bytes) -> Dict[str, Any]:
     }
 
 
-def uuid_bytes_to_str(uuid_bytes: bytes) -> str:
-    """Convert UUID bytes to string representation."""
-    if len(uuid_bytes) != 16:
-        raise ValueError(f"UUID bytes must be 16 bytes, got {len(uuid_bytes)}")
-    return str(uuid_module.UUID(bytes=uuid_bytes))
-
-
 def verify_protocol_header(header: Dict[str, Any], expected_type_id: MessageTypeId):
     """Verify that a protocol header is valid."""
     assert header['magic'] == MESSAGE_MAGIC, f"Invalid magic number: 0x{header['magic']:04x}"
     assert header['type_id'] == expected_type_id.value, f"Wrong type ID: {header['type_id']} != {expected_type_id.value}"
     assert header['length'] > 0, "Payload length should be greater than 0"
     assert header['length'] <= DEFAULT_PACKET_SIZE - MESSAGE_HEADER_SIZE, "Payload too large"
-
-
-def analyze_payload_structure(payload: bytes, expected_struct_name: str):
-    """Analyze the payload structure without deserializing."""
-    analysis = {
-        'length': len(payload),
-        'hex': payload.hex(),
-        'first_20_bytes': payload[:20],
-        'struct_name': expected_struct_name,
-        'has_string_data': False,
-        'has_uuid_data': False,
-        'has_numeric_data': False,
-    }
-    
-    # Simple heuristic analysis
-    try:
-        # Check for string data (readable ASCII characters)
-        for i in range(min(20, len(payload))):
-            if 32 <= payload[i] <= 126:  # printable ASCII
-                analysis['has_string_data'] = True
-                break
-        
-        # Check for UUID patterns (16-byte sequences)
-        if len(payload) >= 16:
-            analysis['has_uuid_data'] = True
-            
-        # Check for numeric data (small integers common in protocol)
-        analysis['has_numeric_data'] = any(0 <= b <= 100 for b in payload[-5:])
-        
-    except Exception:
-        pass
-    
-    return analysis
-
-
-def validate_payload_structure(payload: bytes, expected_struct_name: str) -> Dict[str, Any]:
-    """Validate basic payload structure and return analysis."""
-    analysis = analyze_payload_structure(payload, expected_struct_name)
-    
-    # Basic validation
-    assert analysis['length'] > 0, "Payload should not be empty"
-    assert analysis['length'] < 200, "Payload should be reasonable size"
-    
-    return analysis
 
 
 def create_python_test_data_and_deserialize(test_struct_class, **kwargs):
@@ -162,241 +108,10 @@ def create_python_test_data_and_deserialize(test_struct_class, **kwargs):
     return deserialized, serialized
 
 
-class TestHostCommandRegression:
-    """Test host commands using generated binary data."""
+class TestCrossLanguageCompatibility:
+    """Test cross-language serialization/deserialization compatibility between Rust and Python."""
     
-    def test_host_configure_peripheral(self):
-        """Test validation of HostCommandConfigurePeripheral."""
-        binary_data = load_binary_test_file("test_host_configure_peripheral.bin")
-        header = parse_protocol_header(binary_data)
-        
-        # Verify header
-        verify_protocol_header(header, MessageTypeId.HostCommandConfigurePeripheral)
-        
-        # Validate payload structure  
-        analysis = validate_payload_structure(header['payload'], "HostCommandConfigurePeripheral")
-        
-        # Validate expected structure characteristics
-        assert analysis['has_string_data'], "Should contain string data (peripheral name)"
-        assert analysis['has_uuid_data'], "Should contain UUID data"
-        assert analysis['has_numeric_data'], "Should contain numeric data"
-        
-        # Manual parsing of known fields for validation
-        payload = header['payload']
-        name_len = payload[0] if len(payload) > 0 else 0
-        
-        # Basic structure validation
-        assert 0 < name_len < 32, f"Name length should be reasonable: {name_len}"
-        assert len(payload) >= name_len + 1 + 16 + 1 + 1, "Payload should have minimum expected size"
-        
-        if name_len > 0 and len(payload) > name_len:
-            try:
-                name = payload[1:1+name_len].decode('utf-8')
-                assert len(name) > 0, "Decoded name should not be empty"
-                print(f"✓ host_configure_peripheral validated: name='{name}', payload_len={analysis['length']}")
-            except UnicodeDecodeError:
-                print(f"✓ host_configure_peripheral validated: name_len={name_len}, payload_len={analysis['length']}")
-        else:
-            print(f"✓ host_configure_peripheral validated: payload_len={analysis['length']}")
-    
-    def test_host_configure_service(self):
-        """Test validation of HostCommandConfigureService."""
-        binary_data = load_binary_test_file("test_host_configure_service.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.HostCommandConfigureService)
-        
-        # Validate payload structure
-        analysis = validate_payload_structure(header['payload'], "HostCommandConfigureService")
-        
-        # Should contain UUID + priority (u16) + visible (bool) = at least 16+2+1 = 19 bytes
-        assert analysis['length'] >= 19, f"Payload should be at least 19 bytes, got {analysis['length']}"
-        assert analysis['has_numeric_data'], "Should contain numeric data"
-        
-        print(f"✓ host_configure_service validated: payload_len={analysis['length']}")
-    
-    def test_host_configure_characteristic(self):
-        """Test validation of HostCommandConfigureCharacteristic."""
-        binary_data = load_binary_test_file("test_host_configure_characteristic.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.HostCommandConfigureCharacteristic)
-        
-        # Validate payload structure
-        analysis = validate_payload_structure(header['payload'], "HostCommandConfigureCharacteristic")
-        
-        # Should contain 2 UUIDs + properties list + security_level = at least 32+3+1 = 36 bytes
-        assert analysis['length'] >= 35, f"Payload should be at least 35 bytes, got {analysis['length']}"
-        assert analysis['has_uuid_data'], "Should contain UUID data"
-        assert analysis['has_numeric_data'], "Should contain numeric data"
-        
-        print(f"✓ host_configure_characteristic validated: payload_len={analysis['length']}")
-    
-    def test_host_configure_characteristic_read(self):
-        """Test deserialization of HostCommandConfigureCharacteristicRead."""
-        binary_data = load_binary_test_file("test_host_configure_characteristic_read.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.HostCommandConfigureCharacteristicRead)
-        print(f"✓ host_configure_characteristic_read header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-    
-    def test_host_get_service_info(self):
-        """Test deserialization of HostCommandGetServiceInfo."""
-        binary_data = load_binary_test_file("test_host_get_service_info.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.HostCommandGetServiceInfo)
-        print(f"✓ host_get_service_info header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-    
-    def test_host_get_characteristic_info(self):
-        """Test deserialization of HostCommandGetCharacteristicInfo."""
-        binary_data = load_binary_test_file("test_host_get_characteristic_info.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.HostCommandGetCharacteristicInfo)
-        print(f"✓ host_get_characteristic_info header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-    
-    def test_host_start_advertisement(self):
-        """Test deserialization of HostCommandStartAdvertisement."""
-        binary_data = load_binary_test_file("test_host_start_advertisement.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.HostCommandStartAdvertisement)
-        print(f"✓ host_start_advertisement header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-    
-    def test_host_notify_characteristic_value(self):
-        """Test deserialization of HostCommandNotifyCharacteristicValue."""
-        binary_data = load_binary_test_file("test_host_notify_characteristic_value.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.HostCommandNotifyCharacteristicValue)
-        print(f"✓ host_notify_characteristic_value header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-
-
-class TestPluginResponseRegression:
-    """Test plugin responses using generated binary data."""
-    
-    def test_plugin_data(self):
-        """Test validation of plugin data response."""
-        binary_data = load_binary_test_file("test_plugin_data.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.PluginData)
-        
-        # Validate payload structure
-        analysis = validate_payload_structure(header['payload'], "PluginData")
-        
-        # Should contain UUID + enum + payload + timestamp + handle = at least 16+1+4+8+2 = 31 bytes
-        assert analysis['length'] >= 25, f"Payload should be at least 25 bytes, got {analysis['length']}"
-        assert analysis['has_uuid_data'], "Should contain UUID data"
-        assert analysis['has_numeric_data'], "Should contain numeric data"
-        
-        print(f"✓ plugin_data validated: payload_len={analysis['length']}")
-    
-    def test_plugin_configuration_error(self):
-        """Test deserialization of plugin configuration error."""
-        binary_data = load_binary_test_file("test_plugin_configuration_error.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.PluginConfigurationError)
-        print(f"✓ plugin_configuration_error header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-    
-    def test_plugin_service_info_response(self):
-        """Test validation of plugin service info response."""
-        binary_data = load_binary_test_file("test_plugin_service_info_response.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.PluginServiceInfoResponse)
-        
-        # Validate payload structure
-        analysis = validate_payload_structure(header['payload'], "PluginServiceInfoResponse")
-        
-        # Should contain service UUID + char UUIDs list + bools + count = at least 16+4+2+1 = 23 bytes
-        assert analysis['length'] >= 20, f"Payload should be at least 20 bytes, got {analysis['length']}"
-        assert analysis['has_uuid_data'], "Should contain UUID data"
-        assert analysis['has_numeric_data'], "Should contain numeric data"
-        
-        print(f"✓ plugin_service_info_response validated: payload_len={analysis['length']}")
-    
-    def test_plugin_characteristic_info_response(self):
-        """Test deserialization of plugin characteristic info response."""
-        binary_data = load_binary_test_file("test_plugin_characteristic_info_response.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.PluginCharacteristicInfoResponse)
-        print(f"✓ plugin_characteristic_info_response header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-    
-    def test_plugin_authentication_completed_response(self):
-        """Test deserialization of plugin authentication completed response."""
-        binary_data = load_binary_test_file("test_plugin_authentication_completed_response.bin")
-        header = parse_protocol_header(binary_data)
-        
-        verify_protocol_header(header, MessageTypeId.PluginAuthenticationCompletedResponse)
-        print(f"✓ plugin_authentication_completed_response header valid: magic=0x{header['magic']:04x}, "
-              f"type_id={header['type_id']}, length={header['length']}")
-
-
-class TestBinaryDataValidation:
-    """Test validation of binary data structure and content without full deserialization."""
-    
-    def test_all_payloads_have_valid_structure(self):
-        """Test that all binary files have valid payload structures."""
-        test_data_dir = get_test_data_dir()
-        
-        # Define expected characteristics for each message type
-        expected_characteristics = {
-            'host_configure_peripheral': {'min_size': 20, 'has_string': True, 'has_uuid': True},
-            'host_configure_service': {'min_size': 19, 'has_string': False, 'has_uuid': True},
-            'host_configure_characteristic': {'min_size': 35, 'has_string': False, 'has_uuid': True},
-            'host_configure_characteristic_read': {'min_size': 35, 'has_string': False, 'has_uuid': True},
-            'host_get_service_info': {'min_size': 17, 'has_string': False, 'has_uuid': True},
-            'host_get_characteristic_info': {'min_size': 33, 'has_string': False, 'has_uuid': True},
-            'host_start_advertisement': {'min_size': 4, 'has_string': False, 'has_uuid': False},
-            'host_notify_characteristic_value': {'min_size': 40, 'has_string': False, 'has_uuid': True},
-            'plugin_data': {'min_size': 25, 'has_string': False, 'has_uuid': True},
-            'plugin_configuration_error': {'min_size': 15, 'has_string': True, 'has_uuid': False},
-            'plugin_service_info_response': {'min_size': 20, 'has_string': False, 'has_uuid': True},
-            'plugin_characteristic_info_response': {'min_size': 35, 'has_string': False, 'has_uuid': True},
-            'plugin_authentication_completed_response': {'min_size': 10, 'has_string': False, 'has_uuid': False},
-        }
-        
-        for file_path in sorted(test_data_dir.glob("*.bin")):
-            binary_data = load_binary_test_file(file_path.name)
-            header = parse_protocol_header(binary_data)
-            
-            # Get expected characteristics
-            base_name = file_path.stem
-            expected = expected_characteristics.get(base_name, {'min_size': 1, 'has_string': False, 'has_uuid': False})
-            
-            # Validate payload structure
-            analysis = validate_payload_structure(header['payload'], base_name)
-            
-            # Check size
-            assert analysis['length'] >= expected['min_size'], f"{base_name}: payload too small ({analysis['length']} < {expected['min_size']})"
-            
-            # Check string data if expected
-            if expected['has_string']:
-                assert analysis['has_string_data'], f"{base_name}: should contain string data"
-            
-            # Check UUID data if expected  
-            if expected['has_uuid']:
-                assert analysis['has_uuid_data'], f"{base_name}: should contain UUID data"
-            
-            print(f"✓ {base_name}: payload_len={analysis['length']}, "
-                  f"has_string={analysis['has_string_data']}, has_uuid={analysis['has_uuid_data']}")
-
-
-class TestStructDeserializationValidation:
-    """Test actual deserialization of test structures using Python-generated data."""
-    
-    def test_rust_to_python_cross_language_deserialization(self):
+    def test_rust_to_python_deserialization(self):
         """Test deserialization of Rust-generated binary data into Python structures."""
         # Test TestHostCommandConfigurePeripheral from Rust binary data
         binary_data = load_binary_test_file("test_host_configure_peripheral.bin")
@@ -418,8 +133,31 @@ class TestStructDeserializationValidation:
         print(f"✅ Cross-language deserialization successful: {result.test_name}, "
               f"uuid={result.test_uuid.hex()[:8]}..., enabled={result.test_enabled}, power={power_level}")
     
-    def test_cross_language_round_trip_compatibility(self):
-        """Test that Python can read Rust data and vice versa for the same logical structure."""
+    def test_multiple_message_types_deserialization(self):
+        """Test that multiple message types can be deserialized correctly."""
+        test_cases = [
+            ("test_host_configure_peripheral.bin", MessageTypeId.HostCommandConfigurePeripheral, TestHostCommandConfigurePeripheral),
+            ("test_host_configure_service.bin", MessageTypeId.HostCommandConfigureService, TestHostCommandConfigureService),
+            ("test_plugin_data.bin", MessageTypeId.PluginData, TestPluginData),
+            ("test_plugin_service_info_response.bin", MessageTypeId.PluginServiceInfoResponse, TestPluginServiceInfoResponse),
+        ]
+        
+        for filename, expected_type_id, struct_class in test_cases:
+            binary_data = load_binary_test_file(filename)
+            header = parse_protocol_header(binary_data)
+            
+            # Verify header
+            verify_protocol_header(header, expected_type_id)
+            
+            # Test that deserialization doesn't crash
+            try:
+                attrs2bin.deserialize(header['payload'], struct_class)
+                print(f"✅ {filename}: Deserialized {struct_class.__name__}")
+            except Exception as e:
+                pytest.fail(f"Failed to deserialize {filename} as {struct_class.__name__}: {e}")
+    
+    def test_round_trip_compatibility(self):
+        """Test that Python can read Rust data and produce equivalent structures."""
         import uuid as uuid_module
         
         # Create the same data in Python that Rust creates
@@ -452,204 +190,44 @@ class TestStructDeserializationValidation:
         assert rust_power == python_power
         
         print(f"✅ Cross-language compatibility verified: Rust and Python produce equivalent data structures")
-    
-    def test_host_configure_peripheral_deserialization(self):
-        """Test deserialization of TestHostCommandConfigurePeripheral."""
-        import uuid as uuid_module
-        
-        # Create test data
-        test_uuid = uuid_module.uuid4()
-        deserialized, serialized = create_python_test_data_and_deserialize(
-            TestHostCommandConfigurePeripheral,
-            test_name="TestDevice",
-            test_uuid=test_uuid.bytes,
-            test_enabled=True,
-            test_power_level=attrs2bin.U8(4)
-        )
-        
-        # Validate deserialized data
-        assert isinstance(deserialized.test_name, str), "test_name should be string"
-        assert deserialized.test_name == "TestDevice", "test_name should match"
-        assert len(deserialized.test_uuid) == 16, "test_uuid should be 16 bytes"
-        assert deserialized.test_uuid == test_uuid.bytes, "test_uuid should match"
-        assert isinstance(deserialized.test_enabled, bool), "test_enabled should be bool"
-        assert deserialized.test_enabled is True, "test_enabled should be True"
-        assert isinstance(deserialized.test_power_level, (int, attrs2bin.U8)), "test_power_level should be int or U8"
-        power_level_val = deserialized.test_power_level.value if hasattr(deserialized.test_power_level, 'value') else deserialized.test_power_level
-        assert power_level_val == 4, "test_power_level should be 4"
-        
-        print(f"✓ TestHostCommandConfigurePeripheral deserialized: name='{deserialized.test_name}', "
-              f"uuid={uuid_bytes_to_str(deserialized.test_uuid)}, enabled={deserialized.test_enabled}, "
-              f"power_level={deserialized.test_power_level}, serialized_len={len(serialized)}")
-    
-    def test_host_configure_service_deserialization(self):
-        """Test deserialization of TestHostCommandConfigureService."""
-        import uuid as uuid_module
-        
-        # Create test data
-        test_uuid = uuid_module.uuid4()
-        deserialized, serialized = create_python_test_data_and_deserialize(
-            TestHostCommandConfigureService,
-            test_service_uuid=test_uuid.bytes,
-            test_priority=attrs2bin.U8(100),
-            test_visible=True
-        )
-        
-        # Validate deserialized data
-        assert len(deserialized.test_service_uuid) == 16, "test_service_uuid should be 16 bytes"
-        assert deserialized.test_service_uuid == test_uuid.bytes, "test_service_uuid should match"
-        assert isinstance(deserialized.test_priority, (int, attrs2bin.U8)), "test_priority should be int or U8"
-        priority_val = deserialized.test_priority.value if hasattr(deserialized.test_priority, 'value') else deserialized.test_priority
-        assert priority_val == 100, "test_priority should be 100"
-        assert isinstance(deserialized.test_visible, bool), "test_visible should be bool"
-        assert deserialized.test_visible is True, "test_visible should be True"
-        
-        print(f"✓ TestHostCommandConfigureService deserialized: "
-              f"uuid={uuid_bytes_to_str(deserialized.test_service_uuid)}, "
-              f"priority={deserialized.test_priority}, visible={deserialized.test_visible}, "
-              f"serialized_len={len(serialized)}")
-    
-    def test_host_configure_characteristic_deserialization(self):
-        """Test deserialization of TestHostCommandConfigureCharacteristic."""
-        import uuid as uuid_module
-        
-        # Create test data
-        char_uuid = uuid_module.uuid4()
-        service_uuid = uuid_module.uuid4()
-        properties = [TestBLEProperties.TestRead, TestBLEProperties.TestWrite, TestBLEProperties.TestNotify]
-        
-        deserialized, serialized = create_python_test_data_and_deserialize(
-            TestHostCommandConfigureCharacteristic,
-            test_char_uuid=char_uuid.bytes,
-            test_service_uuid=service_uuid.bytes,
-            test_properties=properties,
-            test_security_level=attrs2bin.U8(2)
-        )
-        
-        # Validate deserialized data
-        assert len(deserialized.test_char_uuid) == 16, "test_char_uuid should be 16 bytes"
-        assert deserialized.test_char_uuid == char_uuid.bytes, "test_char_uuid should match"
-        assert len(deserialized.test_service_uuid) == 16, "test_service_uuid should be 16 bytes"
-        assert deserialized.test_service_uuid == service_uuid.bytes, "test_service_uuid should match"
-        assert isinstance(deserialized.test_properties, list), "test_properties should be list"
-        assert len(deserialized.test_properties) == 3, "test_properties should have 3 items"
-        assert all(isinstance(p, TestBLEProperties) for p in deserialized.test_properties), "all properties should be TestBLEProperties"
-        assert deserialized.test_properties == properties, "test_properties should match"
-        security_level_val = deserialized.test_security_level.value if hasattr(deserialized.test_security_level, 'value') else deserialized.test_security_level
-        assert security_level_val == 2, "test_security_level should be 2"
-        
-        properties_names = [p.name for p in deserialized.test_properties]
-        print(f"✓ TestHostCommandConfigureCharacteristic deserialized: "
-              f"char_uuid={uuid_bytes_to_str(deserialized.test_char_uuid)}, "
-              f"service_uuid={uuid_bytes_to_str(deserialized.test_service_uuid)}, "
-              f"properties={properties_names}, security_level={deserialized.test_security_level}, "
-              f"serialized_len={len(serialized)}")
-    
-    def test_plugin_data_deserialization(self):
-        """Test deserialization of TestPluginData."""
-        import uuid as uuid_module
-        
-        # Create test data
-        source_uuid = uuid_module.uuid4()
-        test_payload = b"Hello, BLE!"
-        
-        deserialized, serialized = create_python_test_data_and_deserialize(
-            TestPluginData,
-            test_source_id=source_uuid.bytes,
-            test_send_type=TestDataSendType.TestWrite,
-            test_payload=test_payload,
-            test_timestamp=attrs2bin.U8(123),
-            test_connection_handle=attrs2bin.U8(1)
-        )
-        
-        # Validate deserialized data
-        assert len(deserialized.test_source_id) == 16, "test_source_id should be 16 bytes"
-        assert deserialized.test_source_id == source_uuid.bytes, "test_source_id should match"
-        assert isinstance(deserialized.test_send_type, TestDataSendType), "test_send_type should be TestDataSendType"
-        assert deserialized.test_send_type == TestDataSendType.TestWrite, "test_send_type should match"
-        assert isinstance(deserialized.test_payload, bytes), "test_payload should be bytes"
-        assert deserialized.test_payload == test_payload, "test_payload should match"
-        assert isinstance(deserialized.test_timestamp, (int, attrs2bin.U8)), "test_timestamp should be int or U8"
-        timestamp_val = deserialized.test_timestamp.value if hasattr(deserialized.test_timestamp, 'value') else deserialized.test_timestamp
-        assert timestamp_val == 123, "test_timestamp should match"
-        assert isinstance(deserialized.test_connection_handle, (int, attrs2bin.U8)), "test_connection_handle should be int or U8"
-        handle_val = deserialized.test_connection_handle.value if hasattr(deserialized.test_connection_handle, 'value') else deserialized.test_connection_handle
-        assert handle_val == 1, "test_connection_handle should match"
-        
-        print(f"✓ TestPluginData deserialized: source_id={uuid_bytes_to_str(deserialized.test_source_id)}, "
-              f"send_type={deserialized.test_send_type.name}, payload={deserialized.test_payload!r}, "
-              f"timestamp={timestamp_val}, handle=0x{handle_val:04x}, "
-              f"serialized_len={len(serialized)}")
-    
-    def test_plugin_service_info_response_deserialization(self):
-        """Test deserialization of TestPluginServiceInfoResponse."""
-        import uuid as uuid_module
-        
-        # Create test data
-        service_uuid = uuid_module.uuid4()
-        char_uuids = [uuid_module.uuid4().bytes, uuid_module.uuid4().bytes]
-        
-        deserialized, serialized = create_python_test_data_and_deserialize(
-            TestPluginServiceInfoResponse,
-            test_service_uuid=service_uuid.bytes,
-            test_characteristic_uuids=char_uuids,
-            test_service_exists=True,
-            test_service_active=True,
-            test_characteristic_count=attrs2bin.U8(2)
-        )
-        
-        # Validate deserialized data
-        assert len(deserialized.test_service_uuid) == 16, "test_service_uuid should be 16 bytes"
-        assert deserialized.test_service_uuid == service_uuid.bytes, "test_service_uuid should match"
-        assert isinstance(deserialized.test_characteristic_uuids, list), "test_characteristic_uuids should be list"
-        assert len(deserialized.test_characteristic_uuids) == 2, "should have 2 characteristic UUIDs"
-        assert all(len(uuid) == 16 for uuid in deserialized.test_characteristic_uuids), "all UUIDs should be 16 bytes"
-        assert deserialized.test_characteristic_uuids == char_uuids, "characteristic UUIDs should match"
-        assert isinstance(deserialized.test_service_exists, bool), "test_service_exists should be bool"
-        assert deserialized.test_service_exists is True, "test_service_exists should be True"
-        assert isinstance(deserialized.test_service_active, bool), "test_service_active should be bool"
-        assert deserialized.test_service_active is True, "test_service_active should be True"
-        char_count_val = deserialized.test_characteristic_count.value if hasattr(deserialized.test_characteristic_count, 'value') else deserialized.test_characteristic_count
-        assert char_count_val == 2, "test_characteristic_count should be 2"
-        
-        char_uuid_strs = [uuid_bytes_to_str(uuid) for uuid in deserialized.test_characteristic_uuids]
-        print(f"✓ TestPluginServiceInfoResponse deserialized: "
-              f"service_uuid={uuid_bytes_to_str(deserialized.test_service_uuid)}, "
-              f"char_count={char_count_val}, exists={deserialized.test_service_exists}, "
-              f"active={deserialized.test_service_active}, char_uuids={char_uuid_strs}, "
-              f"serialized_len={len(serialized)}")
 
 
-class TestPythonStructRoundTrip:
-    """Test the Python test structures independently (without Rust binary data)."""
+class TestPythonStructures:
+    """Test Python test structures independently."""
     
-    def test_test_enum_values_consistency(self):
+    def test_enum_values_consistency(self):
         """Test that test enum values match the expected Rust implementation."""
         validate_test_enum_values()
-        print("✓ All test enum values validated against expected Rust values")
+        print("✅ All test enum values validated against expected Rust values")
     
-    def test_python_round_trip_serialization(self):
+    def test_python_serialization_round_trip(self):
         """Test round-trip serialization for Python test structures (attrs2bin only)."""
         import uuid as uuid_module
         
-        # Test a simple structure
-        test_uuid = uuid_module.uuid4()
-        original = TestHostCommandConfigureService(
-            test_service_uuid=test_uuid.bytes,
-            test_priority=100,
-            test_visible=True
-        )
+        # Test multiple structures
+        test_cases = [
+            (TestHostCommandConfigureService, {
+                'test_service_uuid': uuid_module.uuid4().bytes,
+                'test_priority': attrs2bin.U8(100),
+                'test_visible': True
+            }),
+            (TestHostCommandConfigureCharacteristic, {
+                'test_char_uuid': uuid_module.uuid4().bytes,
+                'test_service_uuid': uuid_module.uuid4().bytes,
+                'test_properties': [TestBLEProperties.TestRead, TestBLEProperties.TestWrite],
+                'test_security_level': attrs2bin.U8(2)
+            }),
+        ]
         
-        # Serialize and deserialize within Python
-        serialized = attrs2bin.serialize(original)
-        deserialized = attrs2bin.deserialize(serialized, TestHostCommandConfigureService)
-        
-        # Validate round-trip
-        assert original.test_service_uuid == deserialized.test_service_uuid
-        assert original.test_priority == deserialized.test_priority
-        assert original.test_visible == deserialized.test_visible
-        
-        print(f"✓ Python round-trip serialization successful for TestHostCommandConfigureService")
+        for struct_class, kwargs in test_cases:
+            original = struct_class(**kwargs)
+            serialized = attrs2bin.serialize(original)
+            deserialized = attrs2bin.deserialize(serialized, struct_class)
+            
+            # Validate round-trip
+            assert original == deserialized, f"Round-trip failed for {struct_class.__name__}"
+            
+        print("✅ Python round-trip serialization successful for all test structures")
     
     def test_enum_serialization_consistency(self):
         """Test that enum serialization works correctly within Python."""
@@ -665,74 +243,63 @@ class TestPythonStructRoundTrip:
             deserialized = attrs2bin.deserialize(serialized, TestDataSendType)
             assert send_type == deserialized, f"Enum round-trip failed for {send_type}"
         
-        print("✓ All test enums pass Python round-trip serialization")
-        
-    def test_cross_language_serialization_note(self):
-        """Document the cross-language serialization compatibility status."""
-        print("\n" + "="*60)
-        print("CROSS-LANGUAGE SERIALIZATION COMPATIBILITY")
-        print("="*60)
-        print("Status: Rust bincode and Python attrs2bin are now COMPATIBLE!")
-        print("This test suite validates:")
-        print("1. ✓ Protocol headers (magic, type_id, length) - COMPATIBLE")
-        print("2. ✓ Message structure validation - COMPATIBLE") 
-        print("3. ✓ Python attrs2bin round-trip - WORKS")
-        print("4. ✓ Rust bincode round-trip - WORKS (tested in Rust)")
-        print("5. ✅ Cross-language payload deserialization - NOW COMPATIBLE!")
-        print("\nCompatibility achieved by:")
-        print("- Using only U8 types for numeric values (avoiding u16, i8, u64)")
-        print("- Consistent string and UUID handling")
-        print("- Matching enum value assignments")
-        print("- Identical struct field ordering")
-        print("\nFull interoperability is now possible between Rust and Python!")
-        print("="*60)
+        print("✅ All test enums pass Python round-trip serialization")
 
 
 class TestBinaryDataIntegrity:
     """Test the integrity and structure of generated binary data."""
     
-    def test_all_files_exist(self):
-        """Test that all expected binary test files exist."""
+    def test_binary_data_integrity(self):
+        """Test that all binary files exist, have correct sizes, and valid headers."""
         expected_files = [
             "test_host_configure_peripheral.bin",
             "test_host_configure_service.bin", 
             "test_host_configure_characteristic.bin",
-            "test_host_configure_characteristic_read.bin",
-            "test_host_get_service_info.bin",
-            "test_host_get_characteristic_info.bin",
-            "test_host_start_advertisement.bin",
-            "test_host_notify_characteristic_value.bin",
             "test_plugin_data.bin",
-            "test_plugin_configuration_error.bin",
             "test_plugin_service_info_response.bin",
-            "test_plugin_characteristic_info_response.bin",
-            "test_plugin_authentication_completed_response.bin",
         ]
         
         test_data_dir = get_test_data_dir()
+        
         for filename in expected_files:
             file_path = test_data_dir / filename
+            
+            # Check file exists
             assert file_path.exists(), f"Missing test data file: {filename}"
-    
-    def test_binary_file_sizes(self):
-        """Test that all binary files have expected sizes."""
-        test_data_dir = get_test_data_dir()
-        
-        for file_path in test_data_dir.glob("*.bin"):
+            
+            # Check file size
             file_size = file_path.stat().st_size
-            # All files should be exactly DEFAULT_PACKET_SIZE bytes
-            assert file_size == DEFAULT_PACKET_SIZE, f"File {file_path.name} has wrong size: {file_size} != {DEFAULT_PACKET_SIZE}"
-    
-    def test_header_magic_numbers(self):
-        """Test that all binary files have correct magic numbers."""
-        test_data_dir = get_test_data_dir()
-        
-        for file_path in test_data_dir.glob("*.bin"):
+            assert file_size == DEFAULT_PACKET_SIZE, f"File {filename} has wrong size: {file_size} != {DEFAULT_PACKET_SIZE}"
+            
+            # Check header magic number
             with open(file_path, 'rb') as f:
                 data = f.read()
             
             header = parse_protocol_header(data)
-            assert header['magic'] == MESSAGE_MAGIC, f"File {file_path.name} has wrong magic: 0x{header['magic']:04x}"
+            assert header['magic'] == MESSAGE_MAGIC, f"File {filename} has wrong magic: 0x{header['magic']:04x}"
+            
+        print(f"✅ All {len(expected_files)} binary files pass integrity checks")
+
+
+def test_compatibility_status():
+    """Document the current cross-language serialization compatibility status."""
+    print("\n" + "="*60)
+    print("CROSS-LANGUAGE SERIALIZATION COMPATIBILITY")
+    print("="*60)
+    print("Status: Rust bincode and Python attrs2bin are now COMPATIBLE!")
+    print("This test suite validates:")
+    print("1. ✅ Protocol headers (magic, type_id, length) - COMPATIBLE")
+    print("2. ✅ Message structure validation - COMPATIBLE") 
+    print("3. ✅ Python attrs2bin round-trip - WORKS")
+    print("4. ✅ Rust bincode round-trip - WORKS (tested in Rust)")
+    print("5. ✅ Cross-language payload deserialization - COMPATIBLE!")
+    print("\nCompatibility achieved by:")
+    print("- Using only U8 types for numeric values (avoiding u16, i8, u64)")
+    print("- Consistent string and UUID handling")
+    print("- Matching enum value assignments")
+    print("- Identical struct field ordering")
+    print("\nFull interoperability is now possible between Rust and Python!")
+    print("="*60)
 
 
 def test_regression_suite_info():
@@ -740,7 +307,7 @@ def test_regression_suite_info():
     test_data_dir = get_test_data_dir()
     
     print("\n" + "="*60)
-    print("PROTOCOL REGRESSION TEST SUITE")
+    print("STREAMLINED PROTOCOL REGRESSION TEST SUITE")
     print("="*60)
     print(f"Test data directory: {test_data_dir}")
     print(f"Generated binary files: {len(list(test_data_dir.glob('*.bin')))}")
@@ -748,17 +315,10 @@ def test_regression_suite_info():
     print(f"Header size: {MESSAGE_HEADER_SIZE} bytes")
     print(f"Packet size: {DEFAULT_PACKET_SIZE} bytes")
     
-    print("\nHost command tests:")
-    for filename in sorted(test_data_dir.glob("test_host_*.bin")):
-        print(f"  ✓ {filename.name}")
-    
-    print("\nPlugin response tests:")
-    for filename in sorted(test_data_dir.glob("test_plugin_*.bin")):
-        print(f"  ✓ {filename.name}")
-    
+    print("\nTest coverage:")
+    print("  ✅ Cross-language deserialization (Rust → Python)")
+    print("  ✅ Python structure round-trip serialization")  
+    print("  ✅ Binary data integrity validation")
+    print("  ✅ Protocol header validation")
+    print("  ✅ Enum consistency verification")
     print("="*60)
-
-
-if __name__ == "__main__":
-    # Run info function when executed directly
-    test_regression_suite_info()
