@@ -4,7 +4,7 @@ from plugin_host.generated_types import *
 
 from plugin_host.comms import USBHostDevice, USBCommunicationError, uuid_str_to_bytes, serialize_command
 from plugin_host.generated_types import BLEProperties, BluetoothAddressType
-
+from time import sleep
 def main():
     """Main example function"""
     print("=== USB Host Device Example ===\n")
@@ -16,6 +16,7 @@ def main():
     try:
         # Connect to device
         print("Connecting to USB device...")
+        delay = 0.005
         if host.connect():
             print("✓ Connected successfully")
             
@@ -27,11 +28,13 @@ def main():
             )
             print("✓ Peripheral configured")
             
+            sleep(delay)
             # Configure a service
             print("Configuring service...")
             host.configure_service(uuid="87654321-4321-4321-4321-cba987654321")
             print("✓ Service configured")
-            
+
+            sleep(delay)
             # Configure a characteristic with properties
             print("Configuring characteristic...")
             host.configure_characteristic(
@@ -40,6 +43,7 @@ def main():
                 properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
             )
             print("✓ Characteristic configured")
+            sleep(delay)
             
             # # Query service information (this would receive a response)
             # print("Querying service information...")
