@@ -35,9 +35,12 @@ USB Host ←→ Plugin State Machine ←→ BLE Peripheral/Central
 use plugin_state_machine_std::PluginStateMachine;
 use protocol::plugin::plugin::{PluginSender, PluginReceiver};
 use esp32_nimble::BLEDevice;
+use std::time::Duration;
 
-// Initialize communication channels
-let (usb_sender, usb_receiver) = /* USB channel setup */;
+// Initialize communication channels with throttle configuration
+// Throttle parameters: (interval, max_requests_per_interval)
+let throttle_config = (Duration::from_millis(10), 10);
+let (usb_sender, usb_receiver) = /* USB channel setup with throttle */;
 let ble_device = BLEDevice::take();
 
 // Create state machine
@@ -56,11 +59,21 @@ std::thread::spawn(runner);
 
 The state machine processes incoming USB commands using message type IDs for efficient dispatch:
 
-1. **Message Reception**: Receives raw USB data
-2. **Header Validation**: Validates magic number and extracts message type ID
-3. **Type-Based Dispatch**: Routes to appropriate handler based on message type
-4. **Command Processing**: Executes BLE operations
-5. **Response Generation**: Sends responses back over USB
+1. **Message Reception**: Receives raw USB data with throttle protection
+2. **Throttle Check**: Applies rate limiting to prevent buffer overflow
+3. **Header Validation**: Validates magic number and extracts message type ID
+4. **Type-Based Dispatch**: Routes to appropriate handler based on message type
+5. **Command Processing**: Executes BLE operations
+6. **Response Generation**: Sends responses back over USB
+
+#### Data Throttling
+
+The state machine implements input throttling to ensure stable data processing:
+
+- **Rate Limiting**: Configurable throttle with interval and max requests per interval
+- **Overflow Protection**: Prevents buffer overflow by dropping excess messages
+- **Logging**: Warns when throttle limit is reached for debugging
+- **Configuration**: Set via USB processor initialization (e.g., 10 requests per 10ms)
 
 ## Supported Commands
 
@@ -137,6 +150,7 @@ The crate integrates deeply with the ESP32-Nimble BLE stack:
 - **Memory Efficient**: Uses heapless collections for embedded compatibility
 - **Minimal Allocations**: Stack-based processing where possible
 - **Async-Ready**: Compatible with ESP-IDF async runtime
+- **Data Throttling**: Input rate limiting to prevent buffer overflow and ensure stable processing
 
 ## Dependencies
 
