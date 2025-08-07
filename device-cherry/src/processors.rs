@@ -25,6 +25,7 @@ use esp_idf_sys::cherry_device::{
 };
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
+use throttle::Throttle;
 
 use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
@@ -286,6 +287,7 @@ impl CdcAcmDevice<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
+        throttle_info: (Duration, usize),
     ) -> Result<(PluginSender<SIZE>, PluginReceiver<SIZE>)> {
         let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
             sync_channel(channel_buffer_size);
@@ -316,9 +318,13 @@ impl CdcAcmDevice<POSTINIT> {
 
         // Reading from the usb endpoint
         scope.spawn(move || {
+            let mut throttle = Throttle::new(throttle_info.0, throttle_info.1);
             loop {
                 let data = block_on(SIGNAL.wait());
-
+                if let Err(_) = throttle.accept() {
+                    ::log::warn!("Throttle limit reached, skipping data processing");
+                    continue;
+                }
                 match from_usb.0.try_send(data) {
                     Ok(_) => {}
                     Err(e) => {

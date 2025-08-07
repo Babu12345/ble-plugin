@@ -26,6 +26,7 @@ ringbuffer = { version = "0.15.0", default-features = false }
 embassy-sync = "0.7.0"
 esp-idf-svc = { version = "0.51", default-features = false }
 thiserror-no-std = "2.0.2"
+throttle = "0.1.0"
 
 [[package.metadata.esp-idf-sys.extra_components]]
 component_dirs = "components/cherryusb"

@@ -37,7 +37,9 @@ fn main() -> Result<()> {
         .sleep(Duration::from_millis(500));
 
     std::thread::scope(|scope| {
-        let usb_processors = usb_device.processors(scope, 20).unwrap();
+        let usb_processors = usb_device
+            .processors(scope, 20, (Duration::from_millis(10), 10))
+            .unwrap();
         scope.spawn(
             PluginStateMachine::new(
                 usb_processors.0,
