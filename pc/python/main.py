@@ -16,8 +16,8 @@ def main():
     try:
         # Connect to device
         print("Connecting to USB device...")
-        delay = 0.005
-        if host.connect():
+        delay = 0.5
+        if host.connect(sleep_time=1.0):
             print("✓ Connected successfully")
             
             # Configure a peripheral
