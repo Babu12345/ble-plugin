@@ -282,7 +282,7 @@ impl PluginStateMachine {
     }
 
     /// Throttle information for blink indication
-    const THROTTLE_INFO: (Duration, usize) = (Duration::from_millis(500), 1);
+    const THROTTLE_INFO: (Duration, usize) = (Duration::from_secs(1), 1);
 
     /// Extract message type ID from received USB data with validation
     ///
@@ -533,7 +533,12 @@ impl PluginStateMachine {
                 {
                     match indicator.try_lock() {
                         Ok(mut indicator) => {
-                            if let Err(e) = indicator.toggle() {
+                            if let Err(e) = {
+                                match i % 2 {
+                                    0 => indicator.set_low(),
+                                    _ => indicator.set_high(),
+                                }
+                            } {
                                 log::error!("Failed to toggle GPIO: {:?}", e);
                                 return;
                             }
