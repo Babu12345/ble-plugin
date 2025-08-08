@@ -35,3 +35,6 @@ uuid = { version = "1.17.0", default-features = false }
 # Error library for displaying errors
 thiserror-no-std = "2.0.2"
 throttle = "0.1.0"
+
+# Thread pool for managing concurrent tasks
+threadpool = "1.8.1"
