@@ -283,7 +283,7 @@ class USBHostDevice:
         self.usb_device = USBDevice(vendor_id, product_id)
         self._connected = False
     
-    def connect(self) -> bool:
+    def connect(self, sleep_time: float = 0.0) -> bool:
         """
         Connect to the USB plugin device
         
@@ -295,6 +295,7 @@ class USBHostDevice:
         """
         result = self.usb_device.connect()
         self._connected = result
+        time.sleep(sleep_time)
         return result
     
     def disconnect(self) -> None:
