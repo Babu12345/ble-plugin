@@ -1014,6 +1014,7 @@ dependencies = [
  "log",
  "protocol",
  "thiserror-no-std",
+ "throttle",
  "uuid",
 ]
 
@@ -1398,6 +1399,12 @@ checksum = "a3ad459d94dd517257cc96add8a43190ee620011bb6e6cdc82dafd97dfafafea"
 dependencies = [
  "thiserror-impl-no-std",
 ]
+
+[[package]]
+name = "throttle"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b7d2d6a110f96a589b87d0f6c46d4048c84a01a7b81a2dcc97656694ace28b1"
 
 [[package]]
 name = "uncased"

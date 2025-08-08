@@ -129,6 +129,7 @@ use protocol::io_types::HostCommandNotifyCharacteristicValue;
 use protocol::io_types::PluginAuthenticationCompletedResponse;
 use protocol::io_types::PluginData;
 use protocol::MESSAGE_HEADER_SIZE;
+use throttle::Throttle;
 
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -217,6 +218,10 @@ pub struct PluginStateMachine {
 
     /// Output pin for LED control (e.g., status indication)
     indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>,
+
+    /// Throttle for blink indication to prevent excessive blinking
+    /// and errors
+    blink_throttle: Throttle,
 }
 
 /// Enum representing the possible states of the blink indication
@@ -272,8 +277,12 @@ impl PluginStateMachine {
             ble_device,
             server: None,
             metadata: Default::default(),
+            blink_throttle: Throttle::new(Self::THROTTLE_INFO.0, Self::THROTTLE_INFO.1),
         }
     }
+
+    /// Throttle information for blink indication
+    const THROTTLE_INFO: (Duration, usize) = (Duration::from_millis(500), 1);
 
     /// Extract message type ID from received USB data with validation
     ///
@@ -509,16 +518,25 @@ impl PluginStateMachine {
     }
 
     fn blink_indication(&mut self, state: BlinkState) {
+        match self.blink_throttle.accept() {
+            Ok(_) => {}
+            Err(_) => {
+                log::warn!("Blink indication throttling limit reached, skipping blink");
+                return;
+            }
+        }
+
         let indicator = self.indicator.clone();
         std::thread::spawn(move || {
-            for i in 0..2 {
-                let indicator = indicator
-                    .lock()
-                    .map_err(|_| {
-                        log::error!("Failed to lock GPIO for blinking indication");
-                    })
-                    .ok();
-                if let Some(mut indicator) = indicator {
+            let mut indicator = indicator
+                .try_lock()
+                .map_err(|e| {
+                    log::error!("Failed to lock GPIO for blinking indication: {:?}", e);
+                })
+                .ok();
+            if let Some(ref mut indicator) = indicator {
+                log::error!("Failed to aquire lock GPIO for blink indication");
+                for i in 0..2 {
                     if let Err(e) = indicator.toggle() {
                         log::error!("Failed to set GPIO low: {:?}", e);
                     }

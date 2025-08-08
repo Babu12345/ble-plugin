@@ -32,7 +32,7 @@ use crate::utils::{
 };
 use crate::{AlignedBuffer, concat_n_arrays};
 use crate::{Error, Result};
-use lib_utils::mk_static;
+use lib_utils::{MatchSliceLengths, mk_static};
 
 use std::ptr;
 use std::sync::LazyLock;
@@ -48,7 +48,6 @@ const SIZE: usize = DEFAULT_PACKET_SIZE;
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 static mut READ_BUFFER: AlignedBuffer<DEFAULT_PACKET_SIZE> = AlignedBuffer::new();
-static mut INPUT: [u8; SIZE] = [0; SIZE];
 
 /// Sending and receiving type
 pub type TSendAndReceive = [u8; SIZE];
@@ -138,12 +137,8 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 #[unsafe(no_mangle)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
     #![allow(static_mut_refs)]
-    unsafe {
-        INPUT.fill(0);
-        (&mut INPUT[..nbytes as usize]).copy_from_slice(&READ_BUFFER.get_data()[..nbytes as usize]);
-    }
 
-    SIGNAL.signal(unsafe { INPUT });
+    SIGNAL.signal(unsafe { READ_BUFFER.get_data()[..nbytes as usize].match_size(0x00) });
     unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32) };
 }
 
