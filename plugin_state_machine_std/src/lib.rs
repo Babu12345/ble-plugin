@@ -528,28 +528,34 @@ impl PluginStateMachine {
 
         let indicator = self.indicator.clone();
         std::thread::spawn(move || {
-            let mut indicator = indicator
-                .try_lock()
-                .map_err(|e| {
-                    log::error!("Failed to lock GPIO for blinking indication: {:?}", e);
-                })
-                .ok();
-            if let Some(ref mut indicator) = indicator {
-                log::error!("Failed to aquire lock GPIO for blink indication");
-                for i in 0..2 {
-                    if let Err(e) = indicator.toggle() {
-                        log::error!("Failed to set GPIO low: {:?}", e);
-                    }
-                    match state {
-                        BlinkState::Success => {
-                            if i == 0 {
-                                std::thread::sleep(Duration::from_millis(50));
+            for i in 0..4 {
+                // Scope the lock to release it before sleeping
+                {
+                    match indicator.try_lock() {
+                        Ok(mut indicator) => {
+                            if let Err(e) = indicator.toggle() {
+                                log::error!("Failed to toggle GPIO: {:?}", e);
+                                return;
                             }
                         }
-                        BlinkState::Failure => {
-                            std::thread::sleep(Duration::from_millis(25));
+                        Err(e) => {
+                            log::error!(
+                                "Failed to acquire lock for GPIO blink indication: {:?}",
+                                e
+                            );
+                            return;
                         }
-                    };
+                    }
+                }
+
+                // Sleep AFTER releasing the lock
+                match state {
+                    BlinkState::Success => {
+                        std::thread::sleep(Duration::from_millis(if i == 0 { 50 } else { 5 }));
+                    }
+                    BlinkState::Failure => {
+                        std::thread::sleep(Duration::from_millis(25));
+                    }
                 }
             }
         });
