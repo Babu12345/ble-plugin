@@ -133,7 +133,10 @@ use throttle::Throttle;
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
 use std::time::Duration;
 
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
@@ -222,6 +225,8 @@ pub struct PluginStateMachine {
     /// Throttle for blink indication to prevent excessive blinking
     /// and errors
     blink_throttle: Throttle,
+    /// Flag to track if a blink is currently in progress
+    blink_in_progress: Arc<AtomicBool>,
 }
 
 /// Enum representing the possible states of the blink indication
@@ -278,11 +283,12 @@ impl PluginStateMachine {
             server: None,
             metadata: Default::default(),
             blink_throttle: Throttle::new(Self::THROTTLE_INFO.0, Self::THROTTLE_INFO.1),
+            blink_in_progress: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    /// Throttle information for blink indication
-    const THROTTLE_INFO: (Duration, usize) = (Duration::from_secs(1), 1);
+    /// Throttle information for blink indication - allow 5 blinks per second
+    const THROTTLE_INFO: (Duration, usize) = (Duration::from_millis(200), 1);
 
     /// Extract message type ID from received USB data with validation
     ///
@@ -518,42 +524,52 @@ impl PluginStateMachine {
     }
 
     fn blink_indication(&mut self, state: BlinkState) {
+        // Check if a blink is already in progress
+        if self.blink_in_progress.load(Ordering::Relaxed) {
+            log::debug!("Blink already in progress, skipping");
+            return;
+        }
+
+        // Apply throttling
         match self.blink_throttle.accept() {
             Ok(_) => {}
             Err(_) => {
-                log::warn!("Blink indication throttling limit reached, skipping blink");
+                log::debug!("Blink indication throttled");
                 return;
             }
         }
 
+        // Set the flag to indicate blink is in progress
+        self.blink_in_progress.store(true, Ordering::Relaxed);
+
         let indicator = self.indicator.clone();
+        let blink_flag = self.blink_in_progress.clone();
+
+        // Spawn detached thread to handle the blink
         std::thread::spawn(move || {
             for i in 0..4 {
-                // Scope the lock to release it before sleeping
-                {
-                    match indicator.try_lock() {
-                        Ok(mut indicator) => {
-                            if let Err(e) = {
-                                match i % 2 {
-                                    0 => indicator.set_low(),
-                                    _ => indicator.set_high(),
-                                }
-                            } {
-                                log::error!("Failed to toggle GPIO: {:?}", e);
-                                return;
+                // Try to acquire lock non-blocking
+                match indicator.try_lock() {
+                    Ok(mut indicator) => {
+                        if let Err(e) = {
+                            match i % 2 {
+                                0 => indicator.set_low(),
+                                _ => indicator.set_high(),
                             }
-                        }
-                        Err(e) => {
-                            log::error!(
-                                "Failed to acquire lock for GPIO blink indication: {:?}",
-                                e
-                            );
+                        } {
+                            log::error!("Failed to toggle GPIO: {:?}", e);
+                            blink_flag.store(false, Ordering::Relaxed);
                             return;
                         }
                     }
+                    Err(_) => {
+                        log::debug!("GPIO lock busy, skipping blink");
+                        blink_flag.store(false, Ordering::Relaxed);
+                        return;
+                    }
                 }
 
-                // Sleep AFTER releasing the lock
+                // Sleep after releasing the lock
                 match state {
                     BlinkState::Success => {
                         std::thread::sleep(Duration::from_millis(if i == 0 { 50 } else { 5 }));
@@ -563,6 +579,9 @@ impl PluginStateMachine {
                     }
                 }
             }
+
+            // Reset flag when done
+            blink_flag.store(false, Ordering::Relaxed);
         });
     }
 
