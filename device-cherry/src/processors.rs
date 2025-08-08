@@ -137,7 +137,6 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 #[unsafe(no_mangle)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
     #![allow(static_mut_refs)]
-
     SIGNAL.signal(unsafe { READ_BUFFER.get_data()[..nbytes as usize].match_size(0x00) });
     unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32) };
 }
