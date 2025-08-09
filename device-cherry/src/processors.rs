@@ -172,21 +172,15 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
     // Switch buffer immediately to prepare for next read
     let new_buffer = 1 - current;
     ACTIVE_BUFFER.store(new_buffer, Ordering::Release);
-    
+
     // Restart read with explicit buffer selection to avoid race
     unsafe { restart_usb_read_with_buffer(busid, ep, new_buffer) };
-    
+
     // Process the received data after ensuring continuity
-    // Bounds check to prevent buffer overrun panic
+    // Make sure that data length is within bounds
     let data_len = core::cmp::min(nbytes as usize, SIZE);
-    let buffer_data = active_buffer.get_data();
-    if data_len <= buffer_data.len() {
-        let data_slice = buffer_data[..data_len].match_size(0x00);
-        SIGNAL.signal(data_slice);
-    } else {
-        // Log error but don't panic
-        ::log::error!("Buffer overrun attempt: data_len={}, buffer_len={}", data_len, buffer_data.len());
-    }
+    let data_slice = active_buffer.get_data()[..data_len].match_size(0x00);
+    SIGNAL.signal(data_slice);
 }
 
 // Race-free USB read restart with explicit buffer selection
@@ -244,15 +238,14 @@ unsafe fn restart_usb_read_with_delay(busid: u8, ep: u8) {
         retry_count += 1;
         if retry_count >= MAX_RETRIES {
             // Log failure but don't panic - continue operation
-            ::log::warn!("Failed to restart USB read after {} retries", MAX_RETRIES);
             break;
         }
 
         // More aggressive backoff for high-speed scenarios
         let delay_us = match retry_count {
-            1..=3 => 10,  // Very short delay for first few retries
-            4..=6 => 50,  // Medium delay
-            _ => 100,     // Longer delay for persistent issues
+            1..=3 => 10, // Very short delay for first few retries
+            4..=6 => 50, // Medium delay
+            _ => 100,    // Longer delay for persistent issues
         };
         std::thread::sleep(Duration::from_micros(delay_us));
     }
@@ -525,12 +518,17 @@ impl CdcAcmDevice<POSTINIT> {
                 packet_count += 1;
 
                 // More aggressive throttle bypass for high-speed scenarios
-                if packet_count > 100 {  // Increased from 10 to 100
+                if packet_count > 100 {
+                    // Increased from 10 to 100
                     if let Err(_) = throttle.accept() {
                         dropped_packets += 1;
                         // Log periodically but don't spam
                         if dropped_packets % 1000 == 0 {
-                            ::log::debug!("Throttle dropped {} packets out of {}", dropped_packets, packet_count);
+                            ::log::debug!(
+                                "Throttle dropped {} packets out of {}",
+                                dropped_packets,
+                                packet_count
+                            );
                         }
                         continue;
                     }
@@ -541,7 +539,11 @@ impl CdcAcmDevice<POSTINIT> {
                     Ok(_) => {
                         // Reset dropped packet counter on successful sends
                         if dropped_packets > 0 && packet_count % 1000 == 0 {
-                            ::log::debug!("Channel processing {} packets, {} dropped", packet_count, dropped_packets);
+                            ::log::debug!(
+                                "Channel processing {} packets, {} dropped",
+                                packet_count,
+                                dropped_packets
+                            );
                         }
                     }
                     Err(std::sync::mpsc::TrySendError::Full(_)) => {

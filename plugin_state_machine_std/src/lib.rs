@@ -498,7 +498,6 @@ impl PluginStateMachine {
                                 log::error!("Failed to handle command {:?}: {:?}", message_type, e);
                                 self.blink_indication(BlinkState::Failure);
                             } else {
-                                log::info!("Successfully handled command: {:?}", message_type);
                                 self.blink_indication(BlinkState::Success);
                             }
                         }
