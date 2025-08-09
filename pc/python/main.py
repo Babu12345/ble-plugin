@@ -29,6 +29,13 @@ def main():
             print("✓ Peripheral configured")
             
             sleep(delay)
+            
+            # Configure peripheral security
+            print("Configuring peripheral security...")
+            host.configure_peripheral_security(passkey=123456)
+            print("✓ Security configured with passkey: 123456")
+            
+            sleep(delay)
             # Configure a service
             print("Configuring service...")
             host.configure_service(uuid="87654321-4321-4321-4321-cba987654321")

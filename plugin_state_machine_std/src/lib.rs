@@ -588,11 +588,15 @@ impl PluginStateMachine {
             cmd.addr
         );
 
-        self.ble_device.set_own_addr_type(OwnAddrType::Random);
-        self.ble_device.set_rnd_addr(cmd.addr).map_err(|_| {
-            log::error!("Failed to set random address for BLE device");
-            StateMachineError::UnableToSetRNDAddress
-        })?;
+        // If we haven't already initialized then we can set the BLE device address
+        // otherwise we cannot without resetting the BLE device
+        if self.metadata.ble_name.is_none() {
+            self.ble_device.set_own_addr_type(OwnAddrType::Random);
+            self.ble_device.set_rnd_addr(cmd.addr).map_err(|_| {
+                log::error!("Failed to set random address for BLE device");
+                StateMachineError::UnableToSetRNDAddress
+            })?;
+        }
 
         self.metadata.ble_name = Some(cmd.name.clone());
         self.server = Some(self.ble_device.get_server());

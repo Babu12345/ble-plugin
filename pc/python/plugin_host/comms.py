@@ -474,6 +474,23 @@ class USBHostDevice:
         )
         return usb_send_and_receive(self.usb_device, cmd, PluginCharacteristicInfoResponse)
     
+    def configure_peripheral_security(self, passkey: int) -> None:
+        """
+        Configure peripheral security settings
+        
+        Args:
+            passkey: 6-digit numeric passkey for pairing (e.g., 123456)
+            
+        Raises:
+            USBCommunicationError: If sending fails
+            ValueError: If passkey is not a valid 6-digit number
+        """
+        if not (0 <= passkey <= 999999):
+            raise ValueError("Passkey must be a 6-digit number between 000000 and 999999")
+        
+        cmd = HostCommandConfigurePeripheralSecurity(passkey=passkey)
+        usb_send_command(self.usb_device, cmd)
+    
     def start_advertisement(self, allow_multi_connect: bool = False) -> None:
         """
         Start advertisement
