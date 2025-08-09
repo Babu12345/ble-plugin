@@ -129,6 +129,14 @@ pub enum StateMachineError {
     /// indicate protocol version mismatch or data corruption.
     #[error("Unknown message type ID - possible protocol version mismatch")]
     UnknownMessageType,
+
+    /// Failure to set the random address for the BLE device
+    #[error("Failed to set random address")]
+    UnableToSetRNDAddress,
+
+    /// Invalid passkey length provided for BLE pairing
+    #[error("Invalid passkey length - must be 6 digits")]
+    InvalidPasskeyLength,
 }
 
 /// Convenient result type for plugin state machine operations

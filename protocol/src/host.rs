@@ -75,13 +75,12 @@ mod tests {
     use crate::IO;
     use crate::{io_types::HostCommandConfigurePeripheral, DEFAULT_PACKET_SIZE};
     use heapless::String;
-    use uuid::Uuid;
 
     #[test]
     fn test_std_encoding_and_decoding() {
         let cmd = HostCommandConfigurePeripheral {
             name: String::from_str("Hello").unwrap(),
-            uuid: Uuid::from_u128(0x01),
+            addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
         };
         let data: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
         let decoded_cmd: HostCommandConfigurePeripheral =
@@ -97,7 +96,7 @@ mod tests {
     fn test_no_std_encoding_and_decoding() {
         let cmd = HostCommandConfigurePeripheral {
             name: String::from_str("Hello").unwrap(),
-            uuid: Uuid::from_u128(0x01),
+            addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
         };
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
         cmd.to_bytes_in_slice(&mut buffer).unwrap();

@@ -54,7 +54,7 @@ fn main() -> anyhow::Result<()> {
 
         scope.spawn(move || loop {
             io.0.send(HostCommandConfigurePeripheral {
-                uuid: unsafe { random_uuid() },
+                addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                 name: String::from_str("Portrait").unwrap(),
             })
             .ok();

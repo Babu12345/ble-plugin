@@ -139,6 +139,9 @@ pub enum MessageTypeId {
     /// Send notification/indication to connected BLE client
     HostCommandNotifyCharacteristicValue = 0x08,
 
+    /// Configure BLE security settings (pairing, bonding, passkey, etc.)
+    HostCommandConfigurePeripheralSecurity = 0x09,
+
     // Plugin Responses (0x80+)
     /// Data forwarded from BLE client to BLE plugin
     PluginData = 0x80,

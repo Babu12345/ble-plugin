@@ -23,8 +23,16 @@ pub mod host {
     pub struct HostCommandConfigurePeripheral {
         /// Peripheral name
         pub name: String<MAX_NAME_SIZE>,
-        /// Peripheral UUID
-        pub uuid: Uuid,
+        /// Peripheral addr
+        pub addr: [u8; 6],
+    }
+
+    /// Host command. Configure peripheral
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandConfigurePeripheralSecurity)]
+    pub struct HostCommandConfigurePeripheralSecurity {
+        /// Passkey for pairing (6 digit numeric)
+        pub passkey: u32,
     }
 
     /// Host command. Configure service

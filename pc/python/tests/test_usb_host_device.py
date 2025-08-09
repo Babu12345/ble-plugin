@@ -64,17 +64,16 @@ class TestUSBHostDevice:
     def test_configure_peripheral(self, mock_send) -> None:
         """Test configure_peripheral method"""
         name = "TestDevice"
-        uuid = "12345678-1234-1234-1234-123456789abc"
-        uuid_bytes = uuid_str_to_bytes(uuid)
+        addr = [0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]  # MAC address as list of 6 bytes
         
-        self.host_device.configure_peripheral(name, uuid)
+        self.host_device.configure_peripheral(name, addr)
         
         mock_send.assert_called_once()
         args, kwargs = mock_send.call_args
         command = args[1]  # Second argument is the command
         assert isinstance(command, HostCommandConfigurePeripheral)
         assert command.name == name
-        assert command.uuid == uuid_bytes
+        assert command.addr == addr
     
     @patch('plugin_host.comms.usb_send_and_receive')
     def test_get_service_info(self, mock_send_receive) -> None:

@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "24d920db081b70ae56088f42ace0c10402adb4251e994094b9939ca5904a590e"
+PROTOCOL_HASH = "511a6dc8ec5cd5b1727112b3233d2804c60305feeb6f9ed9cc52aa75872a2ea3"
 
 # ==================== CONSTANTS ====================
 
@@ -64,6 +64,8 @@ class MessageTypeId(Enum):
     HostCommandStartAdvertisement: attrs2bin.U8 = 0x07
     # Send notification/indication to connected BLE client
     HostCommandNotifyCharacteristicValue: attrs2bin.U8 = 0x08
+    # Configure BLE security settings (pairing, bonding, passkey, etc.)
+    HostCommandConfigurePeripheralSecurity: attrs2bin.U8 = 0x09
     # Data forwarded from BLE client to BLE plugin
     PluginData: attrs2bin.U8 = 0x80
     # Configuration error response from plugin
@@ -138,10 +140,19 @@ class HostCommandConfigurePeripheral:
     
     Attributes:
         name:Peripheral name
-        uuid:Peripheral UUID
+        addr:Peripheral addr
     """
     name: str
-    uuid: bytes
+    addr: List[attrs2bin.U8]
+
+@attr.s(auto_attribs=True)
+class HostCommandConfigurePeripheralSecurity:
+    """Host command. Configure peripheral
+    
+    Attributes:
+        passkey:Passkey for pairing (6 digit numeric)
+    """
+    passkey: int
 
 @attr.s(auto_attribs=True)
 class HostCommandConfigureService:
@@ -283,6 +294,7 @@ class PluginAuthenticationCompletedResponse:
 # Map message types to their type IDs
 MESSAGE_TYPE_MAP = {
     HostCommandConfigurePeripheral: MessageTypeId.HostCommandConfigurePeripheral,
+    HostCommandConfigurePeripheralSecurity: MessageTypeId.HostCommandConfigurePeripheralSecurity,
     HostCommandConfigureService: MessageTypeId.HostCommandConfigureService,
     HostCommandConfigureCharacteristic: MessageTypeId.HostCommandConfigureCharacteristic,
     HostCommandConfigureCharacteristicRead: MessageTypeId.HostCommandConfigureCharacteristicRead,

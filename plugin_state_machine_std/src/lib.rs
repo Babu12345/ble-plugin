@@ -117,6 +117,7 @@ pub mod errors;
 
 use errors::Result;
 use errors::StateMachineError;
+use esp32_nimble::enums::OwnAddrType;
 use esp32_nimble::BLEAddress;
 use esp32_nimble::BLEAddressType;
 use esp_idf_svc::hal::gpio::AnyOutputPin;
@@ -125,6 +126,7 @@ use esp_idf_svc::hal::gpio::PinDriver;
 use esp_idf_svc::hal::task::block_on;
 use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
+use protocol::io_types::HostCommandConfigurePeripheralSecurity;
 use protocol::io_types::HostCommandNotifyCharacteristicValue;
 use protocol::io_types::PluginAuthenticationCompletedResponse;
 use protocol::io_types::PluginData;
@@ -491,6 +493,18 @@ impl PluginStateMachine {
                                         )),
                                     }
                                 }
+
+                                MessageTypeId::HostCommandConfigurePeripheralSecurity => {
+                                    match data.decode::<HostCommandConfigurePeripheralSecurity>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_configure_peripheral_security(cmd)
+                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandConfigurePeripheralSecurity",
+                                        )),
+                                    }
+                                }
                                 _ => Err(StateMachineError::UnhandledMessageType(message_type)),
                             };
 
@@ -560,7 +574,7 @@ impl PluginStateMachine {
                         std::thread::sleep(Duration::from_millis(if i == 0 { 50 } else { 5 }));
                     }
                     BlinkState::Failure => {
-                        std::thread::sleep(Duration::from_millis(25));
+                        std::thread::sleep(Duration::from_millis(40));
                     }
                 }
             }
@@ -569,22 +583,41 @@ impl PluginStateMachine {
 
     fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) -> Result<()> {
         log::info!(
-            "Configuring peripheral with name: '{}', UUID: {}",
+            "Configuring peripheral with name: '{}', UUID: {:?}",
             cmd.name,
-            cmd.uuid
+            cmd.addr
         );
 
-        log::debug!("Setting up BLE security configuration");
-        self.ble_device
-            .security()
-            .set_auth(AuthReq::all())
-            .set_passkey(123456)
-            .set_io_cap(SecurityIOCap::DisplayOnly)
-            .resolve_rpa();
+        self.ble_device.set_own_addr_type(OwnAddrType::Random);
+        self.ble_device.set_rnd_addr(cmd.addr).map_err(|_| {
+            log::error!("Failed to set random address for BLE device");
+            StateMachineError::UnableToSetRNDAddress
+        })?;
 
         self.metadata.ble_name = Some(cmd.name.clone());
         self.server = Some(self.ble_device.get_server());
         log::info!("Successfully configured peripheral '{}'", cmd.name);
+        Ok(())
+    }
+
+    fn handle_configure_peripheral_security(
+        &mut self,
+        cmd: HostCommandConfigurePeripheralSecurity,
+    ) -> Result<()> {
+        log::debug!("Setting up BLE security configuration");
+
+        if cmd.passkey > 999999 {
+            log::error!("Invalid passkey: must be a 6-digit number");
+            return Err(StateMachineError::InvalidPasskeyLength);
+        }
+
+        self.ble_device
+            .security()
+            .set_auth(AuthReq::all())
+            .set_passkey(cmd.passkey)
+            .set_io_cap(SecurityIOCap::DisplayOnly)
+            .resolve_rpa();
+
         Ok(())
     }
 

@@ -11,7 +11,7 @@ def uuid_str_to_bytes(uuid_str: str) -> bytes:
     return uuid_obj.bytes
 
 def test_type_serialization() -> None:
-    cmd = HostCommandConfigurePeripheral(uuid=uuid_str_to_bytes("12300000-0000-0000-0000-000000000000"), name="Default peripheral")
+    cmd = HostCommandConfigurePeripheral(addr=[0x12, 0x30, 0x00, 0x00, 0x00, 0x00], name="Default peripheral")
     serialized = attrs2bin.serialize(cmd)
     deserialized = attrs2bin.deserialize(serialized, HostCommandConfigurePeripheral)
     assert cmd == deserialized, "Peripheral configuration serialization"

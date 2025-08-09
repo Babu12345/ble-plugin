@@ -308,12 +308,11 @@ mod tests {
     #[test]
     fn test_host_command_serialization_with_header() {
         use heapless::String;
-        use uuid::Uuid;
 
         // Test HostCommandConfigurePeripheral serialization
         let cmd = HostCommandConfigurePeripheral {
             name: String::try_from("TestDevice").expect("Should create string"),
-            uuid: Uuid::nil(), // Use nil UUID for testing
+            addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
         };
 
         let serialized: [u8; DEFAULT_PACKET_SIZE] =

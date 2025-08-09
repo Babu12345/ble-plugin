@@ -373,18 +373,18 @@ class USBHostDevice:
     
     # Host Command Methods
     
-    def configure_peripheral(self, name: str, uuid: str) -> None:
+    def configure_peripheral(self, name: str, addr: list) -> None:
         """
         Configure a peripheral device
         
         Args:
             name: Peripheral name (max 32 characters)
-            uuid: Peripheral UUID as string
+            addr: Peripheral MAC address as list of 6 bytes
             
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigurePeripheral(name=name, uuid=uuid_str_to_bytes(uuid))
+        cmd = HostCommandConfigurePeripheral(name=name, addr=addr)
         usb_send_command(self.usb_device, cmd)
     
     def configure_service(self, uuid: str) -> None:

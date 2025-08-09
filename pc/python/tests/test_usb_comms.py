@@ -27,7 +27,7 @@ def test_command_serialization_with_message_header() -> None:
     # Test HostCommandConfigurePeripheral
     cmd = HostCommandConfigurePeripheral(
         name="TestDevice",
-        uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc")
+        addr=[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]  # MAC address as list of 6 bytes
     )
     
     # Serialize command
