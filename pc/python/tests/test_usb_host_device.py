@@ -194,4 +194,4 @@ class TestUSBHostDevice:
         mock_send.side_effect = USBCommunicationError("Test error")
         
         with pytest.raises(USBCommunicationError, match="Test error"):
-            self.host_device.configure_peripheral("test", "12345678-1234-1234-1234-123456789abc")
+            self.host_device.configure_peripheral("test", [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])

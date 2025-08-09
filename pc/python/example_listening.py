@@ -44,7 +44,7 @@ def demonstrate_basic_listening():
             # Send some commands that might generate responses
             print("\n📤 Sending commands to potentially generate responses...")
             try:
-                host.configure_peripheral("ListenerDemo", "demo-uuid-123")
+                host.configure_peripheral("ListenerDemo", [0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])
                 host.configure_service("service-uuid-456")
                 
                 # This should generate a response
@@ -279,7 +279,7 @@ def demonstrate_combined_listening_and_handling():
             # Send some commands
             print(f"\n📤 Sending commands...")
             try:
-                host.configure_peripheral("CombinedDemo", "combined-uuid")
+                host.configure_peripheral("CombinedDemo", [0xC0, 0xDE, 0xCA, 0xFE, 0x56, 0x78])
                 host.configure_service("combined-service")
                 host.start_advertisement()
             except USBCommunicationError as e:

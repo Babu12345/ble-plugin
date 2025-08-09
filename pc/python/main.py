@@ -24,7 +24,7 @@ def main():
             print("Configuring peripheral...")
             host.configure_peripheral(
                 name="Example Peripheral",
-                uuid="a1a2a3a4-b1b2-c1c2-d1d2-d3d4d5d6d7d8"
+                addr=[0xA1, 0xA2, 0xA3, 0xA4, 0xB1, 0xB2]
             )
             print("✓ Peripheral configured")
             

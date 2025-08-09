@@ -24,7 +24,7 @@ Example Usage:
     
     # Basic configuration example
     with USBHostDevice() as device:
-        device.configure_peripheral("MyDevice", "12345678-1234-1234-1234-123456789abc")
+        device.configure_peripheral("MyDevice", [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
         device.configure_service("87654321-4321-4321-4321-cba987654321")
         device.configure_characteristic(
             "11111111-2222-3333-4444-555555555555",
@@ -42,7 +42,7 @@ Example Usage:
     
     with USBHostDevice() as device:
         # Configure the BLE peripheral
-        device.configure_peripheral("SensorDevice", "12345678-1234-1234-1234-123456789abc")
+        device.configure_peripheral("SensorDevice", [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
         device.configure_service("temperature-service-uuid")
         device.configure_characteristic(
             "temperature-char-uuid",
