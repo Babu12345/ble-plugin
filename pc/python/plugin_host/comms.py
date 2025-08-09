@@ -65,25 +65,86 @@ class USBDevice:
             self.device = None
 
     def send_data(self, data: bytes, timeout: int = USB_TIMEOUT_MS) -> int:
-        """Send raw bytes to the USB device"""
+        """Send raw bytes to the USB device with retry logic for I/O errors"""
         if not self.device:
             raise USBCommunicationError("Device not connected")
         
-        try:
-            return self.device.write(self.endpoint_out, data, timeout)
-        except Exception as e:
-            raise USBCommunicationError(f"Failed to send data: {e}")
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count <= max_retries:
+            try:
+                return self.device.write(self.endpoint_out, data, timeout)
+            except Exception as e:
+                error_str = str(e).lower()
+                
+                # Check for specific I/O error patterns
+                if any(pattern in error_str for pattern in ['errno 5', 'input/output error', 'i/o error']):
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        # Exponential backoff for I/O errors
+                        delay = min(0.1 * (2 ** (retry_count - 1)), 1.0)
+                        time.sleep(delay)
+                        continue
+                    else:
+                        raise USBCommunicationError(f"Failed to send data after {max_retries} retries due to I/O errors: {e}")
+                elif 'busy' in error_str or 'resource' in error_str:
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        # Shorter delay for busy errors
+                        time.sleep(0.01)
+                        continue
+                    else:
+                        raise USBCommunicationError(f"Failed to send data - device busy after {max_retries} retries: {e}")
+                else:
+                    # Other errors are not retried
+                    raise USBCommunicationError(f"Failed to send data: {e}")
+        
+        # This should not be reached, but just in case
+        raise USBCommunicationError("Unexpected error in send_data retry logic")
     
     def receive_data(self, size: int = DEFAULT_PACKET_SIZE, timeout: int = USB_TIMEOUT_MS) -> bytes:
-        """Receive raw bytes from the USB device"""
+        """Receive raw bytes from the USB device with retry logic for I/O errors"""
         if not self.device:
             raise USBCommunicationError("Device not connected")
         
-        try:
-            data = self.device.read(self.endpoint_in, size, timeout)
-            return bytes(data)
-        except Exception as e:
-            raise USBCommunicationError(f"Failed to receive data: {e}")
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count <= max_retries:
+            try:
+                data = self.device.read(self.endpoint_in, size, timeout)
+                return bytes(data)
+            except Exception as e:
+                error_str = str(e).lower()
+                
+                # Check for specific I/O error patterns
+                if any(pattern in error_str for pattern in ['errno 5', 'input/output error', 'i/o error']):
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        # Exponential backoff for I/O errors
+                        delay = min(0.1 * (2 ** (retry_count - 1)), 1.0)
+                        time.sleep(delay)
+                        continue
+                    else:
+                        raise USBCommunicationError(f"Failed to receive data after {max_retries} retries due to I/O errors: {e}")
+                elif 'timeout' in error_str:
+                    # Timeout errors are passed through immediately (not retried)
+                    raise USBCommunicationError(f"Failed to receive data: {e}")
+                elif 'busy' in error_str or 'resource' in error_str:
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        # Shorter delay for busy errors
+                        time.sleep(0.01)
+                        continue
+                    else:
+                        raise USBCommunicationError(f"Failed to receive data - device busy after {max_retries} retries: {e}")
+                else:
+                    # Other errors are not retried
+                    raise USBCommunicationError(f"Failed to receive data: {e}")
+        
+        # This should not be reached, but just in case
+        raise USBCommunicationError("Unexpected error in receive_data retry logic")
 
 def serialize_command(command: Any) -> bytes:
     """
@@ -501,6 +562,8 @@ class USBHostDevice:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - automatically disconnect"""
+        # Explicitly mark parameters as unused to avoid linter warnings
+        _ = exc_type, exc_val, exc_tb
         self.disconnect()
         return False  # Don't suppress exceptions
 

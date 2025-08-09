@@ -177,7 +177,7 @@ pub const MAX_NAME_SIZE: usize = 30;
 ///
 /// - **Full-Speed USB**: Supports 8, 16, 32, or 64 bytes maximum
 /// - **High-Speed USB**: Supports up to 512 bytes maximum  
-/// - **Chosen Value**: 256 bytes for optimal performance across both modes
+/// - **Chosen Value**: 64 bytes for optimal performance across both modes
 ///
 /// # Usage
 ///

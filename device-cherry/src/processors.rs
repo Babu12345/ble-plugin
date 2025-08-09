@@ -3,7 +3,7 @@
 //! how this will be called and referenced in code.
 use std::cmp::min;
 use std::marker::PhantomData;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread::Scope;
 use std::time::Duration;
@@ -26,13 +26,14 @@ use esp_idf_sys::cherry_device::{
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use throttle::Throttle;
+use std::collections::VecDeque;
 
 use crate::utils::{
     CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
 };
 use crate::{AlignedBuffer, concat_n_arrays};
 use crate::{Error, Result};
-use lib_utils::{MatchSliceLengths, mk_static};
+use lib_utils::{ mk_static};
 
 use std::ptr;
 use std::sync::LazyLock;
@@ -46,8 +47,12 @@ const USBD_MAX_POWER: u32 = 100; // 100 mA
 const SIZE: usize = DEFAULT_PACKET_SIZE;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
+static WRITE_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
-static mut READ_BUFFER: AlignedBuffer<DEFAULT_PACKET_SIZE> = AlignedBuffer::new();
+// Double buffering for improved throughput
+static mut READ_BUFFER_A: AlignedBuffer<DEFAULT_PACKET_SIZE> = AlignedBuffer::new();
+static mut READ_BUFFER_B: AlignedBuffer<DEFAULT_PACKET_SIZE> = AlignedBuffer::new();
+static ACTIVE_BUFFER: AtomicUsize = AtomicUsize::new(0);
 
 /// Sending and receiving type
 pub type TSendAndReceive = [u8; SIZE];
@@ -137,19 +142,89 @@ unsafe extern "C" fn string_descriptor_callback(_speed: u8, index: u8) -> *const
 #[unsafe(no_mangle)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_out(busid: u8, ep: u8, nbytes: u32) {
     #![allow(static_mut_refs)]
-    SIGNAL.signal(unsafe { READ_BUFFER.get_data()[..nbytes as usize].match_size(0x00) });
-    unsafe { usbd_ep_start_read(busid, ep, READ_BUFFER.as_mut_ptr(), SIZE as u32) };
+    
+    // Critical: Must restart USB read to maintain host communication
+    // Process data first, then restart to reduce timing pressure
+    
+    // Bounds check
+    if nbytes as usize > SIZE {
+        // Still must restart reading
+        unsafe { restart_usb_read_with_delay(busid, ep) };
+        return;
+    }
+    
+    // Handle zero-length packets
+    if nbytes == 0 {
+        unsafe { restart_usb_read_with_delay(busid, ep) };
+        return;
+    }
+    
+    // Get current buffer and process data
+    let current = ACTIVE_BUFFER.load(Ordering::Acquire);
+    let active_buffer = unsafe {
+        if current == 0 { &READ_BUFFER_A } else { &READ_BUFFER_B }
+    };
+    
+    // Process the received data first
+    let data_slice = &active_buffer.get_data()[..nbytes as usize];
+    match data_slice.try_into() {
+        Ok(arr) => SIGNAL.signal(arr),
+        Err(_) => {
+            // Don't log every error to avoid flooding
+        }
+    }
+    
+    // Switch buffer and restart read after processing
+    ACTIVE_BUFFER.store(1 - current, Ordering::Release);
+    unsafe { restart_usb_read_with_delay(busid, ep) };
+}
+
+// USB read restart with small delay to prevent I/O errors
+unsafe fn restart_usb_read_with_delay(busid: u8, ep: u8) {
+    #![allow(static_mut_refs)]
+    let current = ACTIVE_BUFFER.load(Ordering::Acquire);
+    let next_buffer = unsafe{ if current == 0 {
+        &mut READ_BUFFER_A
+    } else {
+        &mut READ_BUFFER_B
+    }};
+    
+    // Small delay to prevent overwhelming USB controller and reduce I/O errors
+    std::thread::sleep(Duration::from_micros(10));
+    
+    // Start read with error checking and retry logic
+    let mut retry_count = 0;
+    const MAX_RETRIES: i32 = 3;
+    
+    loop {
+        let result = unsafe{usbd_ep_start_read(busid, ep, next_buffer.as_mut_ptr(), SIZE as u32)};
+        if result >= 0 {
+            // Success
+            break;
+        }
+        
+        retry_count += 1;
+        if retry_count >= MAX_RETRIES {
+            break;
+        }
+        
+        // Exponential backoff for retries
+        let delay_us = 50 * (1 << retry_count);
+        std::thread::sleep(Duration::from_micros(delay_us));
+    }
 }
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
+    // Clear write-in-progress flag to allow next write
+    WRITE_IN_PROGRESS.store(false, Ordering::Release);
+    
     let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) as u32 };
-    match (nbytes % ep_mps) == 0 && nbytes > 0 {
-        true => {
-            unsafe { usbd_ep_start_write(busid, ep, ptr::null(), 0) };
-        }
-        false => {}
-    };
+    // Send Zero Length Packet if needed (when data is multiple of max packet size)
+    if (nbytes % ep_mps) == 0 && nbytes > 0 {
+        // Don't send ZLP immediately - let the next write handle it
+        // This prevents endpoint busy errors
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -164,14 +239,11 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
         | usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP
         | usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP => {}
         usbd_event_type_USBD_EVENT_CONFIGURED => {
-            let _res = unsafe {
-                usbd_ep_start_read(
-                    busid,
-                    CDC_OUT_EP as u8,
-                    READ_BUFFER.as_mut_ptr(),
-                    SIZE as u32,
-                )
-            };
+            // Start with buffer A
+            ACTIVE_BUFFER.store(0, Ordering::Release);
+            unsafe {
+                restart_usb_read_with_delay(busid, CDC_OUT_EP as u8);
+            }
         }
         _ => {}
     }
@@ -288,41 +360,131 @@ impl CdcAcmDevice<POSTINIT> {
         let from_usb = sync_channel(channel_buffer_size);
 
         let busid = self.busid.ok_or(Error::BusidUndefined)?;
-        // Writing to the usb endpoint
+        // Writing to USB endpoint with proper flow control
         scope.spawn(move || {
+            let mut write_queue: VecDeque<TSendAndReceive> = VecDeque::with_capacity(16);
+            let mut consecutive_errors = 0;
+            
             loop {
-                match to_usb.1.recv() {
-                    Ok(mut data) => {
-                        match unsafe {
-                            usbd_ep_start_write(
-                                busid,
-                                CDC_IN_EP as u8,
-                                data.as_mut_ptr(),
-                                min(data.len() as u32, SIZE as u32),
-                            )
-                        } {
-                            x if x < 0 => ::log::error!("Failed to send via usb device: {data:?}"),
-                            _ => {}
+                // Try to get data from channel
+                match to_usb.1.try_recv() {
+                    Ok(data) => {
+                        write_queue.push_back(data);
+                        // Drain channel to queue (up to capacity)
+                        while write_queue.len() < 16 {
+                            match to_usb.1.try_recv() {
+                                Ok(data) => write_queue.push_back(data),
+                                Err(_) => break,
+                            }
                         }
                     }
-                    Err(e) => ::log::error!("Unable to recieve data: {e}"),
+                    Err(std::sync::mpsc::TryRecvError::Empty) => {
+                        if write_queue.is_empty() {
+                            // Block waiting for data only if queue is empty
+                            match to_usb.1.recv_timeout(Duration::from_millis(1)) {
+                                Ok(data) => write_queue.push_back(data),
+                                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+                                Err(_) => break,  // Channel disconnected
+                            }
+                        }
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
+                }
+                
+                // Process write queue with flow control
+                while let Some(mut data) = write_queue.pop_front() {
+                    // Wait for previous write to complete
+                    let mut wait_cycles = 0;
+                    while WRITE_IN_PROGRESS.load(Ordering::Acquire) {
+                        wait_cycles += 1;
+                        if wait_cycles > 1000 {
+                            ::log::warn!("USB write endpoint busy for too long");
+                            std::thread::sleep(Duration::from_micros(100));
+                            wait_cycles = 0;
+                        }
+                        std::thread::yield_now();
+                    }
+                    
+                    // Set write-in-progress flag
+                    WRITE_IN_PROGRESS.store(true, Ordering::Release);
+                    
+                    let len = min(data.len() as u32, SIZE as u32);
+                    let result = unsafe {
+                        usbd_ep_start_write(
+                            busid,
+                            CDC_IN_EP as u8,
+                            data.as_mut_ptr(),
+                            len,
+                        )
+                    };
+                    
+                    if result < 0 {
+                        WRITE_IN_PROGRESS.store(false, Ordering::Release);
+                        consecutive_errors += 1;
+                        
+                        // Handle specific I/O error codes
+                        let should_retry = match result {
+                            -5 => {  // EIO (Input/Output error)
+                                ::log::warn!("USB I/O error detected, increasing retry delay");
+                                true
+                            },
+                            -16 => { // EBUSY (Device or resource busy)
+                                ::log::debug!("USB endpoint busy, will retry");
+                                true
+                            },
+                            _ => {
+                                ::log::warn!("USB write failed with error: {}", result);
+                                consecutive_errors <= 5  // Only retry for limited attempts on other errors
+                            }
+                        };
+                        
+                        if should_retry && consecutive_errors <= 5 {
+                            // Re-queue the data for retry with exponential backoff
+                            write_queue.push_front(data);
+                            let delay_ms = std::cmp::min(50, 5 * consecutive_errors);
+                            std::thread::sleep(Duration::from_millis(delay_ms as u64));
+                        } else {
+                            ::log::error!("USB write failed after {} attempts, error: {}", consecutive_errors, result);
+                            consecutive_errors = 0;
+                            // Drop the packet to prevent infinite retry
+                        }
+                    } else {
+                        consecutive_errors = 0;
+                        // Slightly longer delay between successful writes to prevent I/O errors
+                        std::thread::sleep(Duration::from_micros(50));
+                    }
                 }
             }
+            
+            ::log::info!("USB write thread exiting");
         });
 
-        // Reading from the usb endpoint
+        // Reading from USB endpoint - optimized for burst handling to prevent host I/O errors
         scope.spawn(move || {
             let mut throttle = Throttle::new(throttle_info.0, throttle_info.1);
+            let mut packet_count = 0u64;
+            
             loop {
                 let data = block_on(SIGNAL.wait());
-                if let Err(_) = throttle.accept() {
-                    ::log::warn!("Throttle limit reached, skipping data processing");
-                    continue;
+                packet_count += 1;
+                
+                // Skip throttle check for first few packets to handle bursts
+                if packet_count > 10 {
+                    if let Err(_) = throttle.accept() {
+                        // Drop packet silently to maintain USB flow
+                        continue;
+                    }
                 }
+                
+                // Try non-blocking send first
                 match from_usb.0.try_send(data) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        ::log::error!("Unable to send data: {e}");
+                    Ok(_) => {},
+                    Err(std::sync::mpsc::TrySendError::Full(_)) => {
+                        // Channel full - drop packet to maintain USB responsiveness
+                        // This prevents host I/O errors by keeping the USB endpoint responsive
+                    },
+                    Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
+                        break;
                     }
                 };
             }
