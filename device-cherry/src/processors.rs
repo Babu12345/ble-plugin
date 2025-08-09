@@ -220,12 +220,12 @@ unsafe fn restart_usb_read_with_delay(busid: u8, ep: u8) {
         }
     };
 
-    // Minimal delay for high-speed scenarios - reduced from 10us to 1us
-    std::thread::sleep(Duration::from_micros(1));
+    // No initial delay for maximum throughput
+    // std::thread::sleep(Duration::from_micros(1));
 
     // Start read with error checking and retry logic - increased retries for high-speed
     let mut retry_count = 0;
-    const MAX_RETRIES: i32 = 10;
+    const MAX_RETRIES: i32 = 20; // Increased from 10 for better resilience
 
     loop {
         let result =
@@ -241,11 +241,12 @@ unsafe fn restart_usb_read_with_delay(busid: u8, ep: u8) {
             break;
         }
 
-        // More aggressive backoff for high-speed scenarios
+        // Ultra-aggressive retry strategy for high throughput
         let delay_us = match retry_count {
-            1..=3 => 10, // Very short delay for first few retries
-            4..=6 => 50, // Medium delay
-            _ => 100,    // Longer delay for persistent issues
+            1..=5 => 1,    // Minimal delay for first retries
+            6..=10 => 5,   // Very short delay
+            11..=15 => 10, // Short delay
+            _ => 20,       // Still short for persistent issues
         };
         std::thread::sleep(Duration::from_micros(delay_us));
     }

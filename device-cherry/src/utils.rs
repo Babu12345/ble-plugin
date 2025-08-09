@@ -8,9 +8,10 @@ use esp_idf_sys::cherry_device::{
     USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION, USB_DEVICE_CLASS_CDC,
     USB_STRING_MFC_INDEX, USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
 };
+use protocol::DEFAULT_PACKET_SIZE;
 
-/// Max size for the CDC
-pub const CDC_MAX_MPS: u32 = 64;
+/// Max size for the CDC - increased for higher throughput
+pub const CDC_MAX_MPS: u32 = DEFAULT_PACKET_SIZE as _;
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L628
 /// Device descriptor
