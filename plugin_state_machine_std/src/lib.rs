@@ -696,6 +696,13 @@ impl PluginStateMachine {
 
         log::info!("Successfully created BLE service with UUID: {}", cmd.uuid);
 
+        // Create a serivce entry and clear any existing characteristics for this service
+        self.metadata
+            .service_to_characteristic_uuids
+            .entry(cmd.uuid)
+            .or_default()
+            .clear();
+
         Ok(())
     }
 
