@@ -78,8 +78,11 @@ class USBDevice:
             except Exception as e:
                 error_str = str(e).lower()
                 
+                # Check for device disconnection
+                if any(pattern in error_str for pattern in ['errno 19', 'no such device', 'device disconnected']):
+                    raise USBCommunicationError(f"Device disconnected: {e}")
                 # Check for specific I/O error patterns
-                if any(pattern in error_str for pattern in ['errno 5', 'input/output error', 'i/o error']):
+                elif any(pattern in error_str for pattern in ['errno 5', 'input/output error', 'i/o error']):
                     retry_count += 1
                     if retry_count <= max_retries:
                         # Exponential backoff for I/O errors
