@@ -209,7 +209,7 @@ fn test_parse_complex_generic_types() -> Result<()> {
     assert_eq!(struct_def.fields[0].python_type, "List[attrs2bin.U8]");
     assert_eq!(struct_def.fields[1].python_type, "List[Optional[str]]");
     assert_eq!(struct_def.fields[2].python_type, "str");
-    assert_eq!(struct_def.fields[3].python_type, "List[int]");
+    assert_eq!(struct_def.fields[3].python_type, "List[attrs2bin.U16]");
     assert_eq!(
         struct_def.fields[4].python_type,
         "Optional[Optional[List[str]]]"

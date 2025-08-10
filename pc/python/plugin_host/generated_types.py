@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "511a6dc8ec5cd5b1727112b3233d2804c60305feeb6f9ed9cc52aa75872a2ea3"
+PROTOCOL_HASH = "c02a1f992e4fadce971e94c0e0e09de9c5c2f3098bab42db553b48b4ab9fbb4c"
 
 # ==================== CONSTANTS ====================
 
@@ -152,7 +152,7 @@ class HostCommandConfigurePeripheralSecurity:
     Attributes:
         passkey:Passkey for pairing (6 digit numeric)
     """
-    passkey: int
+    passkey: attrs2bin.U32
 
 @attr.s(auto_attribs=True)
 class HostCommandConfigureService:
@@ -211,7 +211,7 @@ class HostCommandGetCharacteristicInfo:
 
 @attr.s(auto_attribs=True)
 class HostCommandStartAdvertisement:
-    """Host command. Start advertisement
+    """Host command. Start advertisement. TODO: Allow selecting which services you w...
     
     Attributes:
         allow_multi_connect:Allow multiple central connections

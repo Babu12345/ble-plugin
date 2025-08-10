@@ -179,7 +179,7 @@ fn test_modules_with_complex_types() -> Result<()> {
     let optional_field = complex_struct.fields.iter()
         .find(|f| f.name == "optional_field")
         .expect("Should find optional_field");
-    assert_eq!(optional_field.python_type, "Optional[int]");
+    assert_eq!(optional_field.python_type, "Optional[attrs2bin.U32]");
     assert!(optional_field.is_optional);
     
     let size_limited_field = complex_struct.fields.iter()

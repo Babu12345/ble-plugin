@@ -391,7 +391,7 @@ fn test_type_conversion_edge_cases() -> Result<()> {
         .iter()
         .find(|f| f.name == "heapless_vec")
         .expect("Should find heapless_vec field");
-    assert_eq!(heapless_vec.python_type, "List[Optional[int]]");
+    assert_eq!(heapless_vec.python_type, "List[Optional[attrs2bin.U32]]");
 
     // Test that custom types are preserved
     let custom_type = struct_def

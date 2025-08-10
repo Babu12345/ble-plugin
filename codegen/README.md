@@ -72,7 +72,13 @@ The tool automatically converts Rust types to Python equivalents:
 | Rust Type | Python Type |
 |-----------|-------------|
 | `u8` | `attrs2bin.U8` |
-| `u16`, `u32`, `u64` | `int` |
+| `u16` | `attrs2bin.U16` |
+| `u32` | `attrs2bin.U32` |
+| `u64` | `attrs2bin.UnsignedInt` |
+| `i8` | `attrs2bin.I8` |
+| `i16` | `attrs2bin.I16` |
+| `i32` | `attrs2bin.I32` |
+| `i64` | `attrs2bin.SignedInt` |
 | `f32`, `f64` | `float` |
 | `bool` | `bool` |
 | `String`, `&str` | `str` |
@@ -82,7 +88,7 @@ The tool automatically converts Rust types to Python equivalents:
 | `Option<T>` | `Optional[T]` |
 | `heapless::String<N>` | `str` |
 
-**Note**: `u8` and `Vec<u8>` are mapped to `attrs2bin.U8` and `List[attrs2bin.U8]` respectively to support proper binary serialization through the attrs2bin library. Other integer types (`u16`, `u32`, `u64`) are mapped to Python's `int` type. `Uuid` is mapped to `bytes` to represent the 16-byte UUID as a Python bytes object.
+**Note**: All integer types are mapped to their corresponding `attrs2bin` types to support proper binary serialization through the attrs2bin library. `u64` maps to `attrs2bin.UnsignedInt` and `i64` maps to `attrs2bin.SignedInt` as these are the names used in the Python attrs2bin library. `Uuid` is mapped to `bytes` to represent the 16-byte UUID as a Python bytes object.
 
 ## File Structure
 
@@ -157,10 +163,10 @@ class HostCommandConfigurePeripheral:
 
 @attr.s(auto_attribs=True)
 class PluginData:
-    connection_id: int
+    connection_id: attrs2bin.U16  # u16 maps to attrs2bin.U16
     characteristic_uuid: str
     data: List[attrs2bin.U8]  # Vec<u8> maps to List[attrs2bin.U8]
-    timestamp: int
+    timestamp: attrs2bin.U32  # u32 maps to attrs2bin.U32
 ```
 
 ## Integration

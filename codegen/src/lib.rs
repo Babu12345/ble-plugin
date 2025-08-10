@@ -61,13 +61,29 @@ pub struct ProtocolDef {
 }
 
 /// Maps Rust types to Python equivalents
+/// 
+/// Integer types are mapped to their corresponding attrs2bin types:
+/// - u8 -> attrs2bin.U8
+/// - u16 -> attrs2bin.U16
+/// - u32 -> attrs2bin.U32
+/// - u64 -> attrs2bin.UnsignedInt (Python library naming)
+/// - i8 -> attrs2bin.I8
+/// - i16 -> attrs2bin.I16
+/// - i32 -> attrs2bin.I32
+/// - i64 -> attrs2bin.SignedInt (Python library naming)
 pub fn rust_type_to_python(rust_type: &str) -> String {
     // Normalize whitespace for consistent matching
     let normalized = rust_type.replace(" ", "");
 
     match normalized.as_str() {
         "u8" => "attrs2bin.U8".to_string(),
-        "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" => "int".to_string(),
+        "u16" => "attrs2bin.U16".to_string(),
+        "u32" => "attrs2bin.U32".to_string(),
+        "u64" => "attrs2bin.UnsignedInt".to_string(),  // Python attrs2bin naming convention
+        "i8" => "attrs2bin.I8".to_string(),
+        "i16" => "attrs2bin.I16".to_string(),
+        "i32" => "attrs2bin.I32".to_string(),
+        "i64" => "attrs2bin.SignedInt".to_string(),    // Python attrs2bin naming convention
         "f32" | "f64" => "float".to_string(),
         "bool" => "bool".to_string(),
         "String" => "str".to_string(),
@@ -379,13 +395,13 @@ mod tests {
     #[test]
     fn test_rust_type_to_python_primitives() {
         assert_eq!(rust_type_to_python("u8"), "attrs2bin.U8");
-        assert_eq!(rust_type_to_python("u16"), "int");
-        assert_eq!(rust_type_to_python("u32"), "int");
-        assert_eq!(rust_type_to_python("u64"), "int");
-        assert_eq!(rust_type_to_python("i8"), "int");
-        assert_eq!(rust_type_to_python("i16"), "int");
-        assert_eq!(rust_type_to_python("i32"), "int");
-        assert_eq!(rust_type_to_python("i64"), "int");
+        assert_eq!(rust_type_to_python("u16"), "attrs2bin.U16");
+        assert_eq!(rust_type_to_python("u32"), "attrs2bin.U32");
+        assert_eq!(rust_type_to_python("u64"), "attrs2bin.UnsignedInt");
+        assert_eq!(rust_type_to_python("i8"), "attrs2bin.I8");
+        assert_eq!(rust_type_to_python("i16"), "attrs2bin.I16");
+        assert_eq!(rust_type_to_python("i32"), "attrs2bin.I32");
+        assert_eq!(rust_type_to_python("i64"), "attrs2bin.SignedInt");
         assert_eq!(rust_type_to_python("f32"), "float");
         assert_eq!(rust_type_to_python("f64"), "float");
         assert_eq!(rust_type_to_python("bool"), "bool");
@@ -397,8 +413,8 @@ mod tests {
     fn test_rust_type_to_python_generics() {
         assert_eq!(rust_type_to_python("Vec<u8>"), "List[attrs2bin.U8]");
         assert_eq!(rust_type_to_python("Vec<String>"), "List[str]");
-        assert_eq!(rust_type_to_python("heapless::Vec<u16>"), "List[int]");
-        assert_eq!(rust_type_to_python("Option<u32>"), "Optional[int]");
+        assert_eq!(rust_type_to_python("heapless::Vec<u16>"), "List[attrs2bin.U16]");
+        assert_eq!(rust_type_to_python("Option<u32>"), "Optional[attrs2bin.U32]");
         assert_eq!(rust_type_to_python("Option<String>"), "Optional[str]");
         assert_eq!(rust_type_to_python("heapless::String<32>"), "str");
         assert_eq!(rust_type_to_python("String<64>"), "str");
@@ -547,7 +563,7 @@ mod tests {
 
         assert_eq!(struct_def.fields[1].name, "port");
         assert_eq!(struct_def.fields[1].rust_type, "u16");
-        assert_eq!(struct_def.fields[1].python_type, "int");
+        assert_eq!(struct_def.fields[1].python_type, "attrs2bin.U16");
         assert_eq!(struct_def.fields[1].doc_comment, "The port number");
         assert!(!struct_def.fields[1].is_optional);
 
@@ -774,14 +790,14 @@ mod tests {
             .iter()
             .find(|f| f.name == "vec_data")
             .expect("Should find vec_data field");
-        assert_eq!(vec_data_field.python_type, "List[int]");
+        assert_eq!(vec_data_field.python_type, "List[attrs2bin.U16]");
 
         let heapless_vec_field = struct_def
             .fields
             .iter()
             .find(|f| f.name == "heapless_vec")
             .expect("Should find heapless_vec field");
-        assert_eq!(heapless_vec_field.python_type, "List[int]");
+        assert_eq!(heapless_vec_field.python_type, "List[attrs2bin.U32]");
 
         Ok(())
     }
