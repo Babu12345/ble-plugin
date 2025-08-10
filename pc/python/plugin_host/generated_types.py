@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "c02a1f992e4fadce971e94c0e0e09de9c5c2f3098bab42db553b48b4ab9fbb4c"
+PROTOCOL_HASH = "e40e94a2bb80c4e3fb6f9b2eae7e8fbd070eab605ae7e54cb965e766a75bd223"
 
 # ==================== CONSTANTS ====================
 
@@ -48,9 +48,9 @@ MESSAGE_HEADER_SIZE = MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES + DATA_BYTES_L
 
 class MessageTypeId(Enum):
     """Message type identifiers for efficient command dispatch  This enum defines un..."""
-    # Configure BLE peripheral device with name and UUID
+    # Configure BLE peripheral device with name and 6-byte address
     HostCommandConfigurePeripheral: attrs2bin.U8 = 0x01
-    # Create a new BLE service with specified UUID
+    # Create a new BLE service with specified u32 UUID
     HostCommandConfigureService: attrs2bin.U8 = 0x02
     # Create a BLE characteristic with properties
     HostCommandConfigureCharacteristic: attrs2bin.U8 = 0x03
@@ -118,11 +118,11 @@ class PluginConfigurationError(Enum):
     """Represents the error that can occur during plugin configuration"""
     # The peripheral name is too long
     PeripheralNameTooLong: attrs2bin.U8 = 0
-    # The peripheral UUID is invalid
+    # The peripheral address is invalid
     InvalidPeripheralUuid: attrs2bin.U8 = 1
-    # The service UUID is invalid
+    # The service UUID (u16) is invalid
     InvalidServiceUuid: attrs2bin.U8 = 2
-    # The characteristic UUID is invalid
+    # The characteristic UUID (u16) is invalid
     InvalidCharacteristicUuid: attrs2bin.U8 = 3
     # Advertisement without proper peripheral configuration
     AdvertisementWithoutPeripheralConfiguration: attrs2bin.U8 = 4
@@ -159,21 +159,21 @@ class HostCommandConfigureService:
     """Host command. Configure service
     
     Attributes:
-        uuid:Service UUID
+        uuid:Service UUID (u16)
     """
-    uuid: bytes
+    uuid: attrs2bin.U16
 
 @attr.s(auto_attribs=True)
 class HostCommandConfigureCharacteristic:
     """Host command. Configure characteristic
     
     Attributes:
-        uuid:Characteristic UUID
-        service_uuid:Service UUID this characteristic belongs to
+        uuid:Characteristic UUID (u16)
+        service_uuid:Service UUID (u16) this characteristic belongs to
         properties:Properties of the characteristic (read, write, notify, etc.)
     """
-    uuid: bytes
-    service_uuid: bytes
+    uuid: attrs2bin.U16
+    service_uuid: attrs2bin.U16
     properties: List[BLEProperties]
 
 @attr.s(auto_attribs=True)
@@ -181,12 +181,12 @@ class HostCommandConfigureCharacteristicRead:
     """Host command. Configure characteristic read
     
     Attributes:
-        uuid:Characteristic UUID
-        service_uuid:Service UUID this characteristic belongs to
+        uuid:Characteristic UUID (u16)
+        service_uuid:Service UUID (u16) this characteristic belongs to
         value:Read value
     """
-    uuid: bytes
-    service_uuid: bytes
+    uuid: attrs2bin.U16
+    service_uuid: attrs2bin.U16
     value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
@@ -194,20 +194,20 @@ class HostCommandGetServiceInfo:
     """Host command. Get service info
     
     Attributes:
-        uuid:Service UUID
+        uuid:Service UUID (u16)
     """
-    uuid: bytes
+    uuid: attrs2bin.U16
 
 @attr.s(auto_attribs=True)
 class HostCommandGetCharacteristicInfo:
     """Host command. Get characteristic info
     
     Attributes:
-        characteristic_uuid:Characteristic UUID
-        service_uuid:Service UUID this characteristic belongs to
+        characteristic_uuid:Characteristic UUID (u16)
+        service_uuid:Service UUID (u16) this characteristic belongs to
     """
-    characteristic_uuid: bytes
-    service_uuid: bytes
+    characteristic_uuid: attrs2bin.U16
+    service_uuid: attrs2bin.U16
 
 @attr.s(auto_attribs=True)
 class HostCommandStartAdvertisement:
@@ -225,14 +225,14 @@ class HostCommandNotifyCharacteristicValue:
     Attributes:
         address:Device Address.
         address_type:Address type
-        characteristic_uuid:Characteristic UUID
-        service_uuid:Service UUID this characteristic belongs to
+        characteristic_uuid:Characteristic UUID (u16)
+        service_uuid:Service UUID (u16) this characteristic belongs to
         value:Value to notify
     """
     address: List[attrs2bin.U8]
     address_type: BluetoothAddressType
-    characteristic_uuid: bytes
-    service_uuid: bytes
+    characteristic_uuid: attrs2bin.U16
+    service_uuid: attrs2bin.U16
     value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
@@ -240,11 +240,13 @@ class PluginData:
     """Plugin data
     
     Attributes:
-        src_id:Source peripheral id that this data is orginating from.
+        src_addr:Source peripheral addr that this data is orginating from.
+        src_addr_type:Address type of the source peripheral
         send_type:Send type of the data
         data:Actual command type
     """
-    src_id: bytes
+    src_addr: List[attrs2bin.U8]
+    src_addr_type: BluetoothAddressType
     send_type: PluginDataSendType
     data: bytes
 
@@ -253,12 +255,12 @@ class PluginServiceInfoResponse:
     """Service information response
     
     Attributes:
-        service_uuid:Service UUID
-        characteristic_uuids:List of characteristic UUIDs in this service
+        service_uuid:Service UUID (u16)
+        characteristic_uuids:List of characteristic UUIDs (u16) in this service
         exists:Whether the service exists
     """
-    service_uuid: bytes
-    characteristic_uuids: List[bytes]
+    service_uuid: attrs2bin.U16
+    characteristic_uuids: List[attrs2bin.U16]
     exists: bool
 
 @attr.s(auto_attribs=True)
@@ -266,13 +268,13 @@ class PluginCharacteristicInfoResponse:
     """Characteristic information response
     
     Attributes:
-        characteristic_uuid:Characteristic UUID
-        service_uuid:Service UUID this characteristic belongs to
+        characteristic_uuid:Characteristic UUID (u16)
+        service_uuid:Service UUID (u16) this characteristic belongs to
         properties:Properties of the characteristic (read, write, notify, etc.)
         exists:Whether the characteristic exists
     """
-    characteristic_uuid: bytes
-    service_uuid: bytes
+    characteristic_uuid: attrs2bin.U16
+    service_uuid: attrs2bin.U16
     properties: List[BLEProperties]
     exists: bool
 

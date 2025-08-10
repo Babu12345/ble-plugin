@@ -1,7 +1,7 @@
 import pytest
 import uuid as uuid_module
 from unittest.mock import Mock, patch
-from plugin_host.comms import USBHostDevice, USBCommunicationError
+from plugin_host.comms import USBHostDevice, USBCommunicationError, parse_uuid_u16
 from plugin_host.generated_types import (
     HostCommandConfigurePeripheral,
     HostCommandGetServiceInfo,
@@ -9,12 +9,6 @@ from plugin_host.generated_types import (
     BLEProperties,
     BluetoothAddressType,
 )
-
-def uuid_str_to_bytes(uuid_str: str) -> bytes:
-    """Convert UUID string to bytes"""
-    # Parse UUID and get bytes
-    uuid_obj = uuid_module.UUID(uuid_str)
-    return uuid_obj.bytes
 
 class TestUSBHostDevice:
     """Test suite for USBHostDevice class"""
@@ -78,13 +72,12 @@ class TestUSBHostDevice:
     @patch('plugin_host.comms.usb_send_and_receive')
     def test_get_service_info(self, mock_send_receive) -> None:
         """Test get_service_info method"""
-        uuid = "87654321-4321-4321-4321-cba987654321"
-        uuid_bytes = uuid_str_to_bytes(uuid)
+        uuid = 0x8765
         expected_response = PluginServiceInfoResponse(
-            service_uuid=uuid_bytes,
+            service_uuid=uuid,
             characteristic_uuids=[
-                uuid_str_to_bytes("11111111-1111-1111-1111-111111111111"),
-                uuid_str_to_bytes("22222222-2222-2222-2222-222222222222")
+                0x1111,
+                0x2222
             ],
             exists=True
         )
@@ -98,16 +91,14 @@ class TestUSBHostDevice:
         command = args[1]  # Second argument is the command
         response_type = args[2]  # Third argument is response type
         assert isinstance(command, HostCommandGetServiceInfo)
-        assert command.uuid == uuid_bytes
+        assert command.uuid == uuid
         assert response_type == PluginServiceInfoResponse
     
     @patch('plugin_host.comms.usb_send_command')
     def test_configure_characteristic(self, mock_send) -> None:
         """Test configure_characteristic method"""
-        uuid = "12345678-1234-1234-1234-123456789abc"
-        service_uuid = "87654321-4321-4321-4321-cba987654321"
-        uuid_bytes = uuid_str_to_bytes(uuid)
-        service_uuid_bytes = uuid_str_to_bytes(service_uuid)
+        uuid = 0x1234
+        service_uuid = 0x8765
         properties = [BLEProperties.READ, BLEProperties.WRITE]
         
         self.host_device.configure_characteristic(uuid, service_uuid, properties)
@@ -115,8 +106,8 @@ class TestUSBHostDevice:
         mock_send.assert_called_once()
         args, kwargs = mock_send.call_args
         command = args[1]
-        assert command.uuid == uuid_bytes
-        assert command.service_uuid == service_uuid_bytes
+        assert command.uuid == uuid
+        assert command.service_uuid == service_uuid
         assert command.properties == properties
     
     @patch('plugin_host.comms.usb_send_command')
@@ -134,10 +125,8 @@ class TestUSBHostDevice:
         """Test notify_characteristic_value method"""
         address = b'\x12\x34\x56\x78\x9a\xbc'
         address_type = BluetoothAddressType.Public
-        char_uuid = "12345678-1234-1234-1234-123456789abc"
-        service_uuid = "87654321-4321-4321-4321-cba987654321"
-        char_uuid_bytes = uuid_str_to_bytes(char_uuid)
-        service_uuid_bytes = uuid_str_to_bytes(service_uuid)
+        char_uuid = 0x1234
+        service_uuid = 0x8765
         value = b"test_value"
         
         self.host_device.notify_characteristic_value(
@@ -149,14 +138,14 @@ class TestUSBHostDevice:
         command = args[1]
         assert command.address == address
         assert command.address_type == address_type
-        assert command.characteristic_uuid == char_uuid_bytes
-        assert command.service_uuid == service_uuid_bytes
+        assert command.characteristic_uuid == char_uuid
+        assert command.service_uuid == service_uuid
         assert command.value == value
     
     @patch('plugin_host.comms.usb_send_command')
     def test_send_command_generic(self, mock_send) -> None:
         """Test generic send_command method"""
-        cmd = HostCommandGetServiceInfo(uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789def"))
+        cmd = HostCommandGetServiceInfo(uuid=0x1234)
         
         self.host_device.send_command(cmd)
         
@@ -166,7 +155,7 @@ class TestUSBHostDevice:
     def test_receive_response_generic(self, mock_receive) -> None:
         """Test generic receive_response method"""
         expected_response = PluginServiceInfoResponse(
-            service_uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789123"),
+            service_uuid=0x1234,
             characteristic_uuids=[],
             exists=False
         )

@@ -9,11 +9,41 @@ import uuid as uuid_module
 from typing import Any, Optional
 from plugin_host.generated_types import *
 
-def uuid_str_to_bytes(uuid_str: str) -> bytes:
-    """Convert UUID string to bytes"""
-    # Parse UUID and get bytes
-    uuid_obj = uuid_module.UUID(uuid_str)
-    return uuid_obj.bytes
+def parse_uuid_u16(uuid_value) -> int:
+    """Parse UUID as u16 value
+    
+    Args:
+        uuid_value: Either an integer or hex string (e.g., 0x1234, '0x1234', or 1234)
+        
+    Returns:
+        u16 value for the UUID
+        
+    Raises:
+        ValueError: If value is not valid or exceeds u16 maximum (65,535)
+    """
+    # Parse the value
+    if isinstance(uuid_value, int):
+        result = uuid_value
+    elif isinstance(uuid_value, str):
+        # Handle hex strings
+        if uuid_value.startswith('0x') or uuid_value.startswith('0X'):
+            result = int(uuid_value, 16)
+        else:
+            # Try to parse as decimal or hex without prefix
+            try:
+                result = int(uuid_value)
+            except ValueError:
+                result = int(uuid_value, 16)
+    else:
+        raise ValueError(f"Invalid UUID value type: {type(uuid_value)}")
+    
+    # Validate u16 range (0 to 65,535)
+    if result < 0:
+        raise ValueError(f"UUID value cannot be negative: {result}")
+    if result > 0xFFFF:  # u16 max value
+        raise ValueError(f"UUID value exceeds u16 maximum (65,535): {result}")
+    
+    return result
 
 # Communicate between the host (PC) and the usb plugin
 
@@ -397,7 +427,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigureService(uuid=uuid_str_to_bytes(uuid))
+        cmd = HostCommandConfigureService(uuid=parse_uuid_u16(uuid))
         usb_send_command(self.usb_device, cmd)
     
     def configure_characteristic(self, uuid: str, service_uuid: str, properties: list) -> None:
@@ -413,8 +443,8 @@ class USBHostDevice:
             USBCommunicationError: If sending fails
         """
         cmd = HostCommandConfigureCharacteristic(
-            uuid=uuid_str_to_bytes(uuid),
-            service_uuid=uuid_str_to_bytes(service_uuid),
+            uuid=parse_uuid_u16(uuid),
+            service_uuid=parse_uuid_u16(service_uuid),
             properties=properties
         )
         usb_send_command(self.usb_device, cmd)
@@ -432,8 +462,8 @@ class USBHostDevice:
             USBCommunicationError: If sending fails
         """
         cmd = HostCommandConfigureCharacteristicRead(
-            uuid=uuid_str_to_bytes(uuid),
-            service_uuid=uuid_str_to_bytes(service_uuid),
+            uuid=parse_uuid_u16(uuid),
+            service_uuid=parse_uuid_u16(service_uuid),
             value=value
         )
         usb_send_command(self.usb_device, cmd)
@@ -451,7 +481,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If communication fails
         """
-        cmd = HostCommandGetServiceInfo(uuid=uuid_str_to_bytes(uuid))
+        cmd = HostCommandGetServiceInfo(uuid=parse_uuid_u16(uuid))
         return usb_send_and_receive(self.usb_device, cmd, PluginServiceInfoResponse)
     
     def get_characteristic_info(self, characteristic_uuid: str, service_uuid: str) -> PluginCharacteristicInfoResponse:
@@ -469,8 +499,8 @@ class USBHostDevice:
             USBCommunicationError: If communication fails
         """
         cmd = HostCommandGetCharacteristicInfo(
-            characteristic_uuid=uuid_str_to_bytes(characteristic_uuid),
-            service_uuid=uuid_str_to_bytes(service_uuid)
+            characteristic_uuid=parse_uuid_u16(characteristic_uuid),
+            service_uuid=parse_uuid_u16(service_uuid)
         )
         return usb_send_and_receive(self.usb_device, cmd, PluginCharacteristicInfoResponse)
     
@@ -522,8 +552,8 @@ class USBHostDevice:
         cmd = HostCommandNotifyCharacteristicValue(
             address=address,
             address_type=address_type,
-            characteristic_uuid=uuid_str_to_bytes(characteristic_uuid),
-            service_uuid=uuid_str_to_bytes(service_uuid),
+            characteristic_uuid=parse_uuid_u16(characteristic_uuid),
+            service_uuid=parse_uuid_u16(service_uuid),
             value=value
         )
         usb_send_command(self.usb_device, cmd)

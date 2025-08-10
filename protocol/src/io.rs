@@ -115,10 +115,10 @@ pub const MESSAGE_HEADER_SIZE: usize =
 #[repr(u8)]
 pub enum MessageTypeId {
     // Host Commands (0x01-0x0F)
-    /// Configure BLE peripheral device with name and UUID
+    /// Configure BLE peripheral device with name and 6-byte address
     HostCommandConfigurePeripheral = 0x01,
 
-    /// Create a new BLE service with specified UUID
+    /// Create a new BLE service with specified u32 UUID
     HostCommandConfigureService = 0x02,
 
     /// Create a BLE characteristic with properties

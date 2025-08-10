@@ -172,12 +172,11 @@ mod tests {
     use crate::DEFAULT_PACKET_SIZE;
     use crate::IO;
 
-    use uuid::Uuid;
-
     #[test]
     fn test_std_encoding_and_decoding() {
         let cmd = PluginData {
-            src_id: Uuid::from_u128(0x01),
+            src_addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            src_addr_type: crate::io_types::BluetoothAddressType::Public,
             send_type: crate::io_types::PluginDataSendType::Notify,
             data: b"Cool test\0",
         };
@@ -195,7 +194,8 @@ mod tests {
     #[test]
     fn test_no_std_encoding_and_decoding() {
         let cmd = PluginData {
-            src_id: Uuid::from_u128(0x01),
+            src_addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            src_addr_type: crate::io_types::BluetoothAddressType::Public,
             send_type: crate::io_types::PluginDataSendType::Notify,
             data: b"Another one\0",
         };

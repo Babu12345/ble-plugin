@@ -25,17 +25,17 @@ Example Usage:
     # Basic configuration example
     with USBHostDevice() as device:
         device.configure_peripheral("MyDevice", [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
-        device.configure_service("87654321-4321-4321-4321-cba987654321")
+        device.configure_service(0x8765)  # Use 16-bit hex UUID
         device.configure_characteristic(
-            "11111111-2222-3333-4444-555555555555",
-            "87654321-4321-4321-4321-cba987654321",
+            0x1111,  # Characteristic UUID as u16
+            0x8765,  # Service UUID as u16
             [BLEProperties.READ, BLEProperties.NOTIFY]
         )
         device.start_advertisement()
     
     # Advanced example with configuration and real-time listening
     def handle_plugin_data(message, message_info):
-        print(f"Received data from {message.src_id}: {message.data}")
+        print(f"Received data from {message.src_addr}: {message.data}")  # Updated to src_addr
     
     def handle_service_info(message, message_info):
         print(f"Service {message.service_uuid} exists: {message.exists}")
@@ -43,10 +43,10 @@ Example Usage:
     with USBHostDevice() as device:
         # Configure the BLE peripheral
         device.configure_peripheral("SensorDevice", [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
-        device.configure_service("temperature-service-uuid")
+        device.configure_service(0x1234)  # Use u16 UUID
         device.configure_characteristic(
-            "temperature-char-uuid",
-            "temperature-service-uuid",
+            0x8765,  # Characteristic UUID as u16
+            0x1234,  # Service UUID as u16
             [BLEProperties.READ, BLEProperties.NOTIFY]
         )
         
@@ -73,10 +73,10 @@ Example Usage:
                     if message_info.get('decoded') and isinstance(message_info['message'], PluginData):
                         # Echo the data back as a notification
                         device.notify_characteristic_value(
-                            address=b'\x01\x02\x03\x04\x05\x06',
+                            address=[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                             address_type=BluetoothAddressType.Public,
-                            characteristic_uuid="temperature-char-uuid",
-                            service_uuid="temperature-service-uuid",
+                            characteristic_uuid=0x8765,  # Use u16 UUID
+                            service_uuid=0x1234,  # Use u16 UUID
                             value=message_info['message'].data
                         )
         finally:

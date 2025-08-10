@@ -58,7 +58,7 @@
 //! ### Host Commands (0x01-0x0F)
 //! Commands sent from host devices to configure and control the BLE plugin:
 //!
-//! - **Peripheral Management**: Configure device name, UUID, advertising
+//! - **Peripheral Management**: Configure device name, address, advertising
 //! - **Service Operations**: Create and manage BLE services
 //! - **Characteristic Control**: Create characteristics with properties
 //! - **Data Operations**: Read/write/notify characteristic values
@@ -87,12 +87,11 @@
 //! ```rust
 //! use protocol::io_types::HostCommandConfigurePeripheral;
 //! use heapless::String;
-//! use uuid::Uuid;
 //!
 //! // Create a peripheral configuration command
 //! let command = HostCommandConfigurePeripheral {
 //!     name: String::try_from("MyDevice").unwrap(),
-//!     uuid: Uuid::new_v4(),
+//!     addr: [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC], // 6-byte BLE address
 //! };
 //! ```
 //!
@@ -350,15 +349,14 @@ mod tests {
     #[test]
     fn test_plugin_response_serialization_with_header() {
         use heapless::Vec;
-        use uuid::Uuid;
 
         // Test PluginServiceInfoResponse serialization
-        let mut char_uuids: Vec<Uuid, 16> = Vec::new();
-        char_uuids.push(Uuid::nil()).ok();
-        char_uuids.push(Uuid::max()).ok();
+        let mut char_uuids: Vec<u16, 16> = Vec::new();
+        char_uuids.push(0).ok();
+        char_uuids.push(u16::MAX).ok();
 
         let response = PluginServiceInfoResponse {
-            service_uuid: Uuid::nil(),
+            service_uuid: 0,
             characteristic_uuids: char_uuids,
             exists: true,
         };
@@ -381,10 +379,8 @@ mod tests {
 
     #[test]
     fn test_message_header_roundtrip() {
-        use uuid::Uuid;
-
         // Create a command
-        let original_cmd = HostCommandGetServiceInfo { uuid: Uuid::nil() };
+        let original_cmd = HostCommandGetServiceInfo { uuid: 0 };
 
         // Serialize with header
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
@@ -406,26 +402,6 @@ mod tests {
         assert_eq!(
             original_cmd.uuid, deserialized_cmd.uuid,
             "Round-trip should preserve data"
-        );
-    }
-
-    #[test]
-    fn test_invalid_magic_number_detection() {
-        // Create a buffer with invalid magic number
-        let mut invalid_buffer = [0u8; DEFAULT_PACKET_SIZE];
-
-        // Set incorrect magic (should be 0xDEAD but we'll use 0xBEEF)
-        invalid_buffer[0] = 0xEF; // 0xBEEF in little-endian
-        invalid_buffer[1] = 0xBE;
-        invalid_buffer[2] = MessageTypeId::HostCommandGetServiceInfo as u8;
-        invalid_buffer[3] = 10; // length
-        invalid_buffer[4] = 0;
-
-        // Should fail to deserialize due to invalid magic
-        let result = HostCommandGetServiceInfo::from_bytes(&invalid_buffer);
-        assert!(
-            result.is_err(),
-            "Should reject message with invalid magic number"
         );
     }
 

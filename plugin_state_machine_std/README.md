@@ -79,12 +79,12 @@ The state machine implements input throttling to ensure stable data processing:
 
 ### Peripheral Configuration
 
-- **ConfigurePeripheral**: Set up BLE peripheral with name and UUID
+- **ConfigurePeripheral**: Set up BLE peripheral with name and 6-byte address
 - **StartAdvertisement**: Begin BLE advertising with optional multi-connect support
 
 ### Service Management
 
-- **ConfigureService**: Create BLE services with specified UUIDs
+- **ConfigureService**: Create BLE services with specified u16 UUIDs
 - **GetServiceInfo**: Retrieve service information and characteristic lists
 
 ### Characteristic Operations

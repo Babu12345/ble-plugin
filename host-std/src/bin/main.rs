@@ -1,6 +1,5 @@
 use std::{str::FromStr, time::Duration};
 
-use ble_plugin::utils::random_uuid;
 use esp_idf_svc::hal::{
     prelude::Peripherals,
     spi::{
@@ -58,10 +57,8 @@ fn main() -> anyhow::Result<()> {
                 name: String::from_str("Portrait").unwrap(),
             })
             .ok();
-            io.0.send(HostCommandConfigureService {
-                uuid: unsafe { random_uuid() },
-            })
-            .ok();
+            io.0.send(HostCommandConfigureService { uuid: 0xAAAA })
+                .ok();
 
             std::thread::sleep(Duration::from_millis(20));
         });

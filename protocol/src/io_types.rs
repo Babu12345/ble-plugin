@@ -15,7 +15,6 @@ pub mod host {
     use heapless::Vec;
     use protocol_io::HostIO;
     use serde::{Deserialize, Serialize};
-    use uuid::Uuid;
 
     /// Host command. Configure peripheral
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -39,8 +38,8 @@ pub mod host {
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandConfigureService)]
     pub struct HostCommandConfigureService {
-        /// Service UUID
-        pub uuid: Uuid,
+        /// Service UUID (u16)
+        pub uuid: u16,
     }
 
     /// Properties enumeration for BLE characteristics.
@@ -66,10 +65,10 @@ pub mod host {
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandConfigureCharacteristic)]
     pub struct HostCommandConfigureCharacteristic {
-        /// Characteristic UUID
-        pub uuid: Uuid,
-        /// Service UUID this characteristic belongs to
-        pub service_uuid: Uuid,
+        /// Characteristic UUID (u16)
+        pub uuid: u16,
+        /// Service UUID (u16) this characteristic belongs to
+        pub service_uuid: u16,
         /// Properties of the characteristic (read, write, notify, etc.)
         pub properties: heapless::Vec<BLEProperties, MAX_PROPERTIES>, // Assuming max 4 properties per characteristic
     }
@@ -78,10 +77,10 @@ pub mod host {
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandConfigureCharacteristicRead)]
     pub struct HostCommandConfigureCharacteristicRead {
-        /// Characteristic UUID
-        pub uuid: Uuid,
-        /// Service UUID this characteristic belongs to
-        pub service_uuid: Uuid,
+        /// Characteristic UUID (u16)
+        pub uuid: u16,
+        /// Service UUID (u16) this characteristic belongs to
+        pub service_uuid: u16,
         /// Read value
         pub value: Vec<u8, MAX_NAME_SIZE>,
     }
@@ -90,18 +89,18 @@ pub mod host {
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandGetServiceInfo)]
     pub struct HostCommandGetServiceInfo {
-        /// Service UUID
-        pub uuid: Uuid,
+        /// Service UUID (u16)
+        pub uuid: u16,
     }
 
     /// Host command. Get characteristic info
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandGetCharacteristicInfo)]
     pub struct HostCommandGetCharacteristicInfo {
-        /// Characteristic UUID
-        pub characteristic_uuid: Uuid,
-        /// Service UUID this characteristic belongs to
-        pub service_uuid: Uuid,
+        /// Characteristic UUID (u16)
+        pub characteristic_uuid: u16,
+        /// Service UUID (u16) this characteristic belongs to
+        pub service_uuid: u16,
     }
 
     /// Host command. Start advertisement. TODO: Allow selecting which services you want to advertise
@@ -134,10 +133,10 @@ pub mod host {
         pub address: [u8; 6],
         /// Address type
         pub address_type: BluetoothAddressType,
-        /// Characteristic UUID
-        pub characteristic_uuid: Uuid,
-        /// Service UUID this characteristic belongs to
-        pub service_uuid: Uuid,
+        /// Characteristic UUID (u16)
+        pub characteristic_uuid: u16,
+        /// Service UUID (u16) this characteristic belongs to
+        pub service_uuid: u16,
         /// Value to notify
         pub value: Vec<u8, MAX_NAME_SIZE>,
     }
@@ -148,7 +147,6 @@ pub mod plugin {
     use crate::PluginIO;
     use crate::{MessageType, MessageTypeId};
     use protocol_io::PluginIO;
-    use uuid::Uuid;
 
     use super::*;
     use crate::IO;
@@ -172,8 +170,10 @@ pub mod plugin {
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[PluginIO(MessageTypeId::PluginData)]
     pub struct PluginData<'a> {
-        /// Source peripheral id that this data is orginating from.
-        pub src_id: Uuid,
+        /// Source peripheral addr that this data is orginating from.
+        pub src_addr: [u8; 6],
+        /// Address type of the source peripheral
+        pub src_addr_type: BluetoothAddressType,
         /// Send type of the data
         pub send_type: PluginDataSendType,
         /// Actual command type
@@ -187,11 +187,11 @@ pub mod plugin {
     pub enum PluginConfigurationError {
         /// The peripheral name is too long
         PeripheralNameTooLong = 0,
-        /// The peripheral UUID is invalid
+        /// The peripheral address is invalid
         InvalidPeripheralUuid = 1,
-        /// The service UUID is invalid
+        /// The service UUID (u16) is invalid
         InvalidServiceUuid = 2,
-        /// The characteristic UUID is invalid
+        /// The characteristic UUID (u16) is invalid
         InvalidCharacteristicUuid = 3,
         /// Advertisement without proper peripheral configuration
         AdvertisementWithoutPeripheralConfiguration = 4,
@@ -208,10 +208,10 @@ pub mod plugin {
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[PluginIO(MessageTypeId::PluginServiceInfoResponse)]
     pub struct PluginServiceInfoResponse {
-        /// Service UUID
-        pub service_uuid: Uuid,
-        /// List of characteristic UUIDs in this service
-        pub characteristic_uuids: heapless::Vec<Uuid, MAX_CHARACTERISTICS_PER_SERVICE>, // Assuming max 16 characteristics per service
+        /// Service UUID (u16)
+        pub service_uuid: u16,
+        /// List of characteristic UUIDs (u16) in this service
+        pub characteristic_uuids: heapless::Vec<u16, MAX_CHARACTERISTICS_PER_SERVICE>, // Assuming max 16 characteristics per service
         /// Whether the service exists
         pub exists: bool,
     }
@@ -220,10 +220,10 @@ pub mod plugin {
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[PluginIO(MessageTypeId::PluginCharacteristicInfoResponse)]
     pub struct PluginCharacteristicInfoResponse {
-        /// Characteristic UUID
-        pub characteristic_uuid: Uuid,
-        /// Service UUID this characteristic belongs to
-        pub service_uuid: Uuid,
+        /// Characteristic UUID (u16)
+        pub characteristic_uuid: u16,
+        /// Service UUID (u16) this characteristic belongs to
+        pub service_uuid: u16,
         /// Properties of the characteristic (read, write, notify, etc.)
         pub properties: heapless::Vec<BLEProperties, 4>,
         /// Whether the characteristic exists

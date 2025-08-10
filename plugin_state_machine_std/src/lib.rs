@@ -71,7 +71,7 @@
 //! ## Supported Commands
 //!
 //! ### Peripheral Management
-//! - [`HostCommandConfigurePeripheral`]: Configure BLE peripheral with name and UUID
+//! - [`HostCommandConfigurePeripheral`]: Configure BLE peripheral with name and address
 //! - [`HostCommandStartAdvertisement`]: Start BLE advertising
 //!
 //! ### Service Operations  
@@ -135,7 +135,6 @@ use threadpool::ThreadPool;
 use throttle::Throttle;
 
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -155,7 +154,6 @@ use protocol::{MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
 
 use std::sync::Arc;
-use uuid::Uuid;
 /// Internal metadata storage for the plugin state machine
 ///
 /// This structure maintains the current state and configuration of the BLE plugin,
@@ -170,9 +168,9 @@ struct PluginStateMachineMetadata {
     /// This enables efficient lookup of characteristics within services and
     /// provides quick access to characteristic properties for validation.
     service_to_characteristic_uuids: HashMap<
-        Uuid,
+        u16,
         heapless::Vec<
-            (Uuid, heapless::Vec<BLEProperties, MAX_PROPERTIES>),
+            (u16, heapless::Vec<BLEProperties, MAX_PROPERTIES>),
             MAX_CHARACTERISTICS_PER_SERVICE,
         >,
     >, // (UUID, properties)
@@ -591,7 +589,7 @@ impl PluginStateMachine {
 
     fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) -> Result<()> {
         log::info!(
-            "Configuring peripheral with name: '{}', UUID: {:?}",
+            "Configuring peripheral with name: '{}', address: {:?}",
             cmd.name,
             cmd.addr
         );
@@ -646,13 +644,8 @@ impl PluginStateMachine {
                 let adv_data = adv_data_base.name(name.as_str());
 
                 // Get all service UUIDs to include in advertisement
-                for uuid in self.get_service_uuids().iter() {
-                    let ble_uuid =
-                        BleUuid::from_uuid128_string(&uuid.to_string()).map_err(|e| {
-                            log::error!("Failed to convert service UUID to BleUuid: {:?}", e);
-                            StateMachineError::InvalidBleConfiguration
-                        })?;
-                    adv_data.add_service_uuid(ble_uuid);
+                for uuid in self.get_service_uuids().into_iter() {
+                    adv_data.add_service_uuid(BleUuid::from_uuid16(uuid));
                 }
 
                 advertisement.lock().set_data(adv_data).map_err(|e| {
@@ -740,14 +733,8 @@ impl PluginStateMachine {
             }
         };
 
-        // Convert UUID to BleUuid
-        let ble_uuid = BleUuid::from_uuid128_string(&cmd.uuid.to_string()).map_err(|e| {
-            log::error!("Failed to convert UUID to BleUuid: {:?}", e);
-            StateMachineError::InvalidBleConfiguration
-        })?;
-
-        // Create the BLE service
-        server.create_service(ble_uuid);
+        // Create the BLE service converting from u16 to BleUuid
+        server.create_service(BleUuid::from_uuid16(cmd.uuid));
 
         log::info!("Successfully created BLE service with UUID: {}", cmd.uuid);
 
@@ -764,18 +751,16 @@ impl PluginStateMachine {
     /// Get a stored BLE service by UUID for characteristic creation
     pub fn get_service(
         &self,
-        service_uuid: Uuid,
+        service_uuid: u16,
     ) -> Option<&Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>> {
         match self.server.as_ref() {
-            Some(server) => block_on(
-                server.get_service(BleUuid::from_uuid128_string(&service_uuid.to_string()).ok()?),
-            ),
+            Some(server) => block_on(server.get_service(BleUuid::from_uuid16(service_uuid))),
             None => None,
         }
     }
 
     /// Get all configured service UUIDs
-    pub fn get_service_uuids(&self) -> heapless::Vec<Uuid, 16> {
+    pub fn get_service_uuids(&self) -> heapless::Vec<u16, 16> {
         self.metadata
             .service_to_characteristic_uuids
             .keys()
@@ -810,23 +795,16 @@ impl PluginStateMachine {
             .lock();
 
         // Get the characteristic
-        let characteristic = block_on(service.get_characteristic(
-            BleUuid::from_uuid128_string(&cmd.characteristic_uuid.to_string()).map_err(|e| {
-                log::error!("Failed to convert characteristic UUID to BleUuid: {:?}", e);
-                self.usb_sender
-                    .send(PluginConfigurationError::InvalidCharacteristicUuid)
-                    .ok();
-                StateMachineError::InvalidBleConfiguration
-            })?,
-        ))
-        .ok_or_else(|| {
-            log::error!(
-                "Characteristic with UUID {} not found in service {}",
-                cmd.characteristic_uuid,
-                cmd.service_uuid
-            );
-            StateMachineError::InvalidBleConfiguration
-        })?;
+        let characteristic =
+            block_on(service.get_characteristic(BleUuid::Uuid16(cmd.characteristic_uuid)))
+                .ok_or_else(|| {
+                    log::error!(
+                        "Characteristic with UUID {} not found in service {}",
+                        cmd.characteristic_uuid,
+                        cmd.service_uuid
+                    );
+                    StateMachineError::InvalidBleConfiguration
+                })?;
 
         // Get the characteristic
         let characteristic_lock = characteristic.lock();
@@ -907,16 +885,8 @@ impl PluginStateMachine {
             })?
             .lock();
 
-        let characteristic = block_on(service.get_characteristic(
-            BleUuid::from_uuid128_string(&cmd.uuid.to_string()).map_err(|e| {
-                log::error!("Failed to convert characteristic UUID to BleUuid: {:?}", e);
-                self.usb_sender
-                    .send(PluginConfigurationError::InvalidCharacteristicUuid)
-                    .ok();
-                StateMachineError::InvalidBleConfiguration
-            })?,
-        ))
-        .ok_or_else(|| StateMachineError::InvalidBleConfiguration)?;
+        let characteristic = block_on(service.get_characteristic(BleUuid::Uuid16(cmd.uuid)))
+            .ok_or_else(|| StateMachineError::InvalidBleConfiguration)?;
 
         characteristic.lock().set_value(cmd.value.as_slice());
         Ok(())
@@ -946,10 +916,7 @@ impl PluginStateMachine {
         })?;
 
         // Convert UUID to BleUuid
-        let ble_uuid = BleUuid::from_uuid128_string(&cmd.uuid.to_string()).map_err(|e| {
-            log::error!("Failed to convert characteristic UUID to BleUuid: {:?}", e);
-            StateMachineError::InvalidBleConfiguration
-        })?;
+        let ble_uuid = BleUuid::from_uuid16(cmd.uuid);
 
         // Convert properties from u8 to NimbleProperties
         let mut nimble_properties = NimbleProperties::empty();
@@ -998,7 +965,10 @@ impl PluginStateMachine {
                     );
                     usb_sender
                         .send(PluginData {
-                            src_id: char_uuid_write, // This should be the peripheral ID
+                            src_addr: args.desc().address().as_be_bytes(),
+                            src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
+                                args.desc().address().addr_type(),
+                            ),
                             send_type: protocol::io_types::PluginDataSendType::Write,
                             data: args.current_data(),
                         })
@@ -1017,7 +987,7 @@ impl PluginStateMachine {
         match nimble_properties.contains(NimbleProperties::READ) {
             true => {
                 let usb_sender = self.usb_sender.clone();
-                characteristic.lock().on_read(move |characteristics, _| {
+                characteristic.lock().on_read(move |_, desc| {
                     log::info!(
                         "BLE read requested for characteristic {} in service {}",
                         cmd.uuid,
@@ -1026,8 +996,10 @@ impl PluginStateMachine {
 
                     usb_sender
                         .send(PluginData {
-                            src_id: Uuid::from_str(characteristics.uuid().to_string().as_str())
-                                .unwrap_or(Uuid::nil()),
+                            src_addr: desc.address().as_be_bytes(),
+                            src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
+                                desc.address().addr_type(),
+                            ),
                             send_type: protocol::io_types::PluginDataSendType::Read,
                             data: &[],
                         })

@@ -9,19 +9,14 @@ from plugin_host.comms import (
     USBMessageHandler,
     USBHostDevice,
     USBCommunicationError,
-    serialize_command
+    serialize_command,
 )
 from plugin_host.generated_types import (
     PluginData,
     PluginServiceInfoResponse,
     PluginDataSendType,
+    BluetoothAddressType,
 )
-
-def uuid_str_to_bytes(uuid_str: str) -> bytes:
-    """Convert UUID string to bytes"""
-    # Parse UUID and get bytes
-    uuid_obj = uuid_module.UUID(uuid_str)
-    return uuid_obj.bytes
 
 class TestMessageDecoder:
     """Test suite for MessageDecoder class"""
@@ -30,7 +25,7 @@ class TestMessageDecoder:
         """Test decoding PluginData messages"""
         # Create a test PluginData message
         original_message = PluginData(
-            src_id=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc"),
+            src_addr=[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc], src_addr_type=BluetoothAddressType.Public,
             data=b"test_data",
             send_type=PluginDataSendType.Notify
         )
@@ -43,16 +38,17 @@ class TestMessageDecoder:
         
         assert decoded is not None
         assert isinstance(decoded, PluginData)
-        assert decoded.src_id == original_message.src_id
+        assert decoded.src_addr == original_message.src_addr
+        assert decoded.src_addr_type == original_message.src_addr_type
         assert decoded.data == original_message.data
         assert decoded.send_type == original_message.send_type
     
     def test_decode_service_info_response(self) -> None:
         """Test decoding PluginServiceInfoResponse messages"""
         original_message = PluginServiceInfoResponse(
-            service_uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc"),
+            service_uuid=0x1234,
             characteristic_uuids=[
-                uuid_str_to_bytes("11111111-1111-1111-1111-111111111111")
+                0x1234
             ],
             exists=True
         )
@@ -78,7 +74,7 @@ class TestMessageDecoder:
     def test_get_message_type_name(self) -> None:
         """Test getting message type names"""
         message = PluginData(
-            src_id="test",
+            src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, 0x05], src_addr_type=BluetoothAddressType.Public,
             data=b"data",
             send_type=PluginDataSendType.Read
         )
@@ -210,7 +206,7 @@ class TestUSBDataListener:
         """Test the listening loop with valid messages"""
         # Create a valid message
         test_message = PluginData(
-            src_id=uuid_str_to_bytes("12345678-1234-1234-1234-123456789abc"),
+            src_addr=[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc], src_addr_type=BluetoothAddressType.Public,
             data=b"test",
             send_type=PluginDataSendType.Notify
         )
@@ -301,7 +297,7 @@ class TestUSBMessageHandler:
         self.handler.register_callback(PluginData, test_callback)
         
         test_message = PluginData(
-            src_id="test",
+            src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, 0x05], src_addr_type=BluetoothAddressType.Public,
             send_type=PluginDataSendType.Write,
             data=b"test_data"
         )
@@ -334,15 +330,15 @@ class TestUSBMessageHandler:
             callback_called = True
         
         def test_filter(message, info):
-            # Filter out messages with specific src_id
-            return message.src_id != "filtered_out"
+            # Filter out messages with specific src_addr
+            return message.src_addr != [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
         
         self.handler.register_callback(PluginData, test_callback)
         self.handler.register_filter(PluginData, test_filter)
         
         # Test message that should be filtered out
         filtered_message = PluginData(
-            src_id="filtered_out",
+            src_addr=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], src_addr_type=BluetoothAddressType.Public,
             send_type=PluginDataSendType.Read,
             data=b"data"
         )
@@ -361,7 +357,8 @@ class TestUSBMessageHandler:
         # Test message that should pass through
         callback_called = False
         passed_message = PluginData(
-            src_id="allowed",
+            src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, 0x05],
+            src_addr_type=BluetoothAddressType.Public,
             send_type=PluginDataSendType.Read,
             data=b"data"
         )
@@ -408,7 +405,7 @@ class TestUSBMessageHandler:
         for i in range(3):
             message_info = {
                 'message_type': 'PluginData',
-                'message': PluginData(src_id=f"test_{i}", send_type=PluginDataSendType.Read, data=b"data"),
+                'message': PluginData(src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, i % 256], src_addr_type=BluetoothAddressType.Public, send_type=PluginDataSendType.Read, data=b"data"),
                 'decoded': True
             }
             self.handler.handle_message(message_info)
@@ -416,7 +413,7 @@ class TestUSBMessageHandler:
         # Process different message type
         service_info = {
             'message_type': 'PluginServiceInfoResponse',
-            'message': PluginServiceInfoResponse(service_uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789123"), characteristic_uuids=[], exists=True),
+            'message': PluginServiceInfoResponse(service_uuid=0x1234, characteristic_uuids=[], exists=True),
             'decoded': True
         }
         self.handler.handle_message(service_info)

@@ -3,7 +3,8 @@ import uuid as uuid_module
 from plugin_host.comms import (
     serialize_command,
     deserialize_response,
-    DEFAULT_PACKET_SIZE
+    DEFAULT_PACKET_SIZE,
+    parse_uuid_u16
 )
 from plugin_host.generated_types import (
     HostCommandConfigurePeripheral,
@@ -15,12 +16,6 @@ from plugin_host.generated_types import (
     DATA_BYTES_LENGTH_IN_BYTES,
     MESSAGE_HEADER_SIZE
 )
-
-def uuid_str_to_bytes(uuid_str: str) -> bytes:
-    """Convert UUID string to bytes"""
-    # Parse UUID and get bytes
-    uuid_obj = uuid_module.UUID(uuid_str)
-    return uuid_obj.bytes
 
 def test_command_serialization_with_message_header() -> None:
     """Test serialization of protocol commands with full message header"""
@@ -54,7 +49,7 @@ def test_command_serialization_with_message_header() -> None:
 def test_service_command_serialization() -> None:
     """Test serialization of service info command"""
     service_cmd = HostCommandGetServiceInfo(
-        uuid=uuid_str_to_bytes("87654321-4321-4321-4321-cba987654321")
+        uuid=0x8765
     )
     
     serialized_service = serialize_command(service_cmd)
@@ -80,9 +75,9 @@ def test_response_deserialization() -> None:
     """Test deserializing a mock response"""
     # Create a mock response
     mock_response = PluginServiceInfoResponse(
-        service_uuid=uuid_str_to_bytes("87654321-4321-4321-4321-cba987654321"),
+        service_uuid=0x8765,
         characteristic_uuids=[
-            uuid_str_to_bytes("11111111-1111-1111-1111-111111111111")
+            0x1111
         ],
         exists=True
     )
@@ -101,7 +96,7 @@ def test_response_deserialization() -> None:
 def test_message_header_protocol_roundtrip() -> None:
     """Test the message header protocol with round-trip serialization"""
     # Create a simple command
-    cmd = HostCommandGetServiceInfo(uuid=uuid_str_to_bytes("12345678-1234-1234-1234-123456789123"))
+    cmd = HostCommandGetServiceInfo(uuid=0x1234)
     
     # Serialize
     serialized = serialize_command(cmd)
@@ -134,3 +129,54 @@ def test_message_header_protocol_roundtrip() -> None:
     
     assert deserialized.uuid == cmd.uuid, f"Round-trip failed: {deserialized.uuid} != {cmd.uuid}"
     assert deserialized == cmd, "Complete command objects should match after round-trip"
+
+def test_parse_uuid_u16_valid_values() -> None:
+    """Test parse_uuid_u16 with valid u16 values"""
+    # Test valid integers
+    assert parse_uuid_u16(0) == 0
+    assert parse_uuid_u16(1234) == 1234
+    assert parse_uuid_u16(0xFFFF) == 65535  # Max u16
+    
+    # Test valid hex strings
+    assert parse_uuid_u16('0x1234') == 0x1234
+    assert parse_uuid_u16('0XABCD') == 0xABCD
+    assert parse_uuid_u16('0xFFFF') == 65535
+    
+    # Test decimal strings
+    assert parse_uuid_u16('1234') == 1234
+    assert parse_uuid_u16('65535') == 65535
+    
+    # Test hex strings without prefix
+    assert parse_uuid_u16('ABCD') == 0xABCD
+    assert parse_uuid_u16('beef') == 0xBEEF
+
+def test_parse_uuid_u16_invalid_values() -> None:
+    """Test parse_uuid_u16 with invalid values that should raise ValueError"""
+    import pytest
+    
+    # Test negative values
+    with pytest.raises(ValueError, match="UUID value cannot be negative"):
+        parse_uuid_u16(-1)
+    
+    with pytest.raises(ValueError, match="UUID value cannot be negative"):
+        parse_uuid_u16('-1')
+    
+    # Test values exceeding u16 max
+    with pytest.raises(ValueError, match="UUID value exceeds u16 maximum"):
+        parse_uuid_u16(0x10000)  # One more than max u16
+    
+    with pytest.raises(ValueError, match="UUID value exceeds u16 maximum"):
+        parse_uuid_u16('0x10000')
+    
+    with pytest.raises(ValueError, match="UUID value exceeds u16 maximum"):
+        parse_uuid_u16('65536')  # One more than max u16 as decimal string
+    
+    # Test invalid type
+    with pytest.raises(ValueError, match="Invalid UUID value type"):
+        parse_uuid_u16([1, 2, 3])
+    
+    with pytest.raises(ValueError, match="Invalid UUID value type"):
+        parse_uuid_u16(None)
+    
+    with pytest.raises(ValueError, match="Invalid UUID value type"):
+        parse_uuid_u16({'uuid': 1234})

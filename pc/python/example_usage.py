@@ -36,14 +36,14 @@ def main():
             
             # Configure a service
             print("Configuring service...")
-            host.configure_service(uuid="87654321-4321-4321-4321-cba987654321")
+            host.configure_service(uuid=0x8765)
             print("✓ Service configured")
             
             # Configure a characteristic with properties
             print("Configuring characteristic...")
             host.configure_characteristic(
-                uuid="abcd1234-5678-90ab-cdef-123456789abc",
-                service_uuid="87654321-4321-4321-4321-cba987654321",
+                uuid=0xabcd,
+                service_uuid=0x8765,
                 properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
             )
             print("✓ Characteristic configured")
@@ -51,7 +51,7 @@ def main():
             # Query service information (this would receive a response)
             print("Querying service information...")
             try:
-                service_info = host.get_service_info("87654321-4321-4321-4321-cba987654321")
+                service_info = host.get_service_info(0x8765)
                 print(f"✓ Service exists: {service_info.exists}")
                 print(f"  Characteristics: {len(service_info.characteristic_uuids)}")
             except USBCommunicationError as e:

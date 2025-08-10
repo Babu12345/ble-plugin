@@ -162,7 +162,7 @@ class MessageTypeId(Enum):
 @attr.s(auto_attribs=True)
 class HostCommandConfigurePeripheral:
     name: str
-    uuid: str
+    addr: List[attrs2bin.U8]  # 6-byte BLE address
     # ... more fields
 ```
 

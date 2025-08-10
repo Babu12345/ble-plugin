@@ -26,7 +26,7 @@ This report summarizes the Python code generated from the Rust protocol library.
 - HostCommandGetCharacteristicInfo (2 fields)
 - HostCommandStartAdvertisement (1 fields)
 - HostCommandNotifyCharacteristicValue (5 fields)
-- PluginData (3 fields)
+- PluginData (4 fields)
 - PluginServiceInfoResponse (3 fields)
 - PluginCharacteristicInfoResponse (4 fields)
 - PluginAuthenticationCompletedResponse (3 fields)
@@ -36,4 +36,4 @@ This report summarizes the Python code generated from the Rust protocol library.
 Replace the existing types.py file with generated_types.py, or carefully merge
 the generated definitions into your existing code.
 
-Generated at: 2025-08-10 12:50:26 UTC
+Generated at: 2025-08-10 18:47:59 UTC
