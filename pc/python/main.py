@@ -43,14 +43,20 @@ def main():
 
             sleep(delay)
             # Configure a characteristic with properties
-            print("Configuring characteristic...")
-            host.configure_characteristic(
-                uuid="abcd1234-5678-90ab-cdef-123456789abc",
-                service_uuid="87654321-4321-4321-4321-cba987654321",
-                properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
-            )
-            print("✓ Characteristic configured")
+            print("Configuring service...")
+            host.configure_service(uuid="12654321-4321-4321-4321-cba987654321")
+            print("✓ Service configured")
+
             sleep(delay)
+            # # Configure a characteristic with properties
+            # print("Configuring characteristic...")
+            # host.configure_characteristic(
+            #     uuid="abcd1234-5678-90ab-cdef-123456789abc",
+            #     service_uuid="87654321-4321-4321-4321-cba987654321",
+            #     properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
+            # )
+            # print("✓ Characteristic configured")
+            # sleep(delay)
             
             # # Query service information (this would receive a response)
             # print("Querying service information...")

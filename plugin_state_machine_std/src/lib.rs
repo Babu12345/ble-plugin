@@ -178,6 +178,14 @@ struct PluginStateMachineMetadata {
     >, // (UUID, properties)
 }
 
+impl PluginStateMachineMetadata {
+    /// Set the BLE device name for advertising
+    fn set_name(mut self, name: String<MAX_NAME_SIZE>) -> Self {
+        self.ble_name = Some(name);
+        self
+    }
+}
+
 /// Main state machine for processing BLE and USB data and facilitating bidirectional transfer
 ///
 /// The `PluginStateMachine` serves as the central processing unit for BLE plugin devices,
@@ -598,7 +606,7 @@ impl PluginStateMachine {
             })?;
         }
 
-        self.metadata.ble_name = Some(cmd.name.clone());
+        self.metadata = PluginStateMachineMetadata::default().set_name(cmd.name.clone());
         self.server = Some(self.ble_device.get_server());
         log::info!("Successfully configured peripheral '{}'", cmd.name);
         Ok(())
@@ -634,13 +642,23 @@ impl PluginStateMachine {
 
         match self.metadata.ble_name.as_ref() {
             Some(name) => {
-                advertisement
-                    .lock()
-                    .set_data(esp32_nimble::BLEAdvertisementData::new().name(name.as_str()))
-                    .map_err(|e| {
-                        log::error!("Failed to set advertisement data: {:?}", e);
-                        StateMachineError::AdvertisementError("Failed to start advertisement")
-                    })?;
+                let mut adv_data_base = esp32_nimble::BLEAdvertisementData::new();
+                let adv_data = adv_data_base.name(name.as_str());
+
+                // Get all service UUIDs to include in advertisement
+                for uuid in self.get_service_uuids().iter() {
+                    let ble_uuid =
+                        BleUuid::from_uuid128_string(&uuid.to_string()).map_err(|e| {
+                            log::error!("Failed to convert service UUID to BleUuid: {:?}", e);
+                            StateMachineError::InvalidBleConfiguration
+                        })?;
+                    adv_data.add_service_uuid(ble_uuid);
+                }
+
+                advertisement.lock().set_data(adv_data).map_err(|e| {
+                    log::error!("Failed to set advertisement data: {:?}", e);
+                    StateMachineError::AdvertisementError("Failed to start advertisement")
+                })?;
                 advertisement.lock().start().map_err(|e| {
                     log::error!("Failed to start advertisement: {:?}", e);
                     StateMachineError::AdvertisementError("Failed to start advertisement")
@@ -729,7 +747,7 @@ impl PluginStateMachine {
         })?;
 
         // Create the BLE service
-        server.create_service(ble_uuid).lock();
+        server.create_service(ble_uuid);
 
         log::info!("Successfully created BLE service with UUID: {}", cmd.uuid);
 
@@ -754,6 +772,15 @@ impl PluginStateMachine {
             ),
             None => None,
         }
+    }
+
+    /// Get all configured service UUIDs
+    pub fn get_service_uuids(&self) -> heapless::Vec<Uuid, 16> {
+        self.metadata
+            .service_to_characteristic_uuids
+            .keys()
+            .cloned()
+            .collect()
     }
 
     fn handle_notify_characteristic_value(

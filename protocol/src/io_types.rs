@@ -104,7 +104,7 @@ pub mod host {
         pub service_uuid: Uuid,
     }
 
-    /// Host command. Start advertisement
+    /// Host command. Start advertisement. TODO: Allow selecting which services you want to advertise
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandStartAdvertisement)]
     pub struct HostCommandStartAdvertisement {
