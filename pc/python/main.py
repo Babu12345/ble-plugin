@@ -2,7 +2,7 @@ from enum import Enum
 from collections import namedtuple
 from plugin_host.generated_types import *
 
-from plugin_host.comms import USBHostDevice, USBCommunicationError, parse_uuid_u32, serialize_command
+from plugin_host.comms import USBHostDevice, USBCommunicationError, parse_uuid_u16, serialize_command
 from plugin_host.generated_types import BLEProperties, BluetoothAddressType
 from time import sleep
 def main():
@@ -48,24 +48,24 @@ def main():
             print("✓ Service configured")
 
             sleep(delay)
-            # # Configure a characteristic with properties
-            # print("Configuring characteristic...")
-            # host.configure_characteristic(
-            #     uuid=0xabcd,
-            #     service_uuid=0x8765,
-            #     properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
-            # )
-            # print("✓ Characteristic configured")
-            # sleep(delay)
+            # Configure a characteristic with properties
+            print("Configuring characteristic...")
+            host.configure_characteristic(
+                uuid=0xabcd,
+                service_uuid=0x8765,
+                properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
+            )
+            print("✓ Characteristic configured")
+            sleep(delay)
             
-            # # Query service information (this would receive a response)
-            # print("Querying service information...")
-            # try:
-            #     service_info = host.get_service_info(0x8765)
-            #     print(f"✓ Service exists: {service_info.exists}")
-            #     print(f"  Characteristics: {len(service_info.characteristic_uuids)}")
-            # except USBCommunicationError as e:
-            #     print(f"⚠ Service query failed (expected if no device): {e}")
+            # Query service information (this would receive a response)
+            print("Querying service information...")
+            try:
+                service_info = host.get_service_info(0x8765)
+                print(f"✓ Service exists: {service_info.exists}")
+                print(f"  Characteristics: {len(service_info.characteristic_uuids)}")
+            except USBCommunicationError as e:
+                print(f"⚠ Service query failed (expected if no device): {e}")
             
             # Start advertisement
             print("Starting advertisement...")

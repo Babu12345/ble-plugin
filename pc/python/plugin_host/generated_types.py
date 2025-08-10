@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "144e4dc254e8decc6e13ea173a98f5684f72890d42e391f4809a4ffacc5c8fa0"
+PROTOCOL_HASH = "bc73f45d2343af05f5662839dfffa9be790b449999b4caeec2f5fb65f33549d0"
 
 # ==================== CONSTANTS ====================
 
@@ -50,7 +50,7 @@ class MessageTypeId(Enum):
     """Message type identifiers for efficient command dispatch  This enum defines un..."""
     # Configure BLE peripheral device with name and 6-byte address
     HostCommandConfigurePeripheral: attrs2bin.U8 = 0x01
-    # Create a new BLE service with specified u32 UUID
+    # Create a new BLE service with specified u16 UUID
     HostCommandConfigureService: attrs2bin.U8 = 0x02
     # Create a BLE characteristic with properties
     HostCommandConfigureCharacteristic: attrs2bin.U8 = 0x03

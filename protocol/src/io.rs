@@ -118,7 +118,7 @@ pub enum MessageTypeId {
     /// Configure BLE peripheral device with name and 6-byte address
     HostCommandConfigurePeripheral = 0x01,
 
-    /// Create a new BLE service with specified u32 UUID
+    /// Create a new BLE service with specified u16 UUID
     HostCommandConfigureService = 0x02,
 
     /// Create a BLE characteristic with properties
