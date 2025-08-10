@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "e40e94a2bb80c4e3fb6f9b2eae7e8fbd070eab605ae7e54cb965e766a75bd223"
+PROTOCOL_HASH = "144e4dc254e8decc6e13ea173a98f5684f72890d42e391f4809a4ffacc5c8fa0"
 
 # ==================== CONSTANTS ====================
 
