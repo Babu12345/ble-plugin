@@ -15,8 +15,7 @@ rust-version = "1.70"
 # Local protocol definitions
 protocol = { path = "../protocol" }
 
-# ESP32 BLE stack integration
-esp32-nimble = { version = "0.11.0", default-features = false, features = [
+esp32-nimble = { git = "https://github.com/Babu12345/esp32-nimble", default-features = false, features = [
     "no_std",
 ] }
 

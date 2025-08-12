@@ -278,14 +278,13 @@ impl PluginStateMachine {
     pub fn new(
         usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
         usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
-        ble_device: &'static mut BLEDevice,
         indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>,
     ) -> Self {
         Self {
             indicator,
             usb_sender: Arc::new(usb_sender),
             usb_receiver,
-            ble_device,
+            ble_device: BLEDevice::take(),
             server: None,
             metadata: Default::default(),
             blink_throttle: Throttle::new(Self::THROTTLE_INFO.0, Self::THROTTLE_INFO.1),

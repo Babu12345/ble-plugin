@@ -4,7 +4,6 @@ use std::{
 };
 
 use device_cherry::CdcAcmDevice;
-use esp32_nimble::BLEDevice;
 use esp_idf_svc::hal::{
     gpio::{OutputPin, PinDriver},
     prelude::Peripherals,
@@ -41,13 +40,7 @@ fn main() -> Result<()> {
             .processors(scope, 20, (Duration::from_millis(10), 10))
             .unwrap();
         scope.spawn(
-            PluginStateMachine::new(
-                usb_processors.0,
-                usb_processors.1,
-                BLEDevice::take(),
-                indicator,
-            )
-            .runner_fn(),
+            PluginStateMachine::new(usb_processors.0, usb_processors.1, indicator).runner_fn(),
         );
     });
 

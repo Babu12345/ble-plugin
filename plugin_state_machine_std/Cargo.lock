@@ -604,8 +604,7 @@ dependencies = [
 [[package]]
 name = "esp32-nimble"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "053db9052cf401761b4b42af928e83bbe86542941c82a9ec4622813be53759b8"
+source = "git+https://github.com/Babu12345/esp32-nimble#d250f2aaea439dc5e12cf17fd97ca12b866b9688"
 dependencies = [
  "anyhow",
  "bitflags 2.9.1",
