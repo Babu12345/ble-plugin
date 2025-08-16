@@ -53,7 +53,7 @@ use crate::{
 };
 use heapless::Vec;
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
+use strum::{EnumIter, IntoEnumIterator};
 
 /// Size in bytes of the message type identifier field
 ///
@@ -157,6 +157,18 @@ pub enum MessageTypeId {
 
     /// Authentication completed response from plugin
     PluginAuthenticationCompletedResponse = 0x84,
+}
+
+/// Error type for converting from u8 to MessageTypeId
+pub struct InvalidMessageTypeIdForConversion;
+
+impl TryFrom<u8> for MessageTypeId {
+    type Error = InvalidMessageTypeIdForConversion;
+    fn try_from(value: u8) -> core::result::Result<Self, Self::Error> {
+        MessageTypeId::iter()
+            .find(|&x| x as u8 == value)
+            .ok_or(InvalidMessageTypeIdForConversion)
+    }
 }
 
 /// Trait for associating types with their message type identifiers

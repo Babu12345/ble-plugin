@@ -343,20 +343,10 @@ impl PluginStateMachine {
 
         // Extract message type ID
         let type_id = data[MESSAGE_MAGIC_BYTES];
-        match type_id {
-            0x01 => Ok(MessageTypeId::HostCommandConfigurePeripheral),
-            0x02 => Ok(MessageTypeId::HostCommandConfigureService),
-            0x03 => Ok(MessageTypeId::HostCommandConfigureCharacteristic),
-            0x04 => Ok(MessageTypeId::HostCommandConfigureCharacteristicRead),
-            0x05 => Ok(MessageTypeId::HostCommandGetServiceInfo),
-            0x06 => Ok(MessageTypeId::HostCommandGetCharacteristicInfo),
-            0x07 => Ok(MessageTypeId::HostCommandStartAdvertisement),
-            0x08 => Ok(MessageTypeId::HostCommandNotifyCharacteristicValue),
-            _ => {
-                log::error!("Unknown message type ID: 0x{:02X}", type_id);
-                Err(StateMachineError::UnknownMessageType)
-            }
-        }
+        MessageTypeId::try_from(type_id).map_err(|_| {
+            log::error!("Unknown message type ID: 0x{:02X}", type_id);
+            StateMachineError::UnknownMessageType
+        })
     }
 
     /// Returns a closure that can be used to run the state machine in a separate thread
