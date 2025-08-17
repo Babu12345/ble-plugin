@@ -29,6 +29,7 @@
 //! }
 //! ```
 
+use esp32_nimble::BLEError;
 use protocol::MessageTypeId;
 use thiserror_no_std::Error;
 
@@ -137,6 +138,10 @@ pub enum StateMachineError {
     /// Invalid passkey length provided for BLE pairing
     #[error("Invalid passkey length - must be 6 digits")]
     InvalidPasskeyLength,
+
+    /// Failure to restart the BLE server
+    #[error("Failed to restart BLE server with error {0}")]
+    ServerRestartError(#[source] BLEError),
 }
 
 /// Convenient result type for plugin state machine operations

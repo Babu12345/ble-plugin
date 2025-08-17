@@ -594,7 +594,12 @@ impl PluginStateMachine {
         }
 
         self.metadata = PluginStateMachineMetadata::default().set_name(cmd.name.clone());
-        self.server = Some(self.ble_device.get_server());
+        self.server = Some(
+            self.ble_device
+                .get_server()
+                .advertise_on_disconnect(false)
+                .clear_services(),
+        );
         log::info!("Successfully configured peripheral '{}'", cmd.name);
         Ok(())
     }
@@ -626,6 +631,15 @@ impl PluginStateMachine {
             "Starting BLE advertisement, multi-connect: {}",
             cmd.allow_multi_connect
         );
+
+        // Restart the server to ensure that any cached services are cleared
+        // and we can start fresh with the new advertisement
+        if let Some(server) = self.server.as_mut() {
+            server.restart(true).map_err(|source| {
+                log::error!("Failed to restart BLE server: {:?}", source);
+                StateMachineError::ServerRestartError(source)
+            })?;
+        }
 
         match self.metadata.ble_name.as_ref() {
             Some(name) => {
