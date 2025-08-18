@@ -147,10 +147,12 @@ pub mod host {
     pub enum BLEProfile {
         /// Custom profile - user-defined services
         Custom = 0,
-        // Future profile types reserved:
-        // HeartRateMonitor = 1,
-        // BatteryService = 2,
-        // DeviceInformation = 3,
+        /// Heart Rate Monitor profile
+        HeartRateMonitor = 1,
+        /// Battery Service profile
+        BatteryService = 2,
+        /// Device Information Service profile
+        DeviceInformation = 3,
     }
 
     /// Host command. Configure BLE profile

@@ -13,7 +13,7 @@ This report summarizes the Python code generated from the Rust protocol library.
 - MessageTypeId (15 variants)
 - BLEProperties (5 variants)
 - BluetoothAddressType (4 variants)
-- BLEProfile (1 variants)
+- BLEProfile (4 variants)
 - PluginDataSendType (3 variants)
 - PluginConfigurationError (7 variants)
 
@@ -38,4 +38,4 @@ This report summarizes the Python code generated from the Rust protocol library.
 Replace the existing types.py file with generated_types.py, or carefully merge
 the generated definitions into your existing code.
 
-Generated at: 2025-08-18 00:47:52 UTC
+Generated at: 2025-08-18 01:23:21 UTC

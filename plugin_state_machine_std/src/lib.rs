@@ -130,6 +130,7 @@ use esp_idf_svc::hal::gpio::AnyOutputPin;
 use esp_idf_svc::hal::gpio::Output;
 use esp_idf_svc::hal::gpio::PinDriver;
 use esp_idf_svc::hal::task::block_on;
+use protocol::io_types::BLEProfile;
 use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
 use protocol::io_types::HostCommandConfigurePeripheralSecurity;
@@ -150,11 +151,11 @@ use esp32_nimble::{BLEDevice, BLEServer, BLEService, NimbleProperties};
 use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use heapless::String;
 use protocol::io_types::{
-    HostCommandConfigureCharacteristic,
-    HostCommandConfigurePeripheral, HostCommandConfigureProfile, HostCommandConfigureService,
-    HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo, HostCommandStartAdvertisement,
-    PluginCharacteristicInfoResponse, PluginConfigurationError, PluginServiceInfoResponse,
-    MAX_CHARACTERISTICS_PER_SERVICE, MAX_PROPERTIES,
+    HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
+    HostCommandConfigureProfile, HostCommandConfigureService, HostCommandGetCharacteristicInfo,
+    HostCommandGetServiceInfo, HostCommandStartAdvertisement, PluginCharacteristicInfoResponse,
+    PluginConfigurationError, PluginServiceInfoResponse, MAX_CHARACTERISTICS_PER_SERVICE,
+    MAX_PROPERTIES,
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
@@ -185,7 +186,7 @@ struct PluginStateMachineMetadata {
 
 impl PluginStateMachineMetadata {
     /// Set the BLE device name for advertising
-    fn set_name(&mut self, name: String<MAX_NAME_SIZE>){
+    fn set_name(&mut self, name: String<MAX_NAME_SIZE>) {
         self.ble_name = Some(name);
     }
 }
@@ -1158,29 +1159,39 @@ impl PluginStateMachine {
         if let Some(server) = self.server.as_mut() {
             server.clear_services();
         }
-        
+
         // Clear metadata after server operation to keep them synchronized
         self.metadata.service_to_characteristic_uuids.clear();
     }
 
-
     fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<()> {
         log::info!("Configuring BLE profile: {:?}", cmd.profile);
 
-        // Get the server
-        let server = match self.server.as_mut() {
-            Some(server) => server,
-            None => {
-                log::error!("No BLE server available. Configure peripheral first.");
-                return Err(StateMachineError::InvalidBleConfiguration);
-            }
-        };
+        match cmd.profile {
+            BLEProfile::Custom => {
+                log::info!("Using custom profile with predefined services and characteristics");
+                // Get the server
+                let server = match self.server.as_mut() {
+                    Some(server) => server,
+                    None => {
+                        log::error!("No BLE server available. Configure peripheral first.");
+                        return Err(StateMachineError::InvalidBleConfiguration);
+                    }
+                };
 
-        // Restart the server with all predefined services and characteristics
-        server.restart(true).map_err(|source| {
-            log::error!("Failed to restart BLE server: {:?}", source);
-            StateMachineError::ServerRestartError(source)
-        })?;
+                // Restart the server with all predefined services and characteristics
+                server.restart(true).map_err(|source| {
+                    log::error!("Failed to restart BLE server: {:?}", source);
+                    StateMachineError::ServerRestartError(source)
+                })?;
+            }
+            _ => {
+                log::warn!(
+                    "Predefined BLE profile {:?} is not implemented yet",
+                    cmd.profile
+                );
+            }
+        }
 
         log::info!("Successfully configured profile {:?} by restarting server with predefined configuration", cmd.profile);
         Ok(())

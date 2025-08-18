@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "8265223596e61bea088e082dbfe020a34776ee9eeac53806ffd9d5a623f253b0"
+PROTOCOL_HASH = "3b2493185cf3ef3d8f752ee4118d7d1e7ea18b72b009e160fd0e1cb352b23547"
 
 # ==================== CONSTANTS ====================
 
@@ -110,6 +110,12 @@ class BLEProfile(Enum):
     """Profile type enumeration for preconfigured BLE profiles"""
     # Custom profile - user-defined services
     Custom: attrs2bin.U8 = 0
+    # Heart Rate Monitor profile
+    HeartRateMonitor: attrs2bin.U8 = 1
+    # Battery Service profile
+    BatteryService: attrs2bin.U8 = 2
+    # Device Information Service profile
+    DeviceInformation: attrs2bin.U8 = 3
 
 
 class PluginDataSendType(Enum):
