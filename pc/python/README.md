@@ -56,6 +56,31 @@ with USBHostDevice() as device:
 **Supported Profiles:**
 - `BLEProfile.Custom` - Uses existing service/characteristic definitions
 
+## USBHostDevice Configuration
+
+The `USBHostDevice` class can be initialized with optional parameters:
+
+```python
+from plugin_host.comms import USBHostDevice
+
+# Default initialization
+device = USBHostDevice()
+
+# Custom configuration
+device = USBHostDevice(
+    vendor_id=0x1234,           # USB vendor ID (default: USB_VENDOR_ID)
+    product_id=0x5678,          # USB product ID (default: USB_PRODUCT_ID)  
+    default_command_delay=0.2   # Default delay between commands in seconds (default: DEFAULT_COMMAND_DELAY)
+)
+```
+
+**Parameters:**
+- `vendor_id`: USB vendor ID of the plugin device
+- `product_id`: USB product ID of the plugin device  
+- `default_command_delay`: Default delay in seconds between commands to ensure proper device communication
+
+**Note:** The `default_command_delay` should be at least > 0.01 seconds to give the plugin sufficient time for processing commands.
+
 ## Usage Examples
 
 ### Basic Usage

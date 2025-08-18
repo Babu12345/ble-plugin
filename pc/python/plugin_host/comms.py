@@ -428,6 +428,7 @@ class USBHostDevice:
         Args:
             vendor_id: USB vendor ID of the plugin device
             product_id: USB product ID of the plugin device
+            default_command_delay: Default delay in seconds between commands (default: DEFAULT_COMMAND_DELAY)
         """
         self.usb_device = USBDevice(vendor_id, product_id)
         self._connected = False

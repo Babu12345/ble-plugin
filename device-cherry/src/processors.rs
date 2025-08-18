@@ -107,7 +107,7 @@ static DEVICE_QUALITY_DESCRIPTOR: [u8; 10] = [
 ];
 
 static STRING_MANUFACTURER: &[u8] = b"Wanyeki Technologies LLC\0";
-static STRING_PRODUCT: &[u8] = b"BLEPlugin\0";
+static STRING_PRODUCT: &[u8] = b"BLE Plugin\0";
 static STRING_SERIAL: &[u8] = b"1999\0";
 static STRING_LANGID: &[u8] = b"\x09\x04\0";
 
