@@ -36,21 +36,10 @@ This Python library provides a high-level interface for communicating with BLE p
 - `configure_characteristic_read(uuid, service_uuid, value)` - Set up read operations
 - `get_service_info(uuid)` - Query service information
 - `get_characteristic_info(characteristic_uuid, service_uuid)` - Query characteristic details
-- `start_advertisement(allow_multi_connect)` - Start BLE advertising
+- `start_advertisement(allow_multi_connect)` - Start BLE advertising (auto-configures on first call)
 - `notify_characteristic_value(address, address_type, characteristic_uuid, service_uuid, value)` - Send notifications
 
 ### New Commands (Added 2025)
-
-#### `clear_all_services()`
-Clears all configured BLE services and characteristics, resetting the device to a clean state.
-
-```python
-from plugin_host.comms import USBHostDevice
-
-with USBHostDevice() as device:
-    device.clear_all_services()
-    print("All services cleared")
-```
 
 #### `configure_profile(profile: BLEProfile)`
 Configures the BLE device using a predefined profile, which restarts the server with all previously configured services and characteristics.
@@ -84,7 +73,7 @@ with USBHostDevice() as device:
     # Add characteristic
     device.configure_characteristic("0x2A00", "0x1800", [BLEProperties.READ])
     
-    # Start advertising
+    # Start advertising (auto-configures profile on first call)
     device.start_advertisement()
 ```
 
@@ -95,11 +84,7 @@ with USBHostDevice() as device:
     device.configure_peripheral("Demo", [0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
     device.configure_service("0x180F")  # Battery Service
     
-    # Clear everything and start fresh
-    device.clear_all_services()
-    
-    # Reconfigure
-    device.configure_service("0x1800")  # Generic Access
+    # Apply profile configuration
     device.configure_profile(BLEProfile.Custom)  # Apply configuration
 ```
 
@@ -121,6 +106,5 @@ Current test status: **55 tests passing**
 
 All examples are located in the `examples/` folder:
 
-- `examples/example_usage.py` - Basic integration examples
-- `examples/example_new_commands.py` - Comprehensive demonstration of new commands  
+- `examples/example_usage.py` - Complete integration examples including the configure_profile command
 - `examples/example_listening.py` - USB data listening examples

@@ -141,11 +141,6 @@ pub mod host {
         pub value: Vec<u8, MAX_NAME_SIZE>,
     }
 
-    /// Host command. Clear all services and characteristics
-    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-    #[HostIO(MessageTypeId::HostCommandClearAllServices)]
-    pub struct HostCommandClearAllServices {}
-
     /// Profile type enumeration for preconfigured BLE profiles
     #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
     #[repr(u8)]

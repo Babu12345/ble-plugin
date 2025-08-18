@@ -10,7 +10,7 @@ This report summarizes the Python code generated from the Rust protocol library.
 - MAX_CHARACTERISTICS_PER_SERVICE = 16 (usize)
 
 ## Enums Generated
-- MessageTypeId (16 variants)
+- MessageTypeId (15 variants)
 - BLEProperties (5 variants)
 - BluetoothAddressType (4 variants)
 - BLEProfile (1 variants)
@@ -27,7 +27,6 @@ This report summarizes the Python code generated from the Rust protocol library.
 - HostCommandGetCharacteristicInfo (2 fields)
 - HostCommandStartAdvertisement (1 fields)
 - HostCommandNotifyCharacteristicValue (5 fields)
-- HostCommandClearAllServices (0 fields)
 - HostCommandConfigureProfile (1 fields)
 - PluginData (4 fields)
 - PluginServiceInfoResponse (3 fields)
@@ -39,4 +38,4 @@ This report summarizes the Python code generated from the Rust protocol library.
 Replace the existing types.py file with generated_types.py, or carefully merge
 the generated definitions into your existing code.
 
-Generated at: 2025-08-18 00:10:40 UTC
+Generated at: 2025-08-18 00:47:52 UTC

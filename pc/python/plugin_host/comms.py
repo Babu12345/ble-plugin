@@ -525,6 +525,9 @@ class USBHostDevice:
         """
         Start advertisement
         
+        Note: On the first call, this will auto-configure using any predefined profile settings.
+        Subsequent calls require explicit configuration via configure_profile() or manual service setup.
+        
         Args:
             allow_multi_connect: Allow multiple central connections
             
@@ -556,19 +559,6 @@ class USBHostDevice:
             service_uuid=parse_uuid_u16(service_uuid),
             value=value
         )
-        usb_send_command(self.usb_device, cmd)
-    
-    def clear_all_services(self) -> None:
-        """
-        Clear all configured services and characteristics
-        
-        This command removes all configured BLE services and their associated 
-        characteristics, resetting the device to a clean state.
-        
-        Raises:
-            USBCommunicationError: If sending fails
-        """
-        cmd = HostCommandClearAllServices()
         usb_send_command(self.usb_device, cmd)
     
     def configure_profile(self, profile: BLEProfile) -> None:

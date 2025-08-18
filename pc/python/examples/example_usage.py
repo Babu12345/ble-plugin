@@ -57,6 +57,12 @@ def main():
             except USBCommunicationError as e:
                 print(f"⚠ Service query failed (expected if no device): {e}")
             
+            
+            # Configure profile (restart with existing definitions)
+            from plugin_host.generated_types import BLEProfile
+            host_device.configure_profile(BLEProfile.Custom)
+            print("✓ Custom profile configured")
+            
             # Start advertisement
             print("Starting advertisement...")
             host.start_advertisement(allow_multi_connect=True)
@@ -98,18 +104,6 @@ def main():
                 value=b"notification_data"
             )
             print("✓ Characteristic notification sent")
-            
-            # Demonstrate new commands
-            print("\n--- New Commands Demo ---")
-            
-            # Clear all services
-            host_device.clear_all_services()
-            print("✓ All services cleared")
-            
-            # Configure profile (restart with existing definitions)
-            from plugin_host.generated_types import BLEProfile
-            host_device.configure_profile(BLEProfile.Custom)
-            print("✓ Custom profile configured")
             
     except USBCommunicationError as e:
         print(f"⚠ USB Communication Error (expected if no device): {e}")

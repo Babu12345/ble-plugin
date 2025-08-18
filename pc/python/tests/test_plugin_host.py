@@ -39,13 +39,7 @@ def test_type_serialization() -> None:
     assert data == deserialized, "Host data transmission"
 
 def test_new_commands_serialization() -> None:
-    """Test serialization of the new commands: ClearAllServices and ConfigureProfile"""
-    
-    # Test HostCommandClearAllServices (empty struct)
-    cmd = HostCommandClearAllServices()
-    serialized = attrs2bin.serialize(cmd)
-    deserialized = attrs2bin.deserialize(serialized, HostCommandClearAllServices)
-    assert cmd == deserialized, "Clear all services command serialization failed"
+    """Test serialization of the new command: ConfigureProfile"""
     
     # Test HostCommandConfigureProfile with Custom profile
     cmd = HostCommandConfigureProfile(profile=BLEProfile.Custom)
@@ -63,23 +57,15 @@ def test_new_commands_integration():
     """Test that new commands can be created and have proper message mappings"""
     from plugin_host.comms import serialize_command, MESSAGE_TYPE_MAP, USBHostDevice
     
-    # Test ClearAllServices command
-    cmd = HostCommandClearAllServices()
-    serialized = serialize_command(cmd)
-    assert len(serialized) > 5, "Should include message header"
-    
     # Test ConfigureProfile command  
     cmd = HostCommandConfigureProfile(profile=BLEProfile.Custom)
     serialized = serialize_command(cmd)
     assert len(serialized) > 5, "Should include message header"
     
     # Test that commands are in MESSAGE_TYPE_MAP
-    assert HostCommandClearAllServices in MESSAGE_TYPE_MAP
     assert HostCommandConfigureProfile in MESSAGE_TYPE_MAP
     
     # Test that USBHostDevice has the new methods
     device = USBHostDevice()
-    assert hasattr(device, 'clear_all_services')
     assert hasattr(device, 'configure_profile')
-    assert callable(device.clear_all_services)
     assert callable(device.configure_profile)

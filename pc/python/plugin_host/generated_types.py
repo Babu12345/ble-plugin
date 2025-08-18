@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "2e367ce3bdf4fa798872b31d0aa81af20cc0afcce316404b4a8fd62bc25bf33e"
+PROTOCOL_HASH = "8265223596e61bea088e082dbfe020a34776ee9eeac53806ffd9d5a623f253b0"
 
 # ==================== CONSTANTS ====================
 
@@ -66,10 +66,8 @@ class MessageTypeId(Enum):
     HostCommandNotifyCharacteristicValue: attrs2bin.U8 = 0x08
     # Configure BLE security settings (pairing, bonding, passkey, etc.)
     HostCommandConfigurePeripheralSecurity: attrs2bin.U8 = 0x09
-    # Clear all configured BLE services and characteristics
-    HostCommandClearAllServices: attrs2bin.U8 = 0x0A
     # Configure BLE profile with predefined services and characteristics
-    HostCommandConfigureProfile: attrs2bin.U8 = 0x0B
+    HostCommandConfigureProfile: attrs2bin.U8 = 0x0A
     # Data forwarded from BLE client to BLE plugin
     PluginData: attrs2bin.U8 = 0x80
     # Configuration error response from plugin
@@ -246,13 +244,6 @@ class HostCommandNotifyCharacteristicValue:
     value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
-class HostCommandClearAllServices:
-    """Host command. Clear all services and characteristics
-    
-    Attributes:
-    """
-
-@attr.s(auto_attribs=True)
 class HostCommandConfigureProfile:
     """Host command. Configure BLE profile
     
@@ -330,7 +321,6 @@ MESSAGE_TYPE_MAP = {
     HostCommandGetCharacteristicInfo: MessageTypeId.HostCommandGetCharacteristicInfo,
     HostCommandStartAdvertisement: MessageTypeId.HostCommandStartAdvertisement,
     HostCommandNotifyCharacteristicValue: MessageTypeId.HostCommandNotifyCharacteristicValue,
-    HostCommandClearAllServices: MessageTypeId.HostCommandClearAllServices,
     HostCommandConfigureProfile: MessageTypeId.HostCommandConfigureProfile,
     PluginData: MessageTypeId.PluginData,
     PluginServiceInfoResponse: MessageTypeId.PluginServiceInfoResponse,

@@ -119,7 +119,6 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ### Service Operations
 - `HostCommandConfigureService`: Create BLE services
 - `HostCommandGetServiceInfo`: Query service information
-- `HostCommandClearAllServices`: Clear all configured services and characteristics
 
 ### Characteristic Management
 - `HostCommandConfigureCharacteristic`: Create characteristics with properties

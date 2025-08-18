@@ -480,7 +480,6 @@ mod tests {
         assert!((MessageTypeId::HostCommandStartAdvertisement as u8) < 0x80);
         assert!((MessageTypeId::HostCommandNotifyCharacteristicValue as u8) < 0x80);
         assert!((MessageTypeId::HostCommandConfigurePeripheralSecurity as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandClearAllServices as u8) < 0x80);
         assert!((MessageTypeId::HostCommandConfigureProfile as u8) < 0x80);
 
         // Verify plugin responses are in 0x80+ range
@@ -490,28 +489,6 @@ mod tests {
         assert!((MessageTypeId::PluginCharacteristicInfoResponse as u8) >= 0x80);
     }
 
-    #[test]
-    fn test_clear_all_services_serialization() {
-        use crate::io_types::HostCommandClearAllServices;
-
-        let cmd = HostCommandClearAllServices {};
-        
-        // Test serialization
-        let serialized: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().expect("Should serialize");
-        
-        // Verify magic number
-        let magic = u16::from_le_bytes([serialized[0], serialized[1]]);
-        assert_eq!(magic, MESSAGE_MAGIC);
-        
-        // Verify message type ID
-        let type_id = serialized[MESSAGE_MAGIC_BYTES];
-        assert_eq!(type_id, MessageTypeId::HostCommandClearAllServices as u8);
-        
-        // Test round-trip
-        let deserialized = HostCommandClearAllServices::from_bytes(&serialized)
-            .expect("Should deserialize");
-        assert_eq!(cmd, deserialized);
-    }
 
     #[test]
     fn test_configure_profile_serialization() {

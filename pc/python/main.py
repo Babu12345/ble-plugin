@@ -67,6 +67,11 @@ def main():
             except USBCommunicationError as e:
                 print(f"⚠ Service query failed (expected if no device): {e}")
             
+
+            host.configure_profile(BLEProfile.Custom)
+            print("✓ Configured custom profile")
+            sleep(delay)
+
             # Start advertisement
             print("Starting advertisement...")
             host.start_advertisement(allow_multi_connect=True)

@@ -142,11 +142,8 @@ pub enum MessageTypeId {
     /// Configure BLE security settings (pairing, bonding, passkey, etc.)
     HostCommandConfigurePeripheralSecurity = 0x09,
 
-    /// Clear all configured BLE services and characteristics
-    HostCommandClearAllServices = 0x0A,
-
     /// Configure BLE profile with predefined services and characteristics
-    HostCommandConfigureProfile = 0x0B,
+    HostCommandConfigureProfile = 0x0A,
 
     // Plugin Responses (0x80+)
     /// Data forwarded from BLE client to BLE plugin
