@@ -15,11 +15,13 @@ class BLEConfigurationGUI:
         
         self.host = None
         self.is_connected = False
+        self.device_available = False
         self.connection_monitor_thread = None
         self.monitor_running = False
         
         self.setup_ui()
         self.start_connection_monitor()
+        self.check_device_availability()  # Initial check
         
     def setup_ui(self):
         notebook = ttk.Notebook(self.root)
@@ -414,9 +416,48 @@ class BLEConfigurationGUI:
             self.connection_monitor_thread = threading.Thread(target=self.monitor_connection, daemon=True)
             self.connection_monitor_thread.start()
     
+    def check_device_availability(self):
+        """Check if a USB device is available (plugged in) but not necessarily connected"""
+        try:
+            # Default USB IDs from the comms module
+            vendor_id = 0xffff
+            product_id = 0xffff
+            
+            device = usb.core.find(idVendor=vendor_id, idProduct=product_id)
+            
+            if device is not None:
+                if not self.device_available:
+                    self.device_available = True
+                    if not self.is_connected:
+                        self.root.after(0, lambda: self.update_device_status("available"))
+                return True
+            else:
+                if self.device_available:
+                    self.device_available = False
+                    if not self.is_connected:
+                        self.root.after(0, lambda: self.update_device_status("not_found"))
+                return False
+        except Exception as e:
+            print(f"Error checking device availability: {e}")
+            return False
+    
+    def update_device_status(self, status):
+        """Update the status display based on device availability"""
+        if status == "available":
+            self.status_label.config(text="Status: Device Detected (Not Connected)", foreground="orange")
+            self.log("USB device detected but not connected. Click Connect to establish connection.", "INFO")
+        elif status == "not_found":
+            self.status_label.config(text="Status: No Device Found", foreground="red")
+            self.log("No USB device found. Please plug in the device.", "WARNING")
+    
     def monitor_connection(self):
         """Background thread that checks connection status every 2 seconds"""
         while self.monitor_running:
+            # Always check device availability when not connected
+            if not self.is_connected:
+                self.check_device_availability()
+            
+            # Check connected device status
             if self.is_connected and self.host:
                 try:
                     # Check if the underlying USB device still exists
