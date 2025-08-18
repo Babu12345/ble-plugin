@@ -51,6 +51,11 @@ class BLEConfigurationGUI:
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill="x", padx=10, pady=5)
         
+        # Add visual indicator canvas
+        self.indicator_canvas = tk.Canvas(status_frame, width=30, height=30, highlightthickness=0)
+        self.indicator_canvas.pack(side="left", padx=5)
+        self.create_status_indicator()
+        
         # Status label with indicator
         self.status_label = ttk.Label(status_frame, text="Status: Disconnected", foreground="red")
         self.status_label.pack(side="left")
@@ -62,6 +67,11 @@ class BLEConfigurationGUI:
         # Add last check time
         self.last_check_label = ttk.Label(status_frame, text="", foreground="gray")
         self.last_check_label.pack(side="right")
+        
+        # Animation variables
+        self.animation_id = None
+        self.pulse_size = 0
+        self.pulse_direction = 1
         
     def setup_connection_tab(self):
         frame = ttk.LabelFrame(self.connection_frame, text="USB Connection", padding=10)
@@ -215,7 +225,9 @@ class BLEConfigurationGUI:
             
             if self.host.connect(sleep_time=sleep_time):
                 self.is_connected = True
+                self.device_available = True
                 self.status_label.config(text="Status: Connected", foreground="green")
+                self.update_status_indicator("connected")
                 self.connect_btn.config(state="disabled")
                 self.disconnect_btn.config(state="normal")
                 self.last_check_label.config(text="")
@@ -241,6 +253,7 @@ class BLEConfigurationGUI:
             self.is_connected = False
             self.host = None
             self.status_label.config(text="Status: Disconnected", foreground="red")
+            self.update_status_indicator("disconnected")
             self.connect_btn.config(state="normal")
             self.disconnect_btn.config(state="disabled")
             self.last_check_label.config(text="")
@@ -316,7 +329,7 @@ class BLEConfigurationGUI:
                 
             self.service_info_text.delete(1.0, tk.END)
             self.service_info_text.insert(1.0, info_text)
-            self.log("✓ Service queried", "SUCCESS")
+            self.log("✓ Service queried successfully", "SUCCESS")
             
         except USBCommunicationError as e:
             self.log(f"Service query failed: {e}", "WARNING")
@@ -401,7 +414,79 @@ class BLEConfigurationGUI:
             
     def clear_logs(self):
         self.log_text.delete(1.0, tk.END)
+    
+    def create_status_indicator(self):
+        """Create the initial status indicator (USB icon-like shape)"""
+        # Draw a simple USB connector shape
+        self.indicator_base = self.indicator_canvas.create_rectangle(
+            10, 12, 20, 22, fill="gray", outline="darkgray", width=2
+        )
+        # USB connector tip
+        self.indicator_tip = self.indicator_canvas.create_rectangle(
+            20, 14, 25, 20, fill="gray", outline="darkgray", width=1
+        )
+        # Connection status dot
+        self.status_dot = self.indicator_canvas.create_oval(
+            5, 5, 15, 15, fill="red", outline=""
+        )
+    
+    def update_status_indicator(self, status):
+        """Update the visual indicator based on connection status"""
+        if status == "connected":
+            # Green for connected
+            self.indicator_canvas.itemconfig(self.indicator_base, fill="#4CAF50", outline="#2E7D32")
+            self.indicator_canvas.itemconfig(self.indicator_tip, fill="#4CAF50", outline="#2E7D32")
+            self.indicator_canvas.itemconfig(self.status_dot, fill="#4CAF50")
+            self.stop_pulse_animation()
+        elif status == "available":
+            # Orange for detected but not connected - with pulsing animation
+            self.indicator_canvas.itemconfig(self.indicator_base, fill="#FF9800", outline="#F57C00")
+            self.indicator_canvas.itemconfig(self.indicator_tip, fill="#FF9800", outline="#F57C00")
+            self.indicator_canvas.itemconfig(self.status_dot, fill="#FF9800")
+            self.start_pulse_animation()
+        else:
+            # Gray/red for disconnected
+            self.indicator_canvas.itemconfig(self.indicator_base, fill="gray", outline="darkgray")
+            self.indicator_canvas.itemconfig(self.indicator_tip, fill="gray", outline="darkgray")
+            self.indicator_canvas.itemconfig(self.status_dot, fill="red")
+            self.stop_pulse_animation()
+    
+    def start_pulse_animation(self):
+        """Start pulsing animation for 'available' state"""
+        if self.animation_id is None:
+            self.animate_pulse()
+    
+    def stop_pulse_animation(self):
+        """Stop the pulsing animation"""
+        if self.animation_id is not None:
+            self.root.after_cancel(self.animation_id)
+            self.animation_id = None
+            # Reset the dot to normal size
+            self.indicator_canvas.coords(self.status_dot, 5, 5, 15, 15)
+    
+    def animate_pulse(self):
+        """Animate a pulsing effect on the status dot"""
+        if not self.device_available or self.is_connected:
+            self.animation_id = None
+            return
+            
+        # Update pulse size
+        self.pulse_size += self.pulse_direction * 0.5
+        if self.pulse_size >= 3 or self.pulse_size <= 0:
+            self.pulse_direction *= -1
         
+        # Apply pulse to status dot
+        center_x, center_y = 10, 10
+        size = 5 + self.pulse_size
+        self.indicator_canvas.coords(
+            self.status_dot,
+            center_x - size, center_y - size,
+            center_x + size, center_y + size
+        )
+        
+        # Continue animation
+        self.animation_id = self.root.after(50, self.animate_pulse)
+    
     def start_connection_monitor(self):
         """Start a background thread to monitor USB connection status"""
         if not self.monitor_running:
@@ -438,9 +523,11 @@ class BLEConfigurationGUI:
         """Update the status display based on device availability"""
         if status == "available":
             self.status_label.config(text="Status: Device Detected (Not Connected)", foreground="orange")
+            self.update_status_indicator("available")
             self.log("USB device detected but not connected. Click Connect to establish connection.", "INFO")
         elif status == "not_found":
             self.status_label.config(text="Status: No Device Found", foreground="red")
+            self.update_status_indicator("disconnected")
             self.log("No USB device found. Please plug in the device.", "WARNING")
     
     def monitor_connection(self):
@@ -503,8 +590,10 @@ class BLEConfigurationGUI:
         if self.is_connected:
             self.log("⚠ USB device disconnected unexpectedly!", "WARNING")
             self.is_connected = False
+            self.device_available = False
             self.host = None
             self.status_label.config(text="Status: Disconnected (USB removed)", foreground="red")
+            self.update_status_indicator("disconnected")
             self.connect_btn.config(state="normal")
             self.disconnect_btn.config(state="disabled")
             
@@ -527,6 +616,7 @@ class BLEConfigurationGUI:
     
     def on_closing(self):
         self.monitor_running = False
+        self.stop_pulse_animation()
         if self.connection_monitor_thread:
             self.connection_monitor_thread.join(timeout=2)
         if self.host and self.is_connected:
