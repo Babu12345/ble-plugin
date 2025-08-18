@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 from plugin_host.comms import USBHostDevice, USBCommunicationError
 from plugin_host.generated_types import BLEProperties, BLEProfile
+import threading
+import time
+import usb.core
 
 
 class BLEConfigurationGUI:
@@ -12,8 +15,11 @@ class BLEConfigurationGUI:
         
         self.host = None
         self.is_connected = False
+        self.connection_monitor_thread = None
+        self.monitor_running = False
         
         self.setup_ui()
+        self.start_connection_monitor()
         
     def setup_ui(self):
         notebook = ttk.Notebook(self.root)
@@ -42,8 +48,18 @@ class BLEConfigurationGUI:
         
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill="x", padx=10, pady=5)
+        
+        # Status label with indicator
         self.status_label = ttk.Label(status_frame, text="Status: Disconnected", foreground="red")
         self.status_label.pack(side="left")
+        
+        # Add auto-detection indicator
+        self.auto_detect_label = ttk.Label(status_frame, text="  [Auto-detection: Active]", foreground="gray")
+        self.auto_detect_label.pack(side="left")
+        
+        # Add last check time
+        self.last_check_label = ttk.Label(status_frame, text="", foreground="gray")
+        self.last_check_label.pack(side="right")
         
     def setup_connection_tab(self):
         frame = ttk.LabelFrame(self.connection_frame, text="USB Connection", padding=10)
@@ -200,12 +216,20 @@ class BLEConfigurationGUI:
                 self.status_label.config(text="Status: Connected", foreground="green")
                 self.connect_btn.config(state="disabled")
                 self.disconnect_btn.config(state="normal")
+                self.last_check_label.config(text="")
                 self.log("✓ Connected successfully", "SUCCESS")
+                self.log("✓ Auto-detection enabled - monitoring USB connection", "INFO")
             else:
+                self.host = None
                 self.log("✗ Failed to connect", "ERROR")
-                messagebox.showerror("Connection Failed", "Failed to connect to USB device")
+                messagebox.showerror("Connection Failed", "Failed to connect to USB device. Please ensure the device is connected.")
                 
+        except USBCommunicationError as e:
+            self.host = None
+            self.log(f"USB Communication error: {e}", "ERROR")
+            messagebox.showerror("USB Error", f"Could not communicate with USB device:\n{e}")
         except Exception as e:
+            self.host = None
             self.log(f"Connection error: {e}", "ERROR")
             messagebox.showerror("Connection Error", str(e))
             
@@ -213,9 +237,11 @@ class BLEConfigurationGUI:
         if self.host:
             self.host.disconnect()
             self.is_connected = False
+            self.host = None
             self.status_label.config(text="Status: Disconnected", foreground="red")
             self.connect_btn.config(state="normal")
             self.disconnect_btn.config(state="disabled")
+            self.last_check_label.config(text="")
             self.log("✓ Disconnected", "SUCCESS")
             
     def configure_peripheral(self):
@@ -381,7 +407,94 @@ class BLEConfigurationGUI:
     def clear_logs(self):
         self.log_text.delete(1.0, tk.END)
         
+    def start_connection_monitor(self):
+        """Start a background thread to monitor USB connection status"""
+        if not self.monitor_running:
+            self.monitor_running = True
+            self.connection_monitor_thread = threading.Thread(target=self.monitor_connection, daemon=True)
+            self.connection_monitor_thread.start()
+    
+    def monitor_connection(self):
+        """Background thread that checks connection status every 2 seconds"""
+        while self.monitor_running:
+            if self.is_connected and self.host:
+                try:
+                    # Check if the underlying USB device still exists
+                    # We check the usb_device.device attribute which is the actual pyusb device
+                    if not self.host.usb_device or not self.host.usb_device.device:
+                        # Device disconnected
+                        self.root.after(0, self.handle_disconnection)
+                        continue
+                    
+                    # Try to verify the device is still accessible
+                    # PyUSB device objects become invalid when disconnected
+                    try:
+                        # Attempt to read the device's configuration (lightweight check)
+                        config = self.host.usb_device.device.get_active_configuration()
+                        if config is None:
+                            self.root.after(0, self.handle_disconnection)
+                            continue
+                            
+                        # Also try to check if we can still find the device
+                        found_device = usb.core.find(
+                            idVendor=self.host.usb_device.vendor_id,
+                            idProduct=self.host.usb_device.product_id
+                        )
+                        if found_device is None:
+                            self.root.after(0, self.handle_disconnection)
+                            continue
+                            
+                        # Update last check time only if all checks pass
+                        check_time = time.strftime("%H:%M:%S")
+                        self.root.after(0, lambda ct=check_time: self.last_check_label.config(text=f"Last checked: {ct}"))
+                        
+                    except (usb.core.USBError, usb.core.USBTimeoutError) as e:
+                        # USB errors indicate disconnection
+                        print(f"USB Error detected: {e}")
+                        self.root.after(0, self.handle_disconnection)
+                    except (AttributeError, ValueError) as e:
+                        # Device was invalidated
+                        print(f"Device invalidated: {e}")
+                        self.root.after(0, self.handle_disconnection)
+                        
+                except Exception as e:
+                    # Any unexpected error likely means disconnection
+                    print(f"Unexpected error in monitor: {e}")
+                    self.root.after(0, self.handle_disconnection)
+            
+            time.sleep(2)  # Check every 2 seconds
+    
+    def handle_disconnection(self):
+        """Handle USB disconnection detected by monitor"""
+        if self.is_connected:
+            self.log("⚠ USB device disconnected unexpectedly!", "WARNING")
+            self.is_connected = False
+            self.host = None
+            self.status_label.config(text="Status: Disconnected (USB removed)", foreground="red")
+            self.connect_btn.config(state="normal")
+            self.disconnect_btn.config(state="disabled")
+            
+            # Show alert to user
+            messagebox.showwarning(
+                "USB Disconnected", 
+                "The USB device has been disconnected. Please reconnect the device and click Connect."
+            )
+    
+    def check_connection_health(self):
+        """Perform a health check on the connection"""
+        if self.host and self.is_connected:
+            try:
+                # Attempt a benign operation to check if device is responsive
+                # This is a lightweight check that won't interfere with normal operations
+                return self.host.device and self.host.device.is_open()
+            except:
+                return False
+        return False
+    
     def on_closing(self):
+        self.monitor_running = False
+        if self.connection_monitor_thread:
+            self.connection_monitor_thread.join(timeout=2)
         if self.host and self.is_connected:
             self.disconnect_device()
         self.root.destroy()
