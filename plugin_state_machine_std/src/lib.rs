@@ -73,16 +73,21 @@
 //! ### Peripheral Management
 //! - [`HostCommandConfigurePeripheral`]: Configure BLE peripheral with name and address
 //! - [`HostCommandStartAdvertisement`]: Start BLE advertising
+//! - [`HostCommandConfigurePeripheralSecurity`]: Configure security settings (pairing, passkey)
 //!
 //! ### Service Operations  
 //! - [`HostCommandConfigureService`]: Create BLE services
 //! - [`HostCommandGetServiceInfo`]: Query service information
+//! - [`HostCommandClearAllServices`]: Clear all configured services and characteristics
 //!
 //! ### Characteristic Management
 //! - [`HostCommandConfigureCharacteristic`]: Create characteristics with properties
 //! - [`HostCommandConfigureCharacteristicRead`]: Set up read operations
 //! - [`HostCommandGetCharacteristicInfo`]: Query characteristic details
 //! - [`HostCommandNotifyCharacteristicValue`]: Send notifications to clients
+//!
+//! ### Profile Management
+//! - [`HostCommandConfigureProfile`]: Configure predefined BLE profiles using existing definitions
 //!
 //! ## Error Handling
 //!
@@ -102,12 +107,15 @@
 //!
 //! [`HostCommandConfigurePeripheral`]: protocol::io_types::HostCommandConfigurePeripheral
 //! [`HostCommandStartAdvertisement`]: protocol::io_types::HostCommandStartAdvertisement
+//! [`HostCommandConfigurePeripheralSecurity`]: protocol::io_types::HostCommandConfigurePeripheralSecurity
 //! [`HostCommandConfigureService`]: protocol::io_types::HostCommandConfigureService
 //! [`HostCommandGetServiceInfo`]: protocol::io_types::HostCommandGetServiceInfo
+//! [`HostCommandClearAllServices`]: protocol::io_types::HostCommandClearAllServices
 //! [`HostCommandConfigureCharacteristic`]: protocol::io_types::HostCommandConfigureCharacteristic
 //! [`HostCommandConfigureCharacteristicRead`]: protocol::io_types::HostCommandConfigureCharacteristicRead
 //! [`HostCommandGetCharacteristicInfo`]: protocol::io_types::HostCommandGetCharacteristicInfo
 //! [`HostCommandNotifyCharacteristicValue`]: protocol::io_types::HostCommandNotifyCharacteristicValue
+//! [`HostCommandConfigureProfile`]: protocol::io_types::HostCommandConfigureProfile
 //! [`StateMachineError::InvalidMessageFormat`]: errors::StateMachineError::InvalidMessageFormat
 //! [`StateMachineError::UnknownMessageType`]: errors::StateMachineError::UnknownMessageType
 //! [`StateMachineError::InvalidBleConfiguration`]: errors::StateMachineError::InvalidBleConfiguration
@@ -144,10 +152,11 @@ use esp32_nimble::{BLEDevice, BLEServer, BLEService, NimbleProperties};
 use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use heapless::String;
 use protocol::io_types::{
-    HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
-    HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
-    HostCommandStartAdvertisement, PluginCharacteristicInfoResponse, PluginConfigurationError,
-    PluginServiceInfoResponse, MAX_CHARACTERISTICS_PER_SERVICE, MAX_PROPERTIES,
+    HostCommandClearAllServices, HostCommandConfigureCharacteristic,
+    HostCommandConfigurePeripheral, HostCommandConfigureProfile, HostCommandConfigureService,
+    HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo, HostCommandStartAdvertisement,
+    PluginCharacteristicInfoResponse, PluginConfigurationError, PluginServiceInfoResponse,
+    MAX_CHARACTERISTICS_PER_SERVICE, MAX_PROPERTIES,
 };
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
@@ -497,6 +506,28 @@ impl PluginStateMachine {
                                         }
                                         Err(_) => Err(StateMachineError::FailedToDecodeMessage(
                                             "HostCommandConfigurePeripheralSecurity",
+                                        )),
+                                    }
+                                }
+                                MessageTypeId::HostCommandClearAllServices => {
+                                    match data.decode::<HostCommandClearAllServices>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_clear_all_services(cmd)
+                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandClearAllServices",
+                                        )),
+                                    }
+                                }
+                                MessageTypeId::HostCommandConfigureProfile => {
+                                    match data.decode::<HostCommandConfigureProfile>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_configure_profile(cmd)
+                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandConfigureProfile",
                                         )),
                                     }
                                 }
@@ -1137,5 +1168,47 @@ impl PluginStateMachine {
             BLEAddressType::PublicID => protocol::io_types::BluetoothAddressType::PublicID,
             BLEAddressType::RandomID => protocol::io_types::BluetoothAddressType::RandomID,
         }
+    }
+
+    /// Helper function to clear all services and associated metadata atomically
+    fn clear_all_services_and_metadata(&mut self) {
+        // Clear services on the server first, then clear metadata to ensure consistency
+        if let Some(server) = self.server.as_mut() {
+            server.clear_services();
+        }
+        
+        // Clear metadata after server operation to keep them synchronized
+        self.metadata.service_to_characteristic_uuids.clear();
+    }
+
+    fn handle_clear_all_services(&mut self, _cmd: HostCommandClearAllServices) -> Result<()> {
+        log::info!("Clearing all BLE services and characteristics");
+
+        self.clear_all_services_and_metadata();
+
+        log::info!("Successfully cleared all services and characteristics");
+        Ok(())
+    }
+
+    fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<()> {
+        log::info!("Configuring BLE profile: {:?}", cmd.profile);
+
+        // Get the server
+        let server = match self.server.as_mut() {
+            Some(server) => server,
+            None => {
+                log::error!("No BLE server available. Configure peripheral first.");
+                return Err(StateMachineError::InvalidBleConfiguration);
+            }
+        };
+
+        // Restart the server with all predefined services and characteristics
+        server.restart(true).map_err(|e| {
+            log::error!("Failed to restart BLE server: {:?}", e);
+            StateMachineError::InvalidBleConfiguration
+        })?;
+
+        log::info!("Successfully configured profile {:?} by restarting server with predefined configuration", cmd.profile);
+        Ok(())
     }
 }

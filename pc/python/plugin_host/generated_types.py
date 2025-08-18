@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "460bcb64d7b7c8a9a191c302090c9999a43c98812c9014c8f17b88b87243dcb8"
+PROTOCOL_HASH = "2e367ce3bdf4fa798872b31d0aa81af20cc0afcce316404b4a8fd62bc25bf33e"
 
 # ==================== CONSTANTS ====================
 
@@ -66,6 +66,10 @@ class MessageTypeId(Enum):
     HostCommandNotifyCharacteristicValue: attrs2bin.U8 = 0x08
     # Configure BLE security settings (pairing, bonding, passkey, etc.)
     HostCommandConfigurePeripheralSecurity: attrs2bin.U8 = 0x09
+    # Clear all configured BLE services and characteristics
+    HostCommandClearAllServices: attrs2bin.U8 = 0x0A
+    # Configure BLE profile with predefined services and characteristics
+    HostCommandConfigureProfile: attrs2bin.U8 = 0x0B
     # Data forwarded from BLE client to BLE plugin
     PluginData: attrs2bin.U8 = 0x80
     # Configuration error response from plugin
@@ -102,6 +106,12 @@ class BluetoothAddressType(Enum):
     PublicID: attrs2bin.U8 = 2
     # Random ID address
     RandomID: attrs2bin.U8 = 3
+
+
+class BLEProfile(Enum):
+    """Profile type enumeration for preconfigured BLE profiles"""
+    # Custom profile - user-defined services
+    Custom: attrs2bin.U8 = 0
 
 
 class PluginDataSendType(Enum):
@@ -236,6 +246,22 @@ class HostCommandNotifyCharacteristicValue:
     value: List[attrs2bin.U8]
 
 @attr.s(auto_attribs=True)
+class HostCommandClearAllServices:
+    """Host command. Clear all services and characteristics
+    
+    Attributes:
+    """
+
+@attr.s(auto_attribs=True)
+class HostCommandConfigureProfile:
+    """Host command. Configure BLE profile
+    
+    Attributes:
+        profile:Profile type to configure
+    """
+    profile: BLEProfile
+
+@attr.s(auto_attribs=True)
 class PluginData:
     """Plugin data
     
@@ -304,6 +330,8 @@ MESSAGE_TYPE_MAP = {
     HostCommandGetCharacteristicInfo: MessageTypeId.HostCommandGetCharacteristicInfo,
     HostCommandStartAdvertisement: MessageTypeId.HostCommandStartAdvertisement,
     HostCommandNotifyCharacteristicValue: MessageTypeId.HostCommandNotifyCharacteristicValue,
+    HostCommandClearAllServices: MessageTypeId.HostCommandClearAllServices,
+    HostCommandConfigureProfile: MessageTypeId.HostCommandConfigureProfile,
     PluginData: MessageTypeId.PluginData,
     PluginServiceInfoResponse: MessageTypeId.PluginServiceInfoResponse,
     PluginCharacteristicInfoResponse: MessageTypeId.PluginCharacteristicInfoResponse,

@@ -479,11 +479,75 @@ mod tests {
         assert!((MessageTypeId::HostCommandGetCharacteristicInfo as u8) < 0x80);
         assert!((MessageTypeId::HostCommandStartAdvertisement as u8) < 0x80);
         assert!((MessageTypeId::HostCommandNotifyCharacteristicValue as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandConfigurePeripheralSecurity as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandClearAllServices as u8) < 0x80);
+        assert!((MessageTypeId::HostCommandConfigureProfile as u8) < 0x80);
 
         // Verify plugin responses are in 0x80+ range
         assert!((MessageTypeId::PluginData as u8) >= 0x80);
         assert!((MessageTypeId::PluginConfigurationError as u8) >= 0x80);
         assert!((MessageTypeId::PluginServiceInfoResponse as u8) >= 0x80);
         assert!((MessageTypeId::PluginCharacteristicInfoResponse as u8) >= 0x80);
+    }
+
+    #[test]
+    fn test_clear_all_services_serialization() {
+        use crate::io_types::HostCommandClearAllServices;
+
+        let cmd = HostCommandClearAllServices {};
+        
+        // Test serialization
+        let serialized: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().expect("Should serialize");
+        
+        // Verify magic number
+        let magic = u16::from_le_bytes([serialized[0], serialized[1]]);
+        assert_eq!(magic, MESSAGE_MAGIC);
+        
+        // Verify message type ID
+        let type_id = serialized[MESSAGE_MAGIC_BYTES];
+        assert_eq!(type_id, MessageTypeId::HostCommandClearAllServices as u8);
+        
+        // Test round-trip
+        let deserialized = HostCommandClearAllServices::from_bytes(&serialized)
+            .expect("Should deserialize");
+        assert_eq!(cmd, deserialized);
+    }
+
+    #[test]
+    fn test_configure_profile_serialization() {
+        use crate::io_types::{HostCommandConfigureProfile, BLEProfile};
+        
+        let cmd = HostCommandConfigureProfile {
+            profile: BLEProfile::Custom,
+        };
+        
+        // Test serialization
+        let serialized: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().expect("Should serialize");
+        
+        // Verify magic number
+        let magic = u16::from_le_bytes([serialized[0], serialized[1]]);
+        assert_eq!(magic, MESSAGE_MAGIC);
+        
+        // Verify message type ID
+        let type_id = serialized[MESSAGE_MAGIC_BYTES];
+        assert_eq!(type_id, MessageTypeId::HostCommandConfigureProfile as u8);
+        
+        // Test round-trip
+        let deserialized = HostCommandConfigureProfile::from_bytes(&serialized)
+            .expect("Should deserialize");
+        assert_eq!(cmd, deserialized);
+    }
+
+    #[test]
+    fn test_ble_profile_enum_values() {
+        use crate::io_types::BLEProfile;
+        
+        // Verify enum values
+        assert_eq!(BLEProfile::Custom as u8, 0);
+        
+        // Test that enum can be created and compared
+        let profile1 = BLEProfile::Custom;
+        let profile2 = BLEProfile::Custom;
+        assert_eq!(profile1, profile2);
     }
 }

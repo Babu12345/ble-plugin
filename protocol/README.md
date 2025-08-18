@@ -114,16 +114,21 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ### Peripheral Management
 - `HostCommandConfigurePeripheral`: Set up device name and UUID
 - `HostCommandStartAdvertisement`: Begin BLE advertising
+- `HostCommandConfigurePeripheralSecurity`: Configure security settings (pairing, passkey)
 
 ### Service Operations
 - `HostCommandConfigureService`: Create BLE services
 - `HostCommandGetServiceInfo`: Query service information
+- `HostCommandClearAllServices`: Clear all configured services and characteristics
 
 ### Characteristic Management
 - `HostCommandConfigureCharacteristic`: Create characteristics with properties
 - `HostCommandConfigureCharacteristicRead`: Set up read operations
 - `HostCommandGetCharacteristicInfo`: Query characteristic details
 - `HostCommandNotifyCharacteristicValue`: Send notifications to clients
+
+### Profile Management
+- `HostCommandConfigureProfile`: Configure using predefined BLE profiles (currently supports Custom profile)
 
 ### Plugin Responses
 - `PluginData`: BLE client data forwarded to host
