@@ -4,17 +4,16 @@ def main():
     """Main example function"""
     print("=== USB Host Device Example ===\n")
     
-    # Set command delay for proper device communication
-    set_command_delay(0.1)  # 0.5 second delay between commands
-    
     # Method 1: Manual connection management
     print("1. Manual Connection Management:")
-    host = USBHostDevice()
+    host = USBHostDevice(
+        default_command_delay=0.1,  # Default delay for commands
+    )
     
     try:
         # Connect to device
         print("Connecting to USB device...")
-        if host.connect(sleep_time=1.0):
+        if host.connect(sleep_time=0.5):
             print("✓ Connected successfully")
             
             # Configure a peripheral
@@ -24,7 +23,6 @@ def main():
                 addr=[0xA1, 0xA2, 0xA3, 0xA4, 0xB1, 0xB2]
             )
             print("✓ Peripheral configured")
-            
             
             # Configure peripheral security
             print("Configuring peripheral security...")

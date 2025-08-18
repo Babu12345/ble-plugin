@@ -421,7 +421,7 @@ class USBHostDevice:
     plugin responses with automatic protocol handling.
     """
     
-    def __init__(self, vendor_id: int = USB_VENDOR_ID, product_id: int = USB_PRODUCT_ID):
+    def __init__(self, vendor_id: int = USB_VENDOR_ID, product_id: int = USB_PRODUCT_ID, default_command_delay: float = DEFAULT_COMMAND_DELAY):
         """
         Initialize the USB Host Device
         
@@ -431,6 +431,7 @@ class USBHostDevice:
         """
         self.usb_device = USBDevice(vendor_id, product_id)
         self._connected = False
+        set_command_delay(default_command_delay)  # Set default command delay
     
     def connect(self, sleep_time: float = 0.0) -> bool:
         """
