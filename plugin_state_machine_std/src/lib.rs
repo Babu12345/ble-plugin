@@ -958,15 +958,29 @@ impl PluginStateMachine {
             .lock()
             .create_characteristic(ble_uuid, nimble_properties);
 
-        self.metadata
+        // Only append the characteristic if it doesn't already exist for this service
+        let characteristics = self
+            .metadata
             .service_to_characteristic_uuids
             .entry(cmd.service_uuid)
-            .or_default()
-            .push((cmd.uuid, cmd.properties))
-            .map_err(|_| {
-                log::error!("Failed to store characteristic UUID: {}", cmd.uuid);
-                StateMachineError::CharacteristicUuidStorageError
-            })?;
+            .or_default();
+
+        // Check if characteristic with this UUID already exists
+        match characteristics.iter().any(|(uuid, _)| *uuid == cmd.uuid) {
+            true => log::info!(
+                "Characteristic {} already exists for service {}, skipping",
+                cmd.uuid,
+                cmd.service_uuid
+            ),
+            false => {
+                characteristics
+                    .push((cmd.uuid, cmd.properties))
+                    .map_err(|_| {
+                        log::error!("Failed to store characteristic UUID: {}", cmd.uuid);
+                        StateMachineError::CharacteristicUuidStorageError
+                    })?;
+            }
+        }
 
         match nimble_properties.contains(NimbleProperties::WRITE) {
             true => {

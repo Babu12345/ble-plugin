@@ -12,6 +12,8 @@ pip install libusb
 pip install pytest
 
 brew install libusb # Make sure that this is run
+brew install python-tk # for the gui
+
 
 then add these lines to pytest.ini
 ```

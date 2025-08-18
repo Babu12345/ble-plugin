@@ -1,0 +1,398 @@
+import tkinter as tk
+from tkinter import ttk, scrolledtext, messagebox
+from plugin_host.comms import USBHostDevice, USBCommunicationError
+from plugin_host.generated_types import BLEProperties, BLEProfile
+
+
+class BLEConfigurationGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("BLE USB Configuration Tool")
+        self.root.geometry("900x700")
+        
+        self.host = None
+        self.is_connected = False
+        
+        self.setup_ui()
+        
+    def setup_ui(self):
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self.connection_frame = ttk.Frame(notebook)
+        self.peripheral_frame = ttk.Frame(notebook)
+        self.service_frame = ttk.Frame(notebook)
+        self.characteristic_frame = ttk.Frame(notebook)
+        self.profile_frame = ttk.Frame(notebook)
+        self.log_frame = ttk.Frame(notebook)
+        
+        notebook.add(self.connection_frame, text="Connection")
+        notebook.add(self.peripheral_frame, text="Peripheral")
+        notebook.add(self.service_frame, text="Services")
+        notebook.add(self.characteristic_frame, text="Characteristics")
+        notebook.add(self.profile_frame, text="Profile & Advertisement")
+        notebook.add(self.log_frame, text="Logs")
+        
+        self.setup_connection_tab()
+        self.setup_peripheral_tab()
+        self.setup_service_tab()
+        self.setup_characteristic_tab()
+        self.setup_profile_tab()
+        self.setup_log_tab()
+        
+        status_frame = ttk.Frame(self.root)
+        status_frame.pack(fill="x", padx=10, pady=5)
+        self.status_label = ttk.Label(status_frame, text="Status: Disconnected", foreground="red")
+        self.status_label.pack(side="left")
+        
+    def setup_connection_tab(self):
+        frame = ttk.LabelFrame(self.connection_frame, text="USB Connection", padding=10)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        ttk.Label(frame, text="Command Delay (seconds):").grid(row=0, column=0, sticky="w", pady=5)
+        self.delay_var = tk.StringVar(value="0.1")
+        ttk.Entry(frame, textvariable=self.delay_var, width=20).grid(row=0, column=1, pady=5)
+        
+        ttk.Label(frame, text="Connection Sleep Time (seconds):").grid(row=1, column=0, sticky="w", pady=5)
+        self.sleep_var = tk.StringVar(value="0.5")
+        ttk.Entry(frame, textvariable=self.sleep_var, width=20).grid(row=1, column=1, pady=5)
+        
+        button_frame = ttk.Frame(frame)
+        button_frame.grid(row=2, column=0, columnspan=2, pady=20)
+        
+        self.connect_btn = ttk.Button(button_frame, text="Connect", command=self.connect_device)
+        self.connect_btn.pack(side="left", padx=5)
+        
+        self.disconnect_btn = ttk.Button(button_frame, text="Disconnect", command=self.disconnect_device, state="disabled")
+        self.disconnect_btn.pack(side="left", padx=5)
+        
+    def setup_peripheral_tab(self):
+        frame = ttk.LabelFrame(self.peripheral_frame, text="Peripheral Configuration", padding=10)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        ttk.Label(frame, text="Peripheral Name:").grid(row=0, column=0, sticky="w", pady=5)
+        self.peripheral_name_var = tk.StringVar(value="Example Peripheral")
+        ttk.Entry(frame, textvariable=self.peripheral_name_var, width=30).grid(row=0, column=1, pady=5)
+        
+        ttk.Label(frame, text="MAC Address (6 hex bytes):").grid(row=1, column=0, sticky="w", pady=5)
+        mac_frame = ttk.Frame(frame)
+        mac_frame.grid(row=1, column=1, pady=5)
+        
+        self.mac_vars = []
+        for i in range(6):
+            var = tk.StringVar(value=f"{0xA1 if i < 4 else 0xB1:02X}")
+            self.mac_vars.append(var)
+            entry = ttk.Entry(mac_frame, textvariable=var, width=4)
+            entry.pack(side="left", padx=2)
+            if i < 5:
+                ttk.Label(mac_frame, text=":").pack(side="left")
+        
+        ttk.Button(frame, text="Configure Peripheral", command=self.configure_peripheral).grid(row=2, column=0, columnspan=2, pady=10)
+        
+        security_frame = ttk.LabelFrame(frame, text="Security", padding=10)
+        security_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=10)
+        
+        ttk.Label(security_frame, text="Passkey:").grid(row=0, column=0, sticky="w", pady=5)
+        self.passkey_var = tk.StringVar(value="123456")
+        ttk.Entry(security_frame, textvariable=self.passkey_var, width=20).grid(row=0, column=1, pady=5)
+        
+        ttk.Button(security_frame, text="Configure Security", command=self.configure_security).grid(row=1, column=0, columnspan=2, pady=5)
+        
+    def setup_service_tab(self):
+        frame = ttk.LabelFrame(self.service_frame, text="Service Configuration", padding=10)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        ttk.Label(frame, text="Service UUID (16-bit hex):").grid(row=0, column=0, sticky="w", pady=5)
+        self.service_uuid_var = tk.StringVar(value="0x8765")
+        ttk.Entry(frame, textvariable=self.service_uuid_var, width=20).grid(row=0, column=1, pady=5)
+        
+        ttk.Button(frame, text="Configure Service", command=self.configure_service).grid(row=1, column=0, columnspan=2, pady=10)
+        
+        query_frame = ttk.LabelFrame(frame, text="Query Service", padding=10)
+        query_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=10)
+        
+        ttk.Label(query_frame, text="Query UUID:").grid(row=0, column=0, sticky="w", pady=5)
+        self.query_uuid_var = tk.StringVar(value="0x8765")
+        ttk.Entry(query_frame, textvariable=self.query_uuid_var, width=20).grid(row=0, column=1, pady=5)
+        
+        ttk.Button(query_frame, text="Query Service Info", command=self.query_service).grid(row=1, column=0, columnspan=2, pady=5)
+        
+        self.service_info_text = tk.Text(query_frame, height=5, width=50)
+        self.service_info_text.grid(row=2, column=0, columnspan=2, pady=5)
+        
+    def setup_characteristic_tab(self):
+        frame = ttk.LabelFrame(self.characteristic_frame, text="Characteristic Configuration", padding=10)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        ttk.Label(frame, text="Characteristic UUID (16-bit hex):").grid(row=0, column=0, sticky="w", pady=5)
+        self.char_uuid_var = tk.StringVar(value="0xabcd")
+        ttk.Entry(frame, textvariable=self.char_uuid_var, width=20).grid(row=0, column=1, pady=5)
+        
+        ttk.Label(frame, text="Service UUID (16-bit hex):").grid(row=1, column=0, sticky="w", pady=5)
+        self.char_service_uuid_var = tk.StringVar(value="0x8765")
+        ttk.Entry(frame, textvariable=self.char_service_uuid_var, width=20).grid(row=1, column=1, pady=5)
+        
+        ttk.Label(frame, text="Properties:").grid(row=2, column=0, sticky="nw", pady=5)
+        
+        props_frame = ttk.Frame(frame)
+        props_frame.grid(row=2, column=1, pady=5)
+        
+        self.prop_vars = {}
+        properties = ["READ", "WRITE", "NOTIFY", "INDICATE", "WRITE_WITHOUT_RESPONSE"]
+        for i, prop in enumerate(properties):
+            var = tk.BooleanVar(value=(prop in ["READ", "WRITE", "NOTIFY"]))
+            self.prop_vars[prop] = var
+            ttk.Checkbutton(props_frame, text=prop, variable=var).grid(row=i//2, column=i%2, sticky="w")
+        
+        ttk.Button(frame, text="Configure Characteristic", command=self.configure_characteristic).grid(row=3, column=0, columnspan=2, pady=10)
+        
+    def setup_profile_tab(self):
+        frame = ttk.LabelFrame(self.profile_frame, text="Profile & Advertisement", padding=10)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        ttk.Label(frame, text="Profile:").grid(row=0, column=0, sticky="w", pady=5)
+        self.profile_var = tk.StringVar(value="Custom")
+        profile_combo = ttk.Combobox(frame, textvariable=self.profile_var, width=20)
+        profile_combo['values'] = ["Custom", "HeartRate", "Cycling", "Running"]
+        profile_combo.grid(row=0, column=1, pady=5)
+        
+        ttk.Label(frame, text="Profile Delay (seconds):").grid(row=1, column=0, sticky="w", pady=5)
+        self.profile_delay_var = tk.StringVar(value="0.05")
+        ttk.Entry(frame, textvariable=self.profile_delay_var, width=20).grid(row=1, column=1, pady=5)
+        
+        ttk.Button(frame, text="Configure Profile", command=self.configure_profile).grid(row=2, column=0, columnspan=2, pady=10)
+        
+        adv_frame = ttk.LabelFrame(frame, text="Advertisement", padding=10)
+        adv_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=10)
+        
+        self.multi_connect_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(adv_frame, text="Allow Multiple Connections", variable=self.multi_connect_var).grid(row=0, column=0, pady=5)
+        
+        ttk.Button(adv_frame, text="Start Advertisement", command=self.start_advertisement).grid(row=1, column=0, pady=5)
+        ttk.Button(adv_frame, text="Stop Advertisement", command=self.stop_advertisement).grid(row=1, column=1, pady=5)
+        
+    def setup_log_tab(self):
+        frame = ttk.Frame(self.log_frame)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self.log_text = scrolledtext.ScrolledText(frame, height=20, width=80)
+        self.log_text.pack(fill="both", expand=True)
+        
+        button_frame = ttk.Frame(frame)
+        button_frame.pack(fill="x", pady=5)
+        
+        ttk.Button(button_frame, text="Clear Logs", command=self.clear_logs).pack(side="right")
+        
+    def log(self, message, level="INFO"):
+        self.log_text.insert(tk.END, f"[{level}] {message}\n")
+        self.log_text.see(tk.END)
+        
+    def connect_device(self):
+        try:
+            delay = float(self.delay_var.get())
+            sleep_time = float(self.sleep_var.get())
+            
+            self.host = USBHostDevice(default_command_delay=delay)
+            self.log("Connecting to USB device...")
+            
+            if self.host.connect(sleep_time=sleep_time):
+                self.is_connected = True
+                self.status_label.config(text="Status: Connected", foreground="green")
+                self.connect_btn.config(state="disabled")
+                self.disconnect_btn.config(state="normal")
+                self.log("✓ Connected successfully", "SUCCESS")
+            else:
+                self.log("✗ Failed to connect", "ERROR")
+                messagebox.showerror("Connection Failed", "Failed to connect to USB device")
+                
+        except Exception as e:
+            self.log(f"Connection error: {e}", "ERROR")
+            messagebox.showerror("Connection Error", str(e))
+            
+    def disconnect_device(self):
+        if self.host:
+            self.host.disconnect()
+            self.is_connected = False
+            self.status_label.config(text="Status: Disconnected", foreground="red")
+            self.connect_btn.config(state="normal")
+            self.disconnect_btn.config(state="disabled")
+            self.log("✓ Disconnected", "SUCCESS")
+            
+    def configure_peripheral(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            name = self.peripheral_name_var.get()
+            mac_bytes = []
+            for var in self.mac_vars:
+                mac_bytes.append(int(var.get(), 16))
+                
+            self.log(f"Configuring peripheral: {name}")
+            self.host.configure_peripheral(name=name, addr=mac_bytes)
+            self.log("✓ Peripheral configured", "SUCCESS")
+            messagebox.showinfo("Success", "Peripheral configured successfully")
+            
+        except Exception as e:
+            self.log(f"Failed to configure peripheral: {e}", "ERROR")
+            messagebox.showerror("Configuration Error", str(e))
+            
+    def configure_security(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            passkey = int(self.passkey_var.get())
+            self.log(f"Configuring security with passkey: {passkey}")
+            self.host.configure_peripheral_security(passkey=passkey)
+            self.log("✓ Security configured", "SUCCESS")
+            messagebox.showinfo("Success", "Security configured successfully")
+            
+        except Exception as e:
+            self.log(f"Failed to configure security: {e}", "ERROR")
+            messagebox.showerror("Security Error", str(e))
+            
+    def configure_service(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            uuid_str = self.service_uuid_var.get()
+            uuid = int(uuid_str, 16) if uuid_str.startswith("0x") else int(uuid_str)
+            
+            self.log(f"Configuring service: {uuid_str}")
+            self.host.configure_service(uuid=uuid)
+            self.log("✓ Service configured", "SUCCESS")
+            messagebox.showinfo("Success", "Service configured successfully")
+            
+        except Exception as e:
+            self.log(f"Failed to configure service: {e}", "ERROR")
+            messagebox.showerror("Service Error", str(e))
+            
+    def query_service(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            uuid_str = self.query_uuid_var.get()
+            uuid = int(uuid_str, 16) if uuid_str.startswith("0x") else int(uuid_str)
+            
+            self.log(f"Querying service: {uuid_str}")
+            service_info = self.host.get_service_info(uuid)
+            
+            info_text = f"Service exists: {service_info.exists}\n"
+            info_text += f"Characteristics: {len(service_info.characteristic_uuids)}\n"
+            if service_info.characteristic_uuids:
+                info_text += "UUIDs: " + ", ".join([f"0x{u:04x}" for u in service_info.characteristic_uuids])
+                
+            self.service_info_text.delete(1.0, tk.END)
+            self.service_info_text.insert(1.0, info_text)
+            self.log("✓ Service queried", "SUCCESS")
+            
+        except USBCommunicationError as e:
+            self.log(f"Service query failed: {e}", "WARNING")
+            self.service_info_text.delete(1.0, tk.END)
+            self.service_info_text.insert(1.0, f"Query failed: {e}")
+            
+    def configure_characteristic(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            char_uuid_str = self.char_uuid_var.get()
+            char_uuid = int(char_uuid_str, 16) if char_uuid_str.startswith("0x") else int(char_uuid_str)
+            
+            service_uuid_str = self.char_service_uuid_var.get()
+            service_uuid = int(service_uuid_str, 16) if service_uuid_str.startswith("0x") else int(service_uuid_str)
+            
+            properties = []
+            for prop_name, var in self.prop_vars.items():
+                if var.get():
+                    properties.append(getattr(BLEProperties, prop_name))
+                    
+            self.log(f"Configuring characteristic: {char_uuid_str} for service {service_uuid_str}")
+            self.host.configure_characteristic(
+                uuid=char_uuid,
+                service_uuid=service_uuid,
+                properties=properties
+            )
+            self.log("✓ Characteristic configured", "SUCCESS")
+            messagebox.showinfo("Success", "Characteristic configured successfully")
+            
+        except Exception as e:
+            self.log(f"Failed to configure characteristic: {e}", "ERROR")
+            messagebox.showerror("Characteristic Error", str(e))
+            
+    def configure_profile(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            profile_name = self.profile_var.get()
+            profile = getattr(BLEProfile, profile_name)
+            delay = float(self.profile_delay_var.get())
+            
+            self.log(f"Configuring profile: {profile_name} with delay {delay}s")
+            self.host.configure_profile(profile, delay=delay)
+            self.log("✓ Profile configured", "SUCCESS")
+            messagebox.showinfo("Success", "Profile configured successfully")
+            
+        except Exception as e:
+            self.log(f"Failed to configure profile: {e}", "ERROR")
+            messagebox.showerror("Profile Error", str(e))
+            
+    def start_advertisement(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            allow_multi = self.multi_connect_var.get()
+            self.log(f"Starting advertisement (multi-connect: {allow_multi})")
+            self.host.start_advertisement(allow_multi_connect=allow_multi)
+            self.log("✓ Advertisement started", "SUCCESS")
+            messagebox.showinfo("Success", "Advertisement started successfully")
+            
+        except Exception as e:
+            self.log(f"Failed to start advertisement: {e}", "ERROR")
+            messagebox.showerror("Advertisement Error", str(e))
+            
+    def stop_advertisement(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            self.log("Stopping advertisement")
+            self.host.stop_advertisement()
+            self.log("✓ Advertisement stopped", "SUCCESS")
+            messagebox.showinfo("Success", "Advertisement stopped successfully")
+            
+        except Exception as e:
+            self.log(f"Failed to stop advertisement: {e}", "ERROR")
+            messagebox.showerror("Advertisement Error", str(e))
+            
+    def clear_logs(self):
+        self.log_text.delete(1.0, tk.END)
+        
+    def on_closing(self):
+        if self.host and self.is_connected:
+            self.disconnect_device()
+        self.root.destroy()
+
+
+def main():
+    root = tk.Tk()
+    app = BLEConfigurationGUI(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

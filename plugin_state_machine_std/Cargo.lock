@@ -604,7 +604,7 @@ dependencies = [
 [[package]]
 name = "esp32-nimble"
 version = "0.11.1"
-source = "git+https://github.com/Babu12345/esp32-nimble?rev=aa586aecb56ddb3b4064604739e716dd5dcc78a2#aa586aecb56ddb3b4064604739e716dd5dcc78a2"
+source = "git+https://github.com/Babu12345/esp32-nimble?rev=d346f114a8484f693d68d02baeee241339a0d152#d346f114a8484f693d68d02baeee241339a0d152"
 dependencies = [
  "anyhow",
  "bitflags 2.9.1",
