@@ -259,8 +259,7 @@ class BLEConfigurationGUI:
                 
             self.log(f"Configuring peripheral: {name}")
             self.host.configure_peripheral(name=name, addr=mac_bytes)
-            self.log("✓ Peripheral configured", "SUCCESS")
-            messagebox.showinfo("Success", "Peripheral configured successfully")
+            self.log("✓ Peripheral configured successfully", "SUCCESS")
             
         except Exception as e:
             self.log(f"Failed to configure peripheral: {e}", "ERROR")
@@ -275,8 +274,7 @@ class BLEConfigurationGUI:
             passkey = int(self.passkey_var.get())
             self.log(f"Configuring security with passkey: {passkey}")
             self.host.configure_peripheral_security(passkey=passkey)
-            self.log("✓ Security configured", "SUCCESS")
-            messagebox.showinfo("Success", "Security configured successfully")
+            self.log("✓ Security configured successfully", "SUCCESS")
             
         except Exception as e:
             self.log(f"Failed to configure security: {e}", "ERROR")
@@ -293,8 +291,7 @@ class BLEConfigurationGUI:
             
             self.log(f"Configuring service: {uuid_str}")
             self.host.configure_service(uuid=uuid)
-            self.log("✓ Service configured", "SUCCESS")
-            messagebox.showinfo("Success", "Service configured successfully")
+            self.log("✓ Service configured successfully", "SUCCESS")
             
         except Exception as e:
             self.log(f"Failed to configure service: {e}", "ERROR")
@@ -349,8 +346,7 @@ class BLEConfigurationGUI:
                 service_uuid=service_uuid,
                 properties=properties
             )
-            self.log("✓ Characteristic configured", "SUCCESS")
-            messagebox.showinfo("Success", "Characteristic configured successfully")
+            self.log("✓ Characteristic configured successfully", "SUCCESS")
             
         except Exception as e:
             self.log(f"Failed to configure characteristic: {e}", "ERROR")
@@ -368,8 +364,7 @@ class BLEConfigurationGUI:
             
             self.log(f"Configuring profile: {profile_name} with delay {delay}s")
             self.host.configure_profile(profile, delay=delay)
-            self.log("✓ Profile configured", "SUCCESS")
-            messagebox.showinfo("Success", "Profile configured successfully")
+            self.log("✓ Profile configured successfully", "SUCCESS")
             
         except Exception as e:
             self.log(f"Failed to configure profile: {e}", "ERROR")
@@ -384,8 +379,7 @@ class BLEConfigurationGUI:
             allow_multi = self.multi_connect_var.get()
             self.log(f"Starting advertisement (multi-connect: {allow_multi})")
             self.host.start_advertisement(allow_multi_connect=allow_multi)
-            self.log("✓ Advertisement started", "SUCCESS")
-            messagebox.showinfo("Success", "Advertisement started successfully")
+            self.log("✓ Advertisement started successfully", "SUCCESS")
             
         except Exception as e:
             self.log(f"Failed to start advertisement: {e}", "ERROR")
@@ -399,8 +393,7 @@ class BLEConfigurationGUI:
         try:
             self.log("Stopping advertisement")
             self.host.stop_advertisement()
-            self.log("✓ Advertisement stopped", "SUCCESS")
-            messagebox.showinfo("Success", "Advertisement stopped successfully")
+            self.log("✓ Advertisement stopped successfully", "SUCCESS")
             
         except Exception as e:
             self.log(f"Failed to stop advertisement: {e}", "ERROR")
