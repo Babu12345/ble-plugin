@@ -5,8 +5,7 @@ def main():
     print("=== USB Host Device Example ===\n")
     
     # Set command delay for proper device communication
-    set_command_delay(0.5)  # 0.5 second delay between commands
-    print("Command delay set to 0.5 seconds")
+    set_command_delay(0.1)  # 0.5 second delay between commands
     
     # Method 1: Manual connection management
     print("1. Manual Connection Management:")
