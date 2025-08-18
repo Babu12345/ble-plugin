@@ -1,13 +1,12 @@
-from enum import Enum
-from collections import namedtuple
-from plugin_host.generated_types import *
-
-from plugin_host.comms import USBHostDevice, USBCommunicationError, parse_uuid_u16, serialize_command
-from plugin_host.generated_types import BLEProperties, BluetoothAddressType
-from time import sleep
+from plugin_host.comms import USBHostDevice, USBCommunicationError, set_command_delay
+from plugin_host.generated_types import BLEProperties, BLEProfile
 def main():
     """Main example function"""
     print("=== USB Host Device Example ===\n")
+    
+    # Set command delay for proper device communication
+    set_command_delay(0.5)  # 0.5 second delay between commands
+    print("Command delay set to 0.5 seconds")
     
     # Method 1: Manual connection management
     print("1. Manual Connection Management:")
@@ -16,7 +15,6 @@ def main():
     try:
         # Connect to device
         print("Connecting to USB device...")
-        delay = 0.5
         if host.connect(sleep_time=1.0):
             print("✓ Connected successfully")
             
@@ -28,26 +26,22 @@ def main():
             )
             print("✓ Peripheral configured")
             
-            sleep(delay)
             
             # Configure peripheral security
             print("Configuring peripheral security...")
             host.configure_peripheral_security(passkey=123456)
             print("✓ Security configured with passkey: 123456")
             
-            sleep(delay)
             # Configure a service
             print("Configuring service...")
             host.configure_service(uuid=0x8765)  # Use 16-bit hex value
             print("✓ Service configured")
 
-            sleep(delay)
             # Configure a characteristic with properties
             print("Configuring service...")
             host.configure_service(uuid=0x1265)  # Use 16-bit hex value
             print("✓ Service configured")
 
-            sleep(delay)
             # Configure a characteristic with properties
             print("Configuring characteristic...")
             host.configure_characteristic(
@@ -56,7 +50,6 @@ def main():
                 properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
             )
             print("✓ Characteristic configured")
-            sleep(delay)
             
             # Query service information (this would receive a response)
             print("Querying service information...")
@@ -70,7 +63,6 @@ def main():
 
             host.configure_profile(BLEProfile.Custom)
             print("✓ Configured custom profile")
-            sleep(delay)
 
             # Start advertisement
             print("Starting advertisement...")

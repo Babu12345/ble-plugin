@@ -5,7 +5,7 @@ import struct
 import threading
 import time
 import queue
-import uuid as uuid_module
+import os
 from typing import Any, Optional
 from plugin_host.generated_types import *
 
@@ -60,6 +60,53 @@ from plugin_host.generated_types import (
     DATA_BYTES_LENGTH_IN_BYTES, MESSAGE_HEADER_SIZE, 
     MESSAGE_TYPE_MAP, TYPE_ID_TO_MESSAGE_TYPE, MessageTypeId, DEFAULT_PACKET_SIZE
 )
+
+# Command delay configuration
+DEFAULT_COMMAND_DELAY = 0.0  # 0.0 seconds (default for tests)
+_skip_command_delay = False
+_custom_command_delay = None
+
+def set_command_delay(delay_seconds: float) -> None:
+    """
+    Set custom command delay
+    
+    Args:
+        delay_seconds: Delay in seconds (0.0 to disable delay)
+    """
+    global _custom_command_delay
+    _custom_command_delay = delay_seconds
+
+def get_command_delay() -> float:
+    """
+    Get the current command delay value
+    
+    Returns:
+        float: Current delay in seconds
+    """
+    global _custom_command_delay
+    return _custom_command_delay if _custom_command_delay is not None else DEFAULT_COMMAND_DELAY
+
+def set_command_delay_enabled(enabled: bool) -> None:
+    """
+    Enable or disable command delay
+    
+    Args:
+        enabled: If False, command delays will be skipped
+    """
+    global _skip_command_delay
+    _skip_command_delay = not enabled
+
+def is_command_delay_enabled() -> bool:
+    """
+    Check if command delay is enabled
+    
+    Returns:
+        bool: True if delays are enabled, False if disabled
+    """
+    global _skip_command_delay
+    # Check environment variable first, then global flag
+    env_skip = os.environ.get('BLE_PLUGIN_SKIP_DELAY', '').lower() in ('true', '1', 'yes')
+    return not (_skip_command_delay or env_skip)
 
 class USBCommunicationError(Exception):
     """Exception for USB communication errors"""
@@ -298,7 +345,7 @@ def deserialize_response(data: bytes, response_type: type = None) -> Any:
 
 def usb_send_command(device: USBDevice, command: Any) -> bool:
     """
-    Send a protocol command over USB
+    Send a protocol command over USB with optional delay after sending
     
     Args:
         device: Connected USB device
@@ -313,7 +360,15 @@ def usb_send_command(device: USBDevice, command: Any) -> bool:
     try:
         serialized_data = serialize_command(command)
         bytes_sent = device.send_data(serialized_data)
-        return bytes_sent == len(serialized_data)
+        result = bytes_sent == len(serialized_data)
+        
+        # Add delay after sending if enabled
+        if is_command_delay_enabled():
+            delay = get_command_delay()
+            if delay > 0:
+                time.sleep(delay)
+        
+        return result
     except Exception as e:
         raise USBCommunicationError(f"Failed to send command: {e}")
 
