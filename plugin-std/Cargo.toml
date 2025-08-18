@@ -25,7 +25,6 @@ protocol = {path = "../protocol"}
 device-cherry = {path = "../device-cherry"}
 plugin_state_machine_std = { path = "../plugin_state_machine_std" }
 ## Crates
-esp32-nimble ={version =  "0.11.0", default-features = false, features = ["no_std"]}
 log = {version = "0.4.27", default-features = false}
 esp-idf-sys = { version = "0.36.1", default-features = false }
 esp-idf-svc = { version = "0.51", features = ["binstart", "embassy-sync"], default-features = false }
