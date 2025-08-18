@@ -99,6 +99,18 @@ def main():
             )
             print("✓ Characteristic notification sent")
             
+            # Demonstrate new commands
+            print("\n--- New Commands Demo ---")
+            
+            # Clear all services
+            host_device.clear_all_services()
+            print("✓ All services cleared")
+            
+            # Configure profile (restart with existing definitions)
+            from plugin_host.generated_types import BLEProfile
+            host_device.configure_profile(BLEProfile.Custom)
+            print("✓ Custom profile configured")
+            
     except USBCommunicationError as e:
         print(f"⚠ USB Communication Error (expected if no device): {e}")
     

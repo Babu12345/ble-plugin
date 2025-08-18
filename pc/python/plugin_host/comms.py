@@ -558,6 +558,35 @@ class USBHostDevice:
         )
         usb_send_command(self.usb_device, cmd)
     
+    def clear_all_services(self) -> None:
+        """
+        Clear all configured services and characteristics
+        
+        This command removes all configured BLE services and their associated 
+        characteristics, resetting the device to a clean state.
+        
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandClearAllServices()
+        usb_send_command(self.usb_device, cmd)
+    
+    def configure_profile(self, profile: BLEProfile) -> None:
+        """
+        Configure BLE profile using predefined settings
+        
+        This command configures the BLE device using a predefined profile,
+        which applies all previously configured services and characteristics.
+        
+        Args:
+            profile: BLE profile type to configure (currently only BLEProfile.CUSTOM supported)
+            
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandConfigureProfile(profile=profile)
+        usb_send_command(self.usb_device, cmd)
+    
     # Generic sending and receiving methods
     
     def send_command(self, command: Any) -> None:

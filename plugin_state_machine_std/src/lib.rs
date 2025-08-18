@@ -1203,9 +1203,8 @@ impl PluginStateMachine {
         };
 
         // Restart the server with all predefined services and characteristics
-        server.restart(true).map_err(|e| {
-            log::error!("Failed to restart BLE server: {:?}", e);
-            StateMachineError::InvalidBleConfiguration
+        server.restart(true).map_err(|source| {
+            StateMachineError::ServerRestartError(source)
         })?;
 
         log::info!("Successfully configured profile {:?} by restarting server with predefined configuration", cmd.profile);
