@@ -69,12 +69,11 @@ Responses and data sent from plugin devices back to hosts:
 ```rust
 use protocol::io_types::HostCommandConfigurePeripheral;
 use heapless::String;
-use uuid::Uuid;
 
 // Create a peripheral configuration command
 let command = HostCommandConfigurePeripheral {
     name: String::try_from("MyDevice").unwrap(),
-    uuid: Uuid::new_v4(),
+    addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],  // 6-byte BLE address
 };
 ```
 
@@ -112,7 +111,7 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Supported Commands
 
 ### Peripheral Management
-- `HostCommandConfigurePeripheral`: Set up device name and UUID
+- `HostCommandConfigurePeripheral`: Set up device name and 6-byte BLE address
 - `HostCommandStartAdvertisement`: Begin BLE advertising
 - `HostCommandConfigurePeripheralSecurity`: Configure security settings (pairing, passkey)
 
@@ -127,7 +126,11 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 - `HostCommandNotifyCharacteristicValue`: Send notifications to clients
 
 ### Profile Management
-- `HostCommandConfigureProfile`: Configure using predefined BLE profiles (currently supports Custom profile)
+- `HostCommandConfigureProfile`: Configure using predefined BLE profiles
+  - Custom (0): User-defined services and characteristics
+  - HeartRateMonitor (1): Heart Rate Monitor profile
+  - BatteryService (2): Battery Service profile
+  - DeviceInformation (3): Device Information Service profile
 
 ### Plugin Responses
 - `PluginData`: BLE client data forwarded to host
