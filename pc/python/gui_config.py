@@ -212,7 +212,8 @@ class BLEConfigurationGUI:
         ttk.Button(button_frame, text="Clear Logs", command=self.clear_logs).pack(side="right")
         
     def log(self, message, level="INFO"):
-        self.log_text.insert(tk.END, f"[{level}] {message}\n")
+        timestamp = time.strftime("%H:%M:%S")
+        self.log_text.insert(tk.END, f"[{timestamp}] [{level}] {message}\n")
         self.log_text.see(tk.END)
         
     def connect_device(self):
