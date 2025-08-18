@@ -618,7 +618,7 @@ class USBHostDevice:
         )
         usb_send_command(self.usb_device, cmd)
     
-    def configure_profile(self, profile: BLEProfile) -> None:
+    def configure_profile(self, profile: BLEProfile, delay = 0.05) -> None:
         """
         Configure BLE profile using predefined settings
         
@@ -627,12 +627,15 @@ class USBHostDevice:
         
         Args:
             profile: BLE profile type to configure (currently only BLEProfile.CUSTOM supported)
+            delay: Optional delay in seconds after sending the command (default: 0.05). Needed as it might be required
+            to wait for BLE central devices to disconnect and advertising to stop before reconfiguring.
             
         Raises:
             USBCommunicationError: If sending fails
         """
         cmd = HostCommandConfigureProfile(profile=profile)
         usb_send_command(self.usb_device, cmd)
+        time.sleep(delay)
     
     # Generic sending and receiving methods
     

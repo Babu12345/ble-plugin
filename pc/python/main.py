@@ -1,4 +1,4 @@
-from plugin_host.comms import USBHostDevice, USBCommunicationError, set_command_delay
+from plugin_host.comms import USBHostDevice, USBCommunicationError
 from plugin_host.generated_types import BLEProperties, BLEProfile
 def main():
     """Main example function"""
@@ -58,7 +58,7 @@ def main():
                 print(f"⚠ Service query failed (expected if no device): {e}")
             
 
-            host.configure_profile(BLEProfile.Custom)
+            host.configure_profile(BLEProfile.Custom, delay=0.05)
             print("✓ Configured custom profile")
 
             # Start advertisement
