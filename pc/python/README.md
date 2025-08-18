@@ -79,7 +79,7 @@ device = USBHostDevice(
 - `product_id`: USB product ID of the plugin device  
 - `default_command_delay`: Default delay in seconds between commands to ensure proper device communication
 
-**Note:** The `default_command_delay` should be at least > 0.01 seconds to give the plugin sufficient time for processing commands.
+**Note:** The `default_command_delay` should be at least > 0.1 seconds to give the plugin sufficient time for processing commands.
 
 ## Usage Examples
 
