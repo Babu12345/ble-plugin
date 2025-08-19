@@ -15,7 +15,7 @@ rust-version = "1.70"
 # Local protocol definitions
 protocol = { path = "../protocol" }
 
-esp32-nimble = { git = "https://github.com/Babu12345/esp32-nimble", rev = "d346f114a8484f693d68d02baeee241339a0d152", default-features = false, features = [
+esp32-nimble = { git = "https://github.com/Babu12345/esp32-nimble", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [
     "no_std",
 ] }
 
