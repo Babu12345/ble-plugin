@@ -19,6 +19,12 @@ class BLEConfigurationGUI:
         self.connection_monitor_thread = None
         self.monitor_running = False
         
+        # Message listening variables
+        self.message_listener_thread = None
+        self.is_listening = False
+        self.message_count = 0
+        self.listener_paused = False  # Flag to pause listener for manual operations
+        
         self.setup_ui()
         self.start_connection_monitor()
         self.check_device_availability()  # Initial check
@@ -32,6 +38,7 @@ class BLEConfigurationGUI:
         self.service_frame = ttk.Frame(notebook)
         self.characteristic_frame = ttk.Frame(notebook)
         self.profile_frame = ttk.Frame(notebook)
+        self.messages_frame = ttk.Frame(notebook)
         self.log_frame = ttk.Frame(notebook)
         
         notebook.add(self.connection_frame, text="Connection")
@@ -39,6 +46,7 @@ class BLEConfigurationGUI:
         notebook.add(self.service_frame, text="Services")
         notebook.add(self.characteristic_frame, text="Characteristics")
         notebook.add(self.profile_frame, text="Profile & Advertisement")
+        notebook.add(self.messages_frame, text="Incoming Messages")
         notebook.add(self.log_frame, text="Logs")
         
         self.setup_connection_tab()
@@ -46,6 +54,7 @@ class BLEConfigurationGUI:
         self.setup_service_tab()
         self.setup_characteristic_tab()
         self.setup_profile_tab()
+        self.setup_messages_tab()
         self.setup_log_tab()
         
         status_frame = ttk.Frame(self.root)
@@ -198,6 +207,44 @@ class BLEConfigurationGUI:
         
         ttk.Button(adv_frame, text="Start Advertisement", command=self.start_advertisement).grid(row=1, column=0, pady=5)
         ttk.Button(adv_frame, text="Stop Advertisement", command=self.stop_advertisement).grid(row=1, column=1, pady=5)
+    
+    def setup_messages_tab(self):
+        frame = ttk.Frame(self.messages_frame)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Control buttons at the top
+        control_frame = ttk.LabelFrame(frame, text="Message Listening Controls", padding=10)
+        control_frame.pack(fill="x", pady=(0, 10))
+        
+        self.start_listening_btn = ttk.Button(control_frame, text="Start Listening", command=self.start_listening)
+        self.start_listening_btn.pack(side="left", padx=5)
+        
+        self.stop_listening_btn = ttk.Button(control_frame, text="Stop Listening", command=self.stop_listening, state="disabled")
+        self.stop_listening_btn.pack(side="left", padx=5)
+        
+        ttk.Button(control_frame, text="Clear Messages", command=self.clear_messages).pack(side="left", padx=5)
+        
+        # Status indicator
+        self.listening_status_label = ttk.Label(control_frame, text="Status: Not Listening", foreground="red")
+        self.listening_status_label.pack(side="right", padx=10)
+        
+        # Message count
+        self.message_count_label = ttk.Label(control_frame, text="Messages: 0", foreground="gray")
+        self.message_count_label.pack(side="right", padx=10)
+        
+        # Messages display area
+        message_frame = ttk.LabelFrame(frame, text="Incoming Messages", padding=10)
+        message_frame.pack(fill="both", expand=True)
+        
+        # Create scrolled text for messages
+        self.messages_text = scrolledtext.ScrolledText(message_frame, height=20, width=80, wrap=tk.WORD)
+        self.messages_text.pack(fill="both", expand=True)
+        
+        # Configure text tags for different message types
+        self.messages_text.tag_configure("timestamp", foreground="gray", font=("Courier", 9))
+        self.messages_text.tag_configure("data", foreground="blue", font=("Courier", 9))
+        self.messages_text.tag_configure("error", foreground="red", font=("Courier", 9))
+        self.messages_text.tag_configure("response", foreground="green", font=("Courier", 9))
         
     def setup_log_tab(self):
         frame = ttk.Frame(self.log_frame)
@@ -250,6 +297,10 @@ class BLEConfigurationGUI:
             
     def disconnect_device(self):
         if self.host:
+            # Stop listening if active
+            if self.is_listening:
+                self.stop_listening()
+                
             self.host.disconnect()
             self.is_connected = False
             self.host = None
@@ -272,7 +323,11 @@ class BLEConfigurationGUI:
                 mac_bytes.append(int(var.get(), 16))
                 
             self.log(f"Configuring peripheral: {name}")
-            self.host.configure_peripheral(name=name, addr=mac_bytes)
+            
+            # Pause listener for manual operation
+            with self.pause_listener():
+                self.host.configure_peripheral(name=name, addr=mac_bytes)
+                
             self.log("✓ Peripheral configured successfully", "SUCCESS")
             
         except Exception as e:
@@ -287,7 +342,10 @@ class BLEConfigurationGUI:
         try:
             passkey = int(self.passkey_var.get())
             self.log(f"Configuring security with passkey: {passkey}")
-            self.host.configure_peripheral_security(passkey=passkey)
+            
+            with self.pause_listener():
+                self.host.configure_peripheral_security(passkey=passkey)
+                
             self.log("✓ Security configured successfully", "SUCCESS")
             
         except Exception as e:
@@ -304,7 +362,10 @@ class BLEConfigurationGUI:
             uuid = int(uuid_str, 16) if uuid_str.startswith("0x") else int(uuid_str)
             
             self.log(f"Configuring service: {uuid_str}")
-            self.host.configure_service(uuid=uuid)
+            
+            with self.pause_listener():
+                self.host.configure_service(uuid=uuid)
+                
             self.log("✓ Service configured successfully", "SUCCESS")
             
         except Exception as e:
@@ -321,7 +382,10 @@ class BLEConfigurationGUI:
             uuid = int(uuid_str, 16) if uuid_str.startswith("0x") else int(uuid_str)
             
             self.log(f"Querying service: {uuid_str}")
-            service_info = self.host.get_service_info(uuid)
+            
+            # Pause listener to give priority to manual operation
+            with self.pause_listener():
+                service_info = self.host.get_service_info(uuid)
             
             info_text = f"Service exists: {service_info.exists}\n"
             info_text += f"Characteristics: {len(service_info.characteristic_uuids)}\n"
@@ -355,11 +419,14 @@ class BLEConfigurationGUI:
                     properties.append(getattr(BLEProperties, prop_name))
                     
             self.log(f"Configuring characteristic: {char_uuid_str} for service {service_uuid_str}")
-            self.host.configure_characteristic(
-                uuid=char_uuid,
-                service_uuid=service_uuid,
-                properties=properties
-            )
+            
+            with self.pause_listener():
+                self.host.configure_characteristic(
+                    uuid=char_uuid,
+                    service_uuid=service_uuid,
+                    properties=properties
+                )
+                
             self.log("✓ Characteristic configured successfully", "SUCCESS")
             
         except Exception as e:
@@ -377,7 +444,10 @@ class BLEConfigurationGUI:
             delay = float(self.profile_delay_var.get())
             
             self.log(f"Configuring profile: {profile_name} with delay {delay}s")
-            self.host.configure_profile(profile, delay=delay)
+            
+            with self.pause_listener():
+                self.host.configure_profile(profile, delay=delay)
+                
             self.log("✓ Profile configured successfully", "SUCCESS")
             
         except Exception as e:
@@ -392,7 +462,10 @@ class BLEConfigurationGUI:
         try:
             allow_multi = self.multi_connect_var.get()
             self.log(f"Starting advertisement (multi-connect: {allow_multi})")
-            self.host.start_advertisement(allow_multi_connect=allow_multi)
+            
+            with self.pause_listener():
+                self.host.start_advertisement(allow_multi_connect=allow_multi)
+                
             self.log("✓ Advertisement started successfully", "SUCCESS")
             
         except Exception as e:
@@ -406,7 +479,10 @@ class BLEConfigurationGUI:
             
         try:
             self.log("Stopping advertisement")
-            self.host.stop_advertisement()
+            
+            with self.pause_listener():
+                self.host.stop_advertisement()
+                
             self.log("✓ Advertisement stopped successfully", "SUCCESS")
             
         except Exception as e:
@@ -415,6 +491,133 @@ class BLEConfigurationGUI:
             
     def clear_logs(self):
         self.log_text.delete(1.0, tk.END)
+    
+    def pause_listener(self):
+        """Context manager to pause the message listener during manual operations"""
+        class ListenerPauser:
+            def __init__(self, gui):
+                self.gui = gui
+                
+            def __enter__(self):
+                self.gui.listener_paused = True
+                # Update UI to show listener is paused
+                if self.gui.is_listening:
+                    self.gui.root.after(0, lambda: self.gui.listening_status_label.config(
+                        text="Status: Paused (Manual Operation)", foreground="orange"
+                    ))
+                # Wait a bit to ensure listener has paused
+                time.sleep(0.15)  # Give listener time to finish current operation
+                return self
+                
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self.gui.listener_paused = False
+                # Update UI to show listener is resumed
+                if self.gui.is_listening:
+                    self.gui.root.after(0, lambda: self.gui.listening_status_label.config(
+                        text="Status: Listening", foreground="green"
+                    ))
+                return False
+        
+        return ListenerPauser(self)
+    
+    def start_listening(self):
+        """Start listening for incoming messages"""
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        if self.is_listening:
+            return
+            
+        self.is_listening = True
+        self.message_count = 0
+        self.listening_status_label.config(text="Status: Listening", foreground="green")
+        self.start_listening_btn.config(state="disabled")
+        self.stop_listening_btn.config(state="normal")
+        
+        # Start the message listener thread
+        self.message_listener_thread = threading.Thread(target=self.message_listener, daemon=True)
+        self.message_listener_thread.start()
+        
+        self.log("Started listening for incoming messages", "INFO")
+        self.add_message("=== Message listening started ===", "info")
+    
+    def stop_listening(self):
+        """Stop listening for incoming messages"""
+        self.is_listening = False
+        self.listening_status_label.config(text="Status: Not Listening", foreground="red")
+        self.start_listening_btn.config(state="normal")
+        self.stop_listening_btn.config(state="disabled")
+        
+        self.log("Stopped listening for incoming messages", "INFO")
+        self.add_message("=== Message listening stopped ===", "info")
+    
+    def clear_messages(self):
+        """Clear the messages display"""
+        self.messages_text.delete(1.0, tk.END)
+        self.message_count = 0
+        self.message_count_label.config(text="Messages: 0")
+        self.log("Messages cleared", "INFO")
+    
+    def add_message(self, message, msg_type="data"):
+        """Add a message to the messages display with timestamp and formatting"""
+        timestamp = time.strftime("%H:%M:%S.") + f"{int(time.time() * 1000) % 1000:03d}"
+        
+        # Insert timestamp
+        self.messages_text.insert(tk.END, f"[{timestamp}] ", "timestamp")
+        
+        # Insert message with appropriate tag
+        if msg_type == "error":
+            self.messages_text.insert(tk.END, f"ERROR: {message}\n", "error")
+        elif msg_type == "response":
+            self.messages_text.insert(tk.END, f"RESPONSE: {message}\n", "response")
+        elif msg_type == "info":
+            self.messages_text.insert(tk.END, f"{message}\n", "timestamp")
+        else:
+            self.messages_text.insert(tk.END, f"DATA: {message}\n", "data")
+        
+        # Auto-scroll to bottom
+        self.messages_text.see(tk.END)
+        
+        # Update message count if it's a real message (not info)
+        if msg_type != "info":
+            self.message_count += 1
+            self.root.after(0, lambda: self.message_count_label.config(text=f"Messages: {self.message_count}"))
+    
+    def message_listener(self):
+        """Background thread that listens for incoming messages"""
+        while self.is_listening:
+            # Check if listener is paused for manual operations
+            if self.listener_paused:
+                time.sleep(0.05)  # Short sleep while paused
+                continue
+                
+            if not self.host or not self.is_connected:
+                time.sleep(0.1)
+                continue
+                
+            try:
+                # Try to receive a message from the USB device
+                # The USBDevice class now handles thread safety internally
+                response = self.host.usb_device.receive_data(timeout=100)  # 100ms timeout
+                
+                if response:
+                    # Format the received data
+                    hex_data = ' '.join([f'{b:02X}' for b in response])
+                    self.root.after(0, lambda data=hex_data: self.add_message(data, "response"))
+                    
+            except Exception as e:
+                error_str = str(e).lower()
+                # Silently ignore timeout errors - they're expected when no data
+                if "timeout" in error_str or "timed out" in error_str or "operation timed out" in error_str:
+                    pass  # Normal - no data available
+                # Only show real errors
+                elif "errno" in error_str or "disconnected" in error_str:
+                    error_msg = f"Receive error: {e}"
+                    self.root.after(0, lambda msg=error_msg: self.add_message(msg, "error"))
+                
+                # Small delay to prevent busy waiting
+                time.sleep(0.05)
     
     def create_status_indicator(self):
         """Create the initial status indicator (USB icon-like shape)"""
@@ -618,6 +821,11 @@ class BLEConfigurationGUI:
     def on_closing(self):
         self.monitor_running = False
         self.stop_pulse_animation()
+        
+        # Stop message listening
+        if self.is_listening:
+            self.stop_listening()
+            
         if self.connection_monitor_thread:
             self.connection_monitor_thread.join(timeout=2)
         if self.host and self.is_connected:
