@@ -24,6 +24,7 @@ class BLEConfigurationGUI:
         self.is_listening = False
         self.message_count = 0
         self.listener_paused = False  # Flag to pause listener for manual operations
+        self.message_window = None  # Separate window for messages
         
         self.setup_ui()
         self.start_connection_monitor()
@@ -223,6 +224,9 @@ class BLEConfigurationGUI:
         self.stop_listening_btn.pack(side="left", padx=5)
         
         ttk.Button(control_frame, text="Clear Messages", command=self.clear_messages).pack(side="left", padx=5)
+        
+        # Button to open separate window
+        ttk.Button(control_frame, text="Open in Separate Window", command=self.open_message_window).pack(side="left", padx=10)
         
         # Status indicator
         self.listening_status_label = ttk.Label(control_frame, text="Status: Not Listening", foreground="red")
@@ -505,6 +509,11 @@ class BLEConfigurationGUI:
                     self.gui.root.after(0, lambda: self.gui.listening_status_label.config(
                         text="Status: Paused (Manual Operation)", foreground="orange"
                     ))
+                    # Update separate window status if it exists
+                    if self.gui.message_window and self.gui.message_window.winfo_exists():
+                        self.gui.root.after(0, lambda: self.gui.message_window_status_label.config(
+                            text="Status: Paused (Manual Operation)", foreground="orange"
+                        ))
                 # Wait a bit to ensure listener has paused
                 time.sleep(0.15)  # Give listener time to finish current operation
                 return self
@@ -516,6 +525,11 @@ class BLEConfigurationGUI:
                     self.gui.root.after(0, lambda: self.gui.listening_status_label.config(
                         text="Status: Listening", foreground="green"
                     ))
+                    # Update separate window status if it exists
+                    if self.gui.message_window and self.gui.message_window.winfo_exists():
+                        self.gui.root.after(0, lambda: self.gui.message_window_status_label.config(
+                            text="Status: Listening", foreground="green"
+                        ))
                 return False
         
         return ListenerPauser(self)
@@ -535,6 +549,12 @@ class BLEConfigurationGUI:
         self.start_listening_btn.config(state="disabled")
         self.stop_listening_btn.config(state="normal")
         
+        # Update separate window controls if it exists
+        if self.message_window and self.message_window.winfo_exists():
+            self.message_window_start_btn.config(state="disabled")
+            self.message_window_stop_btn.config(state="normal")
+            self.message_window_status_label.config(text="Status: Listening", foreground="green")
+        
         # Start the message listener thread
         self.message_listener_thread = threading.Thread(target=self.message_listener, daemon=True)
         self.message_listener_thread.start()
@@ -549,21 +569,122 @@ class BLEConfigurationGUI:
         self.start_listening_btn.config(state="normal")
         self.stop_listening_btn.config(state="disabled")
         
+        # Update separate window controls if it exists
+        if self.message_window and self.message_window.winfo_exists():
+            self.message_window_start_btn.config(state="normal")
+            self.message_window_stop_btn.config(state="disabled")
+            self.message_window_status_label.config(text="Status: Not Listening", foreground="red")
+        
         self.log("Stopped listening for incoming messages", "INFO")
         self.add_message("=== Message listening stopped ===", "info")
     
     def clear_messages(self):
         """Clear the messages display"""
         self.messages_text.delete(1.0, tk.END)
+        if self.message_window and self.message_window.winfo_exists():
+            self.message_window_text.delete(1.0, tk.END)
         self.message_count = 0
         self.message_count_label.config(text="Messages: 0")
+        if self.message_window and self.message_window.winfo_exists():
+            self.message_window_count_label.config(text="Messages: 0")
         self.log("Messages cleared", "INFO")
+    
+    def open_message_window(self):
+        """Open or focus the separate message window"""
+        if self.message_window and self.message_window.winfo_exists():
+            # Window already exists, bring it to front
+            self.message_window.lift()
+            self.message_window.focus()
+        else:
+            # Create new window
+            self.create_message_window()
+    
+    def create_message_window(self):
+        """Create a separate window for messages"""
+        self.message_window = tk.Toplevel(self.root)
+        self.message_window.title("Incoming Messages - BLE USB Monitor")
+        self.message_window.geometry("600x700")
+        
+        # Position to the right of main window
+        main_x = self.root.winfo_x()
+        main_y = self.root.winfo_y()
+        main_width = self.root.winfo_width()
+        self.message_window.geometry(f"+{main_x + main_width + 10}+{main_y}")
+        
+        # Control frame at top
+        control_frame = ttk.Frame(self.message_window)
+        control_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Control buttons
+        self.message_window_start_btn = ttk.Button(control_frame, text="Start Listening", 
+                                                   command=self.start_listening)
+        self.message_window_start_btn.pack(side="left", padx=5)
+        
+        self.message_window_stop_btn = ttk.Button(control_frame, text="Stop Listening", 
+                                                  command=self.stop_listening, state="disabled")
+        self.message_window_stop_btn.pack(side="left", padx=5)
+        
+        ttk.Button(control_frame, text="Clear", command=self.clear_messages).pack(side="left", padx=5)
+        
+        # Auto-scroll checkbox
+        self.auto_scroll_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(control_frame, text="Auto-scroll", 
+                       variable=self.auto_scroll_var).pack(side="left", padx=10)
+        
+        # Status indicators
+        status_frame = ttk.Frame(self.message_window)
+        status_frame.pack(fill="x", padx=10, pady=5)
+        
+        self.message_window_status_label = ttk.Label(status_frame, 
+                                                     text="Status: Not Listening", foreground="red")
+        self.message_window_status_label.pack(side="left", padx=5)
+        
+        self.message_window_count_label = ttk.Label(status_frame, 
+                                                    text="Messages: 0", foreground="gray")
+        self.message_window_count_label.pack(side="right", padx=5)
+        
+        # Messages display
+        message_frame = ttk.LabelFrame(self.message_window, text="Incoming Messages", padding=10)
+        message_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        
+        # Scrolled text widget
+        self.message_window_text = scrolledtext.ScrolledText(message_frame, height=30, width=70, wrap=tk.WORD)
+        self.message_window_text.pack(fill="both", expand=True)
+        
+        # Configure text tags
+        self.message_window_text.tag_configure("timestamp", foreground="gray", font=("Courier", 9))
+        self.message_window_text.tag_configure("data", foreground="blue", font=("Courier", 10, "bold"))
+        self.message_window_text.tag_configure("error", foreground="red", font=("Courier", 10))
+        self.message_window_text.tag_configure("response", foreground="green", font=("Courier", 10, "bold"))
+        self.message_window_text.tag_configure("info", foreground="gray", font=("Courier", 9, "italic"))
+        
+        # Copy existing messages if any
+        if self.messages_text.get(1.0, tk.END).strip():
+            self.message_window_text.insert(1.0, self.messages_text.get(1.0, tk.END))
+        
+        # Update button states to match current listening state
+        if self.is_listening:
+            self.message_window_start_btn.config(state="disabled")
+            self.message_window_stop_btn.config(state="normal")
+            self.message_window_status_label.config(text="Status: Listening", foreground="green")
+        
+        # Update count
+        self.message_window_count_label.config(text=f"Messages: {self.message_count}")
+        
+        # Handle window close
+        self.message_window.protocol("WM_DELETE_WINDOW", self.on_message_window_close)
+    
+    def on_message_window_close(self):
+        """Handle message window close event"""
+        if self.message_window:
+            self.message_window.destroy()
+            self.message_window = None
     
     def add_message(self, message, msg_type="data"):
         """Add a message to the messages display with timestamp and formatting"""
         timestamp = time.strftime("%H:%M:%S.") + f"{int(time.time() * 1000) % 1000:03d}"
         
-        # Insert timestamp
+        # Insert to main window
         self.messages_text.insert(tk.END, f"[{timestamp}] ", "timestamp")
         
         # Insert message with appropriate tag
@@ -579,10 +700,29 @@ class BLEConfigurationGUI:
         # Auto-scroll to bottom
         self.messages_text.see(tk.END)
         
+        # Also add to separate window if it exists
+        if self.message_window and self.message_window.winfo_exists():
+            self.message_window_text.insert(tk.END, f"[{timestamp}] ", "timestamp")
+            
+            if msg_type == "error":
+                self.message_window_text.insert(tk.END, f"ERROR: {message}\n", "error")
+            elif msg_type == "response":
+                self.message_window_text.insert(tk.END, f"RESPONSE: {message}\n", "response")
+            elif msg_type == "info":
+                self.message_window_text.insert(tk.END, f"{message}\n", "info")
+            else:
+                self.message_window_text.insert(tk.END, f"DATA: {message}\n", "data")
+            
+            # Auto-scroll if enabled
+            if hasattr(self, 'auto_scroll_var') and self.auto_scroll_var.get():
+                self.message_window_text.see(tk.END)
+        
         # Update message count if it's a real message (not info)
         if msg_type != "info":
             self.message_count += 1
             self.root.after(0, lambda: self.message_count_label.config(text=f"Messages: {self.message_count}"))
+            if self.message_window and self.message_window.winfo_exists():
+                self.root.after(0, lambda: self.message_window_count_label.config(text=f"Messages: {self.message_count}"))
     
     def message_listener(self):
         """Background thread that listens for incoming messages"""
