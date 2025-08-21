@@ -213,28 +213,51 @@ class BLEConfigurationGUI:
         frame = ttk.Frame(self.messages_frame)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Control buttons at the top
+        # Control buttons at the top with scrollable frame
         control_frame = ttk.LabelFrame(frame, text="Message Listening Controls", padding=10)
         control_frame.pack(fill="x", pady=(0, 10))
         
-        self.start_listening_btn = ttk.Button(control_frame, text="Start Listening", command=self.start_listening)
+        # Create canvas and scrollbar for horizontal scrolling
+        control_canvas = tk.Canvas(control_frame, height=50, highlightthickness=0, borderwidth=0)
+        control_scrollbar = ttk.Scrollbar(control_frame, orient="horizontal", command=control_canvas.xview)
+        control_canvas.configure(xscrollcommand=control_scrollbar.set)
+        
+        # Create scrollable frame inside canvas
+        scrollable_control_frame = ttk.Frame(control_canvas)
+        control_canvas.create_window((0, 0), window=scrollable_control_frame, anchor="nw")
+        
+        # Pack canvas and scrollbar - scrollbar always visible
+        control_canvas.pack(side="top", fill="both", expand=True)
+        control_scrollbar.pack(side="bottom", fill="x")
+        
+        # Force scrollbar to always be visible by setting a minimum scroll region
+        control_canvas.configure(scrollregion=(0, 0, 1, 1))
+        
+        # Add buttons to scrollable frame
+        self.start_listening_btn = ttk.Button(scrollable_control_frame, text="Start Listening", command=self.start_listening)
         self.start_listening_btn.pack(side="left", padx=5)
         
-        self.stop_listening_btn = ttk.Button(control_frame, text="Stop Listening", command=self.stop_listening, state="disabled")
+        self.stop_listening_btn = ttk.Button(scrollable_control_frame, text="Stop Listening", command=self.stop_listening, state="disabled")
         self.stop_listening_btn.pack(side="left", padx=5)
         
-        ttk.Button(control_frame, text="Clear Messages", command=self.clear_messages).pack(side="left", padx=5)
+        ttk.Button(scrollable_control_frame, text="Clear Messages", command=self.clear_messages).pack(side="left", padx=5)
         
         # Button to open separate window
-        ttk.Button(control_frame, text="Open in Separate Window", command=self.open_message_window).pack(side="left", padx=10)
+        ttk.Button(scrollable_control_frame, text="Open in Separate Window", command=self.open_message_window).pack(side="left", padx=10)
         
         # Status indicator
-        self.listening_status_label = ttk.Label(control_frame, text="Status: Not Listening", foreground="red")
-        self.listening_status_label.pack(side="right", padx=10)
+        self.listening_status_label = ttk.Label(scrollable_control_frame, text="Status: Not Listening", foreground="red")
+        self.listening_status_label.pack(side="left", padx=10)
         
         # Message count
-        self.message_count_label = ttk.Label(control_frame, text="Messages: 0", foreground="gray")
-        self.message_count_label.pack(side="right", padx=10)
+        self.message_count_label = ttk.Label(scrollable_control_frame, text="Messages: 0", foreground="gray")
+        self.message_count_label.pack(side="left", padx=10)
+        
+        # Update scroll region when frame size changes
+        def configure_scroll_region(event):
+            control_canvas.configure(scrollregion=control_canvas.bbox("all"))
+        
+        scrollable_control_frame.bind("<Configure>", configure_scroll_region)
         
         # Messages display area
         message_frame = ttk.LabelFrame(frame, text="Incoming Messages", padding=10)
@@ -611,9 +634,25 @@ class BLEConfigurationGUI:
         main_width = self.root.winfo_width()
         self.message_window.geometry(f"+{main_x + main_width + 10}+{main_y}")
         
-        # Control frame at top
-        control_frame = ttk.Frame(self.message_window)
-        control_frame.pack(fill="x", padx=10, pady=10)
+        # Control frame at top with scrollable functionality
+        control_outer_frame = ttk.Frame(self.message_window)
+        control_outer_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Create canvas and scrollbar for horizontal scrolling
+        control_canvas = tk.Canvas(control_outer_frame, height=40, highlightthickness=0, borderwidth=0)
+        control_scrollbar = ttk.Scrollbar(control_outer_frame, orient="horizontal", command=control_canvas.xview)
+        control_canvas.configure(xscrollcommand=control_scrollbar.set)
+        
+        # Create scrollable frame inside canvas
+        control_frame = ttk.Frame(control_canvas)
+        control_canvas.create_window((0, 0), window=control_frame, anchor="nw")
+        
+        # Pack canvas and scrollbar - scrollbar always visible
+        control_canvas.pack(side="top", fill="both", expand=True)
+        control_scrollbar.pack(side="bottom", fill="x")
+        
+        # Force scrollbar to always be visible by setting a minimum scroll region
+        control_canvas.configure(scrollregion=(0, 0, 1, 1))
         
         # Control buttons
         self.message_window_start_btn = ttk.Button(control_frame, text="Start Listening", 
@@ -630,6 +669,12 @@ class BLEConfigurationGUI:
         self.auto_scroll_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(control_frame, text="Auto-scroll", 
                        variable=self.auto_scroll_var).pack(side="left", padx=10)
+        
+        # Update scroll region when frame size changes
+        def configure_window_scroll_region(event):
+            control_canvas.configure(scrollregion=control_canvas.bbox("all"))
+        
+        control_frame.bind("<Configure>", configure_window_scroll_region)
         
         # Status indicators
         status_frame = ttk.Frame(self.message_window)
