@@ -121,6 +121,18 @@ class TestUSBHostDevice:
         assert command.allow_multi_connect is True
     
     @patch('plugin_host.comms.usb_send_command')
+    def test_stop_advertisement(self, mock_send) -> None:
+        """Test stop_advertisement method"""
+        self.host_device.stop_advertisement()
+        
+        mock_send.assert_called_once()
+        args, kwargs = mock_send.call_args
+        command = args[1]
+        # HostCommandStopAdvertisement has no attributes, just verify it's the right type
+        from plugin_host.generated_types import HostCommandStopAdvertisement
+        assert isinstance(command, HostCommandStopAdvertisement)
+    
+    @patch('plugin_host.comms.usb_send_command')
     def test_notify_characteristic_value(self, mock_send) -> None:
         """Test notify_characteristic_value method"""
         address = b'\x12\x34\x56\x78\x9a\xbc'

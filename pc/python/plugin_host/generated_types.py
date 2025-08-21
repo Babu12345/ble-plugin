@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "3b2493185cf3ef3d8f752ee4118d7d1e7ea18b72b009e160fd0e1cb352b23547"
+PROTOCOL_HASH = "c1712043596b7350fd900e99db929a20c829dc2d59db9fc5878a7b328c5ae908"
 
 # ==================== CONSTANTS ====================
 
@@ -68,6 +68,8 @@ class MessageTypeId(Enum):
     HostCommandConfigurePeripheralSecurity: attrs2bin.U8 = 0x09
     # Configure BLE profile with predefined services and characteristics
     HostCommandConfigureProfile: attrs2bin.U8 = 0x0A
+    # Stop BLE advertising
+    HostCommandStopAdvertisement: attrs2bin.U8 = 0x0B
     # Data forwarded from BLE client to BLE plugin
     PluginData: attrs2bin.U8 = 0x80
     # Configuration error response from plugin
@@ -233,6 +235,13 @@ class HostCommandStartAdvertisement:
     allow_multi_connect: bool
 
 @attr.s(auto_attribs=True)
+class HostCommandStopAdvertisement:
+    """Host command. Stop all advertisement
+    
+    Attributes:
+    """
+
+@attr.s(auto_attribs=True)
 class HostCommandNotifyCharacteristicValue:
     """Host command. Notify characteristic value
     
@@ -326,6 +335,7 @@ MESSAGE_TYPE_MAP = {
     HostCommandGetServiceInfo: MessageTypeId.HostCommandGetServiceInfo,
     HostCommandGetCharacteristicInfo: MessageTypeId.HostCommandGetCharacteristicInfo,
     HostCommandStartAdvertisement: MessageTypeId.HostCommandStartAdvertisement,
+    HostCommandStopAdvertisement: MessageTypeId.HostCommandStopAdvertisement,
     HostCommandNotifyCharacteristicValue: MessageTypeId.HostCommandNotifyCharacteristicValue,
     HostCommandConfigureProfile: MessageTypeId.HostCommandConfigureProfile,
     PluginData: MessageTypeId.PluginData,

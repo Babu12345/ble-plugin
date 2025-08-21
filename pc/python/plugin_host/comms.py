@@ -594,6 +594,18 @@ class USBHostDevice:
         cmd = HostCommandStartAdvertisement(allow_multi_connect=allow_multi_connect)
         usb_send_command(self.usb_device, cmd)
     
+    def stop_advertisement(self) -> None:
+        """
+        Stop BLE advertisement
+        
+        Stops all ongoing BLE advertisements.
+        
+        Raises:
+            USBCommunicationError: If sending fails
+        """
+        cmd = HostCommandStopAdvertisement()
+        usb_send_command(self.usb_device, cmd)
+    
     def notify_characteristic_value(self, address: bytes, address_type: BluetoothAddressType, 
                                   characteristic_uuid: str, service_uuid: str, value: bytes) -> None:
         """

@@ -145,6 +145,9 @@ pub enum MessageTypeId {
     /// Configure BLE profile with predefined services and characteristics
     HostCommandConfigureProfile = 0x0A,
 
+    /// Stop BLE advertising
+    HostCommandStopAdvertisement = 0x0B,
+
     // Plugin Responses (0x80+)
     /// Data forwarded from BLE client to BLE plugin
     PluginData = 0x80,

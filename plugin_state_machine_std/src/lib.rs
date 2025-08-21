@@ -135,6 +135,7 @@ use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
 use protocol::io_types::HostCommandConfigurePeripheralSecurity;
 use protocol::io_types::HostCommandNotifyCharacteristicValue;
+use protocol::io_types::HostCommandStopAdvertisement;
 use protocol::io_types::PluginAuthenticationCompletedResponse;
 use protocol::io_types::PluginData;
 use protocol::MESSAGE_HEADER_SIZE;
@@ -515,6 +516,17 @@ impl PluginStateMachine {
                                         }
                                         Err(_) => Err(StateMachineError::FailedToDecodeMessage(
                                             "HostCommandConfigureProfile",
+                                        )),
+                                    }
+                                }
+                                MessageTypeId::HostCommandStopAdvertisement => {
+                                    match data.decode::<HostCommandStopAdvertisement>() {
+                                        Ok(cmd) => {
+                                            log::info!("Received USB command: {:?}", cmd);
+                                            self.handle_stop_advertisement(cmd)
+                                        }
+                                        Err(_) => Err(StateMachineError::FailedToDecodeMessage(
+                                            "HostCommandStopAdvertisement",
                                         )),
                                     }
                                 }
@@ -1208,6 +1220,22 @@ impl PluginStateMachine {
         }
 
         log::info!("Successfully configured profile {:?} by restarting server with predefined configuration", cmd.profile);
+        Ok(())
+    }
+
+    fn handle_stop_advertisement(&mut self, _cmd: HostCommandStopAdvertisement) -> Result<()> {
+        log::info!("Stopping BLE advertisement");
+
+        self.ble_device
+            .get_advertising()
+            .lock()
+            .stop()
+            .map_err(|e| {
+                log::error!("Failed to stop advertisement: {:?}", e);
+                StateMachineError::AdvertisementError("Failed to stop advertisement")
+            })?;
+
+        log::info!("Successfully stopped BLE advertisement");
         Ok(())
     }
 }

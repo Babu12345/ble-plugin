@@ -111,6 +111,11 @@ pub mod host {
         pub allow_multi_connect: bool,
     }
 
+    /// Host command. Stop all advertisement
+    #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+    #[HostIO(MessageTypeId::HostCommandStopAdvertisement)]
+    pub struct HostCommandStopAdvertisement {}
+
     /// Bluetooth Device address type
     #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq)]
     #[repr(u8)]
