@@ -31,8 +31,45 @@ class BLEConfigurationGUI:
         self.check_device_availability()  # Initial check
         
     def setup_ui(self):
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        # Create a frame with scrollbar for the notebook
+        notebook_container = ttk.Frame(self.root)
+        notebook_container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Create canvas and scrollbar for horizontal scrolling
+        notebook_canvas = tk.Canvas(notebook_container, highlightthickness=0, borderwidth=0)
+        notebook_scrollbar = ttk.Scrollbar(notebook_container, orient="horizontal", command=notebook_canvas.xview)
+        notebook_canvas.configure(xscrollcommand=notebook_scrollbar.set)
+        
+        # Pack scrollbar at bottom, canvas fills rest
+        notebook_scrollbar.pack(side="bottom", fill="x")
+        notebook_canvas.pack(side="top", fill="both", expand=True)
+        
+        # Create notebook inside canvas with minimum width to ensure all tabs are visible
+        notebook = ttk.Notebook(notebook_canvas)
+        
+        # Create window in canvas
+        canvas_window = notebook_canvas.create_window((0, 0), window=notebook, anchor="nw")
+        
+        # Function to handle canvas and notebook sizing
+        def configure_notebook_canvas(event=None):
+            # Get canvas dimensions
+            canvas_width = notebook_canvas.winfo_width()
+            canvas_height = notebook_canvas.winfo_height()
+            
+            # Calculate minimum width needed for all tabs (estimate)
+            min_width = 1000  # Minimum width to show all tabs without compression
+            
+            # Use the larger of canvas width or minimum width
+            notebook_width = max(canvas_width, min_width)
+            
+            # Configure the notebook size
+            notebook_canvas.itemconfig(canvas_window, width=notebook_width, height=canvas_height)
+            
+            # Update scroll region to enable scrolling if needed
+            notebook_canvas.configure(scrollregion=(0, 0, notebook_width, canvas_height))
+        
+        # Bind resize to canvas configure event
+        notebook_canvas.bind("<Configure>", configure_notebook_canvas)
         
         self.connection_frame = ttk.Frame(notebook)
         self.peripheral_frame = ttk.Frame(notebook)
