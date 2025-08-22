@@ -653,25 +653,9 @@ class BLEConfigurationGUI:
         main_width = self.root.winfo_width()
         self.message_window.geometry(f"+{main_x + main_width + 10}+{main_y}")
         
-        # Control frame at top with scrollable functionality
-        control_outer_frame = ttk.Frame(self.message_window)
-        control_outer_frame.pack(fill="x", padx=10, pady=10)
-        
-        # Create canvas and scrollbar for horizontal scrolling
-        control_canvas = tk.Canvas(control_outer_frame, height=40, highlightthickness=0, borderwidth=0)
-        control_scrollbar = ttk.Scrollbar(control_outer_frame, orient="horizontal", command=control_canvas.xview)
-        control_canvas.configure(xscrollcommand=control_scrollbar.set)
-        
-        # Create scrollable frame inside canvas
-        control_frame = ttk.Frame(control_canvas)
-        control_canvas.create_window((0, 0), window=control_frame, anchor="nw")
-        
-        # Pack canvas and scrollbar - scrollbar always visible
-        control_canvas.pack(side="top", fill="both", expand=True)
-        control_scrollbar.pack(side="bottom", fill="x")
-        
-        # Force scrollbar to always be visible by setting a minimum scroll region
-        control_canvas.configure(scrollregion=(0, 0, 1, 1))
+        # Control frame at top
+        control_frame = ttk.Frame(self.message_window)
+        control_frame.pack(fill="x", padx=10, pady=10)
         
         # Control buttons
         self.message_window_start_btn = ttk.Button(control_frame, text="Start Listening", 
@@ -688,12 +672,6 @@ class BLEConfigurationGUI:
         self.auto_scroll_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(control_frame, text="Auto-scroll", 
                        variable=self.auto_scroll_var).pack(side="left", padx=10)
-        
-        # Update scroll region when frame size changes
-        def configure_window_scroll_region(event):
-            control_canvas.configure(scrollregion=control_canvas.bbox("all"))
-        
-        control_frame.bind("<Configure>", configure_window_scroll_region)
         
         # Status indicators
         status_frame = ttk.Frame(self.message_window)
