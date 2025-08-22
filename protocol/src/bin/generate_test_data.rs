@@ -1,14 +1,17 @@
 // Test data generation binary for protocol regression tests
 // This file creates independent test structures and generates serialized binary data
-// for use in Python regression tests in the plugin_host library.
+// for use in Python regression tests in the plugin_host library. Run this file
+// to regenerate test data after any changes to the serialization logic. This uses test
+// structures that are independent of the main codebase to ensure no accidental
+// dependencies are introduced.
 
-use protocol::{MessageType, MessageTypeId, IO, DEFAULT_PACKET_SIZE, HostIO, PluginIO};
+use heapless::{String as HeaplessString, Vec as HeaplessVec};
+use protocol::{HostIO, MessageType, MessageTypeId, PluginIO, DEFAULT_PACKET_SIZE, IO};
 use protocol_io::{HostIO as HostIOMacro, PluginIO as PluginIOMacro};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use uuid::Uuid;
-use heapless::{String as HeaplessString, Vec as HeaplessVec};
 
 // ====== TEST CONSTANTS ======
 const TEST_MAX_NAME_SIZE: usize = 20;
@@ -233,7 +236,7 @@ pub struct IntegerTypesTestMixed {
 
 fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     let mut test_data = Vec::new();
-    
+
     // Test peripheral configuration command
     let test_peripheral_cmd = HostCommandConfigurePeripheralTest {
         test_name: HeaplessString::try_from("TestPeripheral").unwrap(),
@@ -258,7 +261,7 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
     properties.push(BLEPropertiesTest::TestRead).unwrap();
     properties.push(BLEPropertiesTest::TestWrite).unwrap();
     properties.push(BLEPropertiesTest::TestNotify).unwrap();
-    
+
     let test_characteristic_cmd = HostCommandConfigureCharacteristicTest {
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
@@ -266,12 +269,17 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
         test_security_level: 2,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_characteristic_cmd.to_bytes().unwrap();
-    test_data.push(("host_configure_characteristic".to_string(), serialized.to_vec()));
+    test_data.push((
+        "host_configure_characteristic".to_string(),
+        serialized.to_vec(),
+    ));
 
     // Test characteristic read configuration command
     let mut default_value = HeaplessVec::new();
-    default_value.extend_from_slice(&[0x48, 0x65, 0x6c, 0x6c, 0x6f]).unwrap(); // "Hello"
-    
+    default_value
+        .extend_from_slice(&[0x48, 0x65, 0x6c, 0x6c, 0x6f])
+        .unwrap(); // "Hello"
+
     let test_char_read_cmd = HostCommandConfigureCharacteristicReadTest {
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
@@ -279,7 +287,10 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
         test_read_permissions: 1,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_char_read_cmd.to_bytes().unwrap();
-    test_data.push(("host_configure_characteristic_read".to_string(), serialized.to_vec()));
+    test_data.push((
+        "host_configure_characteristic_read".to_string(),
+        serialized.to_vec(),
+    ));
 
     // Test service info query command
     let test_service_info_cmd = HostCommandGetServiceInfoTest {
@@ -296,7 +307,10 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
         test_detailed_info: true,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_char_info_cmd.to_bytes().unwrap();
-    test_data.push(("host_get_characteristic_info".to_string(), serialized.to_vec()));
+    test_data.push((
+        "host_get_characteristic_info".to_string(),
+        serialized.to_vec(),
+    ));
 
     // Test advertisement start command
     let test_adv_cmd = HostCommandStartAdvertisementTest {
@@ -309,8 +323,10 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
 
     // Test notification command
     let mut notification_value = HeaplessVec::new();
-    notification_value.extend_from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
-    
+    notification_value
+        .extend_from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05])
+        .unwrap();
+
     let test_notify_cmd = HostCommandNotifyCharacteristicValueTest {
         test_device_address: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
         test_address_type: BluetoothAddressTypeTest::TestPublic,
@@ -320,14 +336,17 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
         test_confirm_required: true,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_notify_cmd.to_bytes().unwrap();
-    test_data.push(("host_notify_characteristic_value".to_string(), serialized.to_vec()));
+    test_data.push((
+        "host_notify_characteristic_value".to_string(),
+        serialized.to_vec(),
+    ));
 
     test_data
 }
 
 fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
     let mut test_data = Vec::new();
-    
+
     // Test plugin data response
     let payload_data = b"Test data";
     let test_plugin_data = PluginDataTest {
@@ -347,13 +366,20 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
         test_error_description: HeaplessString::try_from("Invalid UUID").unwrap(),
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_config_error.to_bytes().unwrap();
-    test_data.push(("plugin_configuration_error".to_string(), serialized.to_vec()));
+    test_data.push((
+        "plugin_configuration_error".to_string(),
+        serialized.to_vec(),
+    ));
 
     // Test plugin service info response
     let mut char_uuids = HeaplessVec::new();
-    char_uuids.push(Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap()).unwrap();
-    char_uuids.push(Uuid::parse_str("11111111-2222-3333-4444-555555555555").unwrap()).unwrap();
-    
+    char_uuids
+        .push(Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap())
+        .unwrap();
+    char_uuids
+        .push(Uuid::parse_str("11111111-2222-3333-4444-555555555555").unwrap())
+        .unwrap();
+
     let test_service_info = PluginServiceInfoResponseTest {
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
         test_characteristic_uuids: char_uuids,
@@ -362,13 +388,16 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
         test_characteristic_count: 2,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_service_info.to_bytes().unwrap();
-    test_data.push(("plugin_service_info_response".to_string(), serialized.to_vec()));
+    test_data.push((
+        "plugin_service_info_response".to_string(),
+        serialized.to_vec(),
+    ));
 
     // Test plugin characteristic info response
     let mut char_properties = HeaplessVec::new();
     char_properties.push(BLEPropertiesTest::TestRead).unwrap();
     char_properties.push(BLEPropertiesTest::TestNotify).unwrap();
-    
+
     let test_char_info = PluginCharacteristicInfoResponseTest {
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
@@ -378,7 +407,10 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
         test_client_config: 1,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_char_info.to_bytes().unwrap();
-    test_data.push(("plugin_characteristic_info_response".to_string(), serialized.to_vec()));
+    test_data.push((
+        "plugin_characteristic_info_response".to_string(),
+        serialized.to_vec(),
+    ));
 
     // Test plugin authentication completed response
     let test_auth_completed = PluginAuthenticationCompletedResponseTest {
@@ -389,14 +421,17 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
         test_bond_created: true,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = test_auth_completed.to_bytes().unwrap();
-    test_data.push(("plugin_authentication_completed_response".to_string(), serialized.to_vec()));
+    test_data.push((
+        "plugin_authentication_completed_response".to_string(),
+        serialized.to_vec(),
+    ));
 
     test_data
 }
 
 fn create_integer_type_test_data() -> Vec<(String, Vec<u8>)> {
     let mut test_data = Vec::new();
-    
+
     // Test IntegerTypesTestSmall
     let small_test = IntegerTypesTestSmall {
         test_u8: 255,
@@ -410,18 +445,18 @@ fn create_integer_type_test_data() -> Vec<(String, Vec<u8>)> {
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = small_test.to_bytes().unwrap();
     test_data.push(("integer_types_small".to_string(), serialized.to_vec()));
-    
+
     // Test IntegerTypesTestWithU64I64
     let u64_i64_test = IntegerTypesTestWithU64I64 {
         test_u64: 18446744073709551615, // Max U64
-        test_i64: -9223372036854775808,  // Min I64
+        test_i64: -9223372036854775808, // Min I64
         test_u16: 12345,
         test_i16: -12345,
         test_enabled: true,
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = u64_i64_test.to_bytes().unwrap();
     test_data.push(("integer_types_u64_i64".to_string(), serialized.to_vec()));
-    
+
     // Test IntegerTypesTestMixed
     let mixed_test = IntegerTypesTestMixed {
         test_u8: 42,
@@ -433,17 +468,17 @@ fn create_integer_type_test_data() -> Vec<(String, Vec<u8>)> {
     };
     let serialized: [u8; DEFAULT_PACKET_SIZE] = mixed_test.to_bytes().unwrap();
     test_data.push(("integer_types_mixed".to_string(), serialized.to_vec()));
-    
+
     test_data
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Generating test data for protocol regression tests...");
-    
+
     // Create output directory
     let output_dir = Path::new("../pc/python/python_regression_test_data/binary");
     fs::create_dir_all(output_dir)?;
-    
+
     // Generate host command test data
     let host_commands = create_test_host_commands();
     for (name, data) in host_commands {
@@ -451,7 +486,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         fs::write(&file_path, &data)?;
         println!("Generated: {} ({} bytes)", file_path.display(), data.len());
     }
-    
+
     // Generate plugin response test data
     let plugin_responses = create_test_plugin_responses();
     for (name, data) in plugin_responses {
@@ -459,7 +494,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         fs::write(&file_path, &data)?;
         println!("Generated: {} ({} bytes)", file_path.display(), data.len());
     }
-    
+
     // Generate integer type test data
     let integer_tests = create_integer_type_test_data();
     for (name, data) in integer_tests {
@@ -467,12 +502,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         fs::write(&file_path, &data)?;
         println!("Generated: {} ({} bytes)", file_path.display(), data.len());
     }
-    
+
     println!("Test data generation completed successfully!");
-    println!("Generated {} host command files, {} plugin response files, and {} integer type test files", 
-             create_test_host_commands().len(),
-             create_test_plugin_responses().len(),
-             create_integer_type_test_data().len());
-    
+    println!(
+        "Generated {} host command files, {} plugin response files, and {} integer type test files",
+        create_test_host_commands().len(),
+        create_test_plugin_responses().len(),
+        create_integer_type_test_data().len()
+    );
+
     Ok(())
 }
