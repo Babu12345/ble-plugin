@@ -24,7 +24,7 @@ lib_utils = {path = "../lib_utils"}
 protocol = {path = "../protocol"}
 device-cherry = {path = "../device-cherry"}
 plugin_state_machine_std = { path = "../plugin_state_machine_std" }
-plugin-nvc = { path = "../plugin-nvc" }
+plugin-nvs = { path = "../plugin-nvs" }
 ## Crates
 log = {version = "0.4.27", default-features = false}
 esp-idf-sys = { version = "0.36.1", default-features = false }

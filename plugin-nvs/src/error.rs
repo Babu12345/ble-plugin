@@ -1,6 +1,7 @@
 //! Error crate for the plugin-nvc crate.
 
 /// Defines error types and handling mechanisms specific to non-volatile storage operations.
+#[derive(Debug)]
 pub enum PluginNvcError {
     /// Namespace aquisition error.
     NamespaceAcquisitionError,

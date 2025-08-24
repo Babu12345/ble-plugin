@@ -1,8 +1,5 @@
 //! Contains the namespaces used for NVS storage in the plugin.
-use crate::{
-    EspNvsDefault,
-    error::{self, Result},
-};
+use crate::{EspNvsDefault, keys::peripheral_config::PeripheralConfigurationKey};
 
 /// Defines the available NVS namespaces.
 pub trait NvsNamespaceTrait {
@@ -13,28 +10,19 @@ pub trait NvsNamespaceTrait {
     fn new(nvs: EspNvsDefault) -> Self;
 }
 
+/// Defines the keys used in the Config namespace.
+pub trait NvsKeyTrait<'a> {
+    /// Returns the string representation of the key.
+    /// DO NOT CHANGE THIS VALUE ONCE DEPLOYED!
+    fn as_str() -> &'static str;
+
+    /// Creates a new instance of the namespace with the provided NVS handle.
+    fn new(nvs: &'a mut EspNvsDefault) -> Self;
+}
+
 /// Configuration namespace.
 pub struct ConfigNamespace {
     nvs: EspNvsDefault,
-}
-
-impl ConfigNamespace {
-    /// Gets the "is_on" configuration value.
-    pub fn get_is_on(&self) -> bool {
-        match self.nvs.get_i32("is_on") {
-            Ok(value) => matches!(value, Some(1)),
-            Err(_) => false,
-        }
-    }
-
-    /// Sets the "is_on" configuration value.
-    pub fn set_is_on(&mut self, is_on: bool) -> Result<()> {
-        let value = if is_on { 1 } else { 0 };
-        self.nvs
-            .set_i32("is_on", value)
-            .map_err(|_| error::PluginNvcError::NvsWriteError)?;
-        Ok(())
-    }
 }
 
 impl NvsNamespaceTrait for ConfigNamespace {
@@ -45,5 +33,11 @@ impl NvsNamespaceTrait for ConfigNamespace {
 
     fn as_str() -> &'static str {
         return "config";
+    }
+}
+impl ConfigNamespace {
+    /// Returns the "is_on" key for the Config namespace.
+    pub fn peripheral_config_key(&mut self) -> PeripheralConfigurationKey {
+        PeripheralConfigurationKey::new(&mut self.nvs)
     }
 }

@@ -5,6 +5,7 @@ use esp_idf_svc::nvs::{EspNvs, EspNvsPartition, NvsDefault};
 
 use crate::{error::Result, namespaces::NvsNamespaceTrait};
 pub mod error;
+pub mod keys;
 pub mod namespaces;
 
 type EspNvsDefaultPartition = EspNvsPartition<NvsDefault>;
