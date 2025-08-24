@@ -7,6 +7,7 @@ use crate::{
 /// Defines the available NVS namespaces.
 pub trait NvsNamespaceTrait {
     /// Returns the string representation of the namespace.
+    /// DO NOT CHANGE THIS VALUE ONCE DEPLOYED!
     fn as_str() -> &'static str;
     /// Creates a new instance of the namespace with the provided NVS handle.
     fn new(nvs: EspNvsDefault) -> Self;
