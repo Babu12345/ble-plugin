@@ -11,7 +11,7 @@ pub trait NvsNamespaceTrait {
 }
 
 /// Defines the keys used in the Config namespace.
-pub trait NvsKeyTrait<'a> {
+pub(crate) trait NvsKeyTrait<'a> {
     /// Returns the string representation of the key.
     /// DO NOT CHANGE THIS VALUE ONCE DEPLOYED!
     fn as_str() -> &'static str;
@@ -32,12 +32,17 @@ impl NvsNamespaceTrait for ConfigNamespace {
     }
 
     fn as_str() -> &'static str {
-        return "config";
+        "config"
     }
 }
 impl ConfigNamespace {
-    /// Returns the "is_on" key for the Config namespace.
-    pub fn peripheral_config_key(&mut self) -> PeripheralConfigurationKey {
-        PeripheralConfigurationKey::new(&mut self.nvs)
+    /// Returns the key struct for the config namespace
+    fn key<'a, T: NvsKeyTrait<'a>>(&'a mut self) -> T {
+        T::new(&mut self.nvs)
+    }
+
+    /// Returns the peripheral configuration key
+    pub fn peripheral_config_key<'a>(&'a mut self) -> PeripheralConfigurationKey<'a> {
+        self.key::<PeripheralConfigurationKey<'a>>()
     }
 }

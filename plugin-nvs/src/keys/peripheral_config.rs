@@ -13,7 +13,7 @@ pub struct PeripheralConfigurationKey<'a> {
 
 impl<'a> NvsKeyTrait<'a> for PeripheralConfigurationKey<'a> {
     fn as_str() -> &'static str {
-        return "peripheral_config";
+        "peripheral_config"
     }
 
     fn new(nvs: &'a mut EspNvsDefault) -> Self {

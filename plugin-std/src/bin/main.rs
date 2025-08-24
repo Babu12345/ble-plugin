@@ -23,9 +23,8 @@ fn main() -> Result<()> {
 
     let nvs_default_partition = EspNvsPartition::<NvsDefault>::take().unwrap();
 
-    let mut _nvs = namespace::<ConfigNamespace>(nvs_default_partition)
+    let _nvs = namespace::<ConfigNamespace>(nvs_default_partition)
         .map_err(|_| PluginError::UsbDeviceInitError("Failed to configure NVS namespace"))?;
-
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
 
     let indicator = Arc::new(Mutex::new(
