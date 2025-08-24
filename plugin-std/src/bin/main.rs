@@ -4,17 +4,28 @@ use std::{
 };
 
 use device_cherry::CdcAcmDevice;
-use esp_idf_svc::hal::{
-    gpio::{OutputPin, PinDriver},
-    prelude::Peripherals,
+use esp_idf_svc::{
+    hal::{
+        gpio::{OutputPin, PinDriver},
+        prelude::Peripherals,
+    },
+    nvs::{EspNvsPartition, NvsDefault},
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
+use plugin_nvc::{namespace, namespaces::ConfigNamespace};
 use plugin_state_machine_std::PluginStateMachine;
 use plugin_std::errors::{PluginError, Result};
+
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
+
+    let nvs_default_partition: EspNvsPartition<NvsDefault> =
+        EspNvsPartition::<NvsDefault>::take().unwrap();
+
+    let _nvs = namespace::<ConfigNamespace>(nvs_default_partition)
+        .map_err(|_| PluginError::UsbDeviceInitError("Failed to configure NVS namespace"))?;
 
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
 

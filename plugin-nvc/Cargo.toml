@@ -1,0 +1,16 @@
+[package]
+name = "plugin-nvc"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+## Internal Crates
+lib_utils = { path = "../lib_utils" }
+
+## Crates
+log = { version = "0.4.27", default-features = false }
+esp-idf-sys = { version = "0.36.1", default-features = false }
+esp-idf-svc = { version = "0.51", features = [
+    "binstart",
+    "embassy-sync",
+], default-features = false }
