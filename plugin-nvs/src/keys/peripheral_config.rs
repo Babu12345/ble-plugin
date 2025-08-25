@@ -34,7 +34,7 @@ where
 {
     /// Reads the "peripheral_config" value from NVS.
     pub fn read(&self, buffer: &'a mut [u8]) -> Result<Option<&[u8]>> {
-        match self.nvs.get_blob(Self::as_str(), buffer) {
+        match self.nvs.get_raw(Self::as_str(), buffer) {
             Ok(value) => Ok(value),
             Err(_) => Err(error::PluginNvcError::NvsReadError),
         }
@@ -42,7 +42,7 @@ where
 
     /// Writes the "peripheral_config" value to NVS.
     pub fn write(&mut self, buffer: &'a [u8]) -> Result<()> {
-        match self.nvs.set_blob(Self::as_str(), buffer) {
+        match self.nvs.set_raw(Self::as_str(), buffer) {
             Ok(_) => Ok(()),
             Err(_) => Err(error::PluginNvcError::NvsWriteError),
         }
