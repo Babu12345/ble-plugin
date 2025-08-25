@@ -4,15 +4,12 @@ use std::{
 };
 
 use device_cherry::CdcAcmDevice;
-use esp_idf_svc::{
-    hal::{
-        gpio::{OutputPin, PinDriver},
-        prelude::Peripherals,
-    },
-    nvs::{EspNvsPartition, NvsDefault},
+use esp_idf_svc::hal::{
+    gpio::{OutputPin, PinDriver},
+    prelude::Peripherals,
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
-use plugin_nvs::{namespace, namespaces::ConfigNamespace};
+use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
 use plugin_std::errors::{PluginError, Result};
 
@@ -21,10 +18,8 @@ fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    let nvs_default_partition = EspNvsPartition::<NvsDefault>::take().unwrap();
+    let nvs_default_partition = EspNvsDefaultPartition::take().unwrap();
 
-    let _nvs = namespace::<ConfigNamespace>(nvs_default_partition)
-        .map_err(|_| PluginError::UsbDeviceInitError("Failed to configure NVS namespace"))?;
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
 
     let indicator = Arc::new(Mutex::new(
@@ -49,7 +44,14 @@ fn main() -> Result<()> {
             .processors(scope, 20, (Duration::from_millis(10), 10))
             .unwrap();
         scope.spawn(
-            PluginStateMachine::new(usb_processors.0, usb_processors.1, indicator).runner_fn(),
+            PluginStateMachine::<_>::new(
+                usb_processors.0,
+                usb_processors.1,
+                indicator,
+                nvs_default_partition,
+            )
+            .unwrap()
+            .runner_fn(),
         );
     });
 

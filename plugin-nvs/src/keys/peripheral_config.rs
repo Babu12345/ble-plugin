@@ -1,27 +1,37 @@
 //! Key for the "peripheral_config" configuration setting in NVS.
 
+use esp_idf_svc::nvs::{EspNvs, NvsPartitionId};
+
 use crate::{
-    EspNvsDefault,
     error::{self, Result},
     namespaces::NvsKeyTrait,
 };
 
 /// Key for the "peripheral_config" configuration setting.
-pub struct PeripheralConfigurationKey<'a> {
-    nvs: &'a mut EspNvsDefault,
+pub struct PeripheralConfigurationKey<'a, T>
+where
+    T: NvsPartitionId,
+{
+    nvs: &'a mut EspNvs<T>,
 }
 
-impl<'a> NvsKeyTrait<'a> for PeripheralConfigurationKey<'a> {
+impl<'a, T> NvsKeyTrait<'a, T> for PeripheralConfigurationKey<'a, T>
+where
+    T: NvsPartitionId,
+{
     fn as_str() -> &'static str {
         "peripheral_config"
     }
 
-    fn new(nvs: &'a mut EspNvsDefault) -> Self {
+    fn new(nvs: &'a mut EspNvs<T>) -> Self {
         Self { nvs }
     }
 }
 
-impl<'a> PeripheralConfigurationKey<'a> {
+impl<'a, T> PeripheralConfigurationKey<'a, T>
+where
+    T: NvsPartitionId,
+{
     /// Reads the "peripheral_config" value from NVS.
     pub fn read(&self, buffer: &'a mut [u8]) -> Result<Option<&[u8]>> {
         match self.nvs.get_blob(Self::as_str(), buffer) {

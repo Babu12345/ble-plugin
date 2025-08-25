@@ -130,6 +130,10 @@ use esp_idf_svc::hal::gpio::AnyOutputPin;
 use esp_idf_svc::hal::gpio::Output;
 use esp_idf_svc::hal::gpio::PinDriver;
 use esp_idf_svc::hal::task::block_on;
+use esp_idf_svc::nvs::EspNvsPartition;
+use esp_idf_svc::nvs::NvsPartitionId;
+use plugin_nvs::namespace;
+use plugin_nvs::namespaces::ConfigNamespace;
 use protocol::io_types::BLEProfile;
 use protocol::io_types::BLEProperties;
 use protocol::io_types::HostCommandConfigureCharacteristicRead;
@@ -217,7 +221,10 @@ impl PluginStateMachineMetadata {
 /// 2. Start the runner (typically in a separate thread)
 /// 3. State machine processes commands automatically
 /// 4. BLE callbacks forward data back to USB host
-pub struct PluginStateMachine {
+pub struct PluginStateMachine<T>
+where
+    T: NvsPartitionId,
+{
     /// Thread-safe USB sender for responses and BLE data forwarding
     usb_sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
 
@@ -241,6 +248,10 @@ pub struct PluginStateMachine {
     blink_throttle: Throttle,
     /// Thread pool for managing blink operations
     blink_thread_pool: ThreadPool,
+
+    /// NVS partition for persistent storage
+    #[allow(dead_code)]
+    ns: ConfigNamespace<T>,
 }
 
 /// Enum representing the possible states of the blink indication
@@ -251,7 +262,10 @@ enum BlinkState {
     Failure,
 }
 
-impl PluginStateMachine {
+impl<T> PluginStateMachine<T>
+where
+    T: NvsPartitionId,
+{
     /// Create a new instance of the plugin state machine
     ///
     /// Initializes the state machine with the necessary communication channels and BLE device.
@@ -287,8 +301,12 @@ impl PluginStateMachine {
         usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
         usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
         indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>,
-    ) -> Self {
-        Self {
+        nvs_partition: EspNvsPartition<T>,
+    ) -> Result<Self>
+    where
+        T: NvsPartitionId,
+    {
+        Ok(Self {
             indicator,
             usb_sender: Arc::new(usb_sender),
             usb_receiver,
@@ -297,7 +315,9 @@ impl PluginStateMachine {
             metadata: Default::default(),
             blink_throttle: Throttle::new(Self::THROTTLE_INFO.0, Self::THROTTLE_INFO.1),
             blink_thread_pool: ThreadPool::new(1),
-        }
+            ns: namespace::<T, ConfigNamespace<T>>(nvs_partition)
+                .map_err(|_| StateMachineError::FailedToResolveNvsNamespace())?,
+        })
     }
 
     /// Throttle information for blink indication - allow 5 blinks per second
