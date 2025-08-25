@@ -16,6 +16,7 @@
 //! - **Thread-Safe Communication**: Arc-wrapped senders for callback integration
 //! - **Comprehensive Error Handling**: Detailed error types for robust operation
 //! - **Memory Efficient**: Designed for embedded systems with limited resources
+//! - **Non-Volatile Storage**: Persistent configuration storage using ESP32 NVS partitions
 //!
 //! ## Architecture Overview
 //!
@@ -68,10 +69,73 @@
 //! std::thread::spawn(runner);
 //! ```
 //!
+//! ## Non-Volatile Storage (NVS)
+//!
+//! The state machine leverages ESP32's Non-Volatile Storage (NVS) subsystem for persistent
+//! configuration management. This enables the plugin device to retain critical settings
+//! across power cycles and resets.
+//!
+//! ### NVS Architecture
+//!
+//! ```text
+//! ┌─────────────────────────────────────────┐
+//! │         NVS Partition (Flash)           │
+//! ├─────────────────────────────────────────┤
+//! │  ConfigNamespace                        │
+//! │  ├── BLE Device Name                    │
+//! │  ├── [Future: Service Configurations]   │
+//! │  └── [Future: Security Settings]        │
+//! └─────────────────────────────────────────┘
+//! ```
+//!
+//! ### Current Storage Capabilities
+//!
+//! - **BLE Device Name**: Automatically persisted when configured via [`HostCommandConfigurePeripheral`]
+//!   - Stored in the `ConfigNamespace` under the `name_config_key`
+//!   - Survives device resets and power cycles
+//!   - Maximum name length: `MAX_NAME_SIZE` bytes
+//!
+//! ### Storage Operations
+//!
+//! The NVS integration provides:
+//! - **Automatic Persistence**: Configuration changes are immediately written to flash
+//! - **Namespace Isolation**: Uses dedicated `ConfigNamespace` to prevent conflicts
+//! - **Error Recovery**: Graceful handling of write failures with error logging
+//! - **Thread-Safe Access**: NVS operations are protected by internal synchronization
+//!
+//! ### Future NVS Enhancements
+//!
+//! The NVS infrastructure is designed for extensibility:
+//! - Service and characteristic configurations
+//! - Security settings and pairing information
+//! - Custom application-specific data
+//! - Connection history and trusted devices
+//!
+//! ### Usage Example
+//!
+//! ```rust,no_run
+//! use plugin_state_machine_std::PluginStateMachine;
+//! use esp_idf_svc::nvs::{EspNvs, EspNvsPartition, NvsDefault};
+//! 
+//! // Initialize NVS partition
+//! let nvs_partition = EspNvsPartition::<NvsDefault>::take()?;
+//! 
+//! // Create state machine with NVS support
+//! let state_machine = PluginStateMachine::new(
+//!     usb_sender,
+//!     usb_receiver,
+//!     indicator,
+//!     nvs_partition
+//! )?;
+//! 
+//! // BLE name will be automatically persisted to NVS when configured
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
 //! ## Supported Commands
 //!
 //! ### Peripheral Management
-//! - [`HostCommandConfigurePeripheral`]: Configure BLE peripheral with name and address
+//! - [`HostCommandConfigurePeripheral`]: Configure BLE peripheral with name and address (persisted to NVS)
 //! - [`HostCommandStartAdvertisement`]: Start BLE advertising
 //! - [`HostCommandConfigurePeripheralSecurity`]: Configure security settings (pairing, passkey)
 //!
@@ -96,6 +160,8 @@
 //! - [`StateMachineError::UnknownMessageType`]: Unsupported command types  
 //! - [`StateMachineError::InvalidBleConfiguration`]: BLE setup errors
 //! - [`StateMachineError::UsbSendError`]: USB communication failures
+//! - [`StateMachineError::NvsWriteError`]: Failed to persist data to NVS
+//! - [`StateMachineError::FailedToResolveNvsNamespace`]: NVS namespace initialization error
 //!
 //! ## Performance Characteristics
 //!
@@ -118,6 +184,8 @@
 //! [`StateMachineError::UnknownMessageType`]: errors::StateMachineError::UnknownMessageType
 //! [`StateMachineError::InvalidBleConfiguration`]: errors::StateMachineError::InvalidBleConfiguration
 //! [`StateMachineError::UsbSendError`]: errors::StateMachineError::UsbSendError
+//! [`StateMachineError::NvsWriteError`]: errors::StateMachineError::NvsWriteError
+//! [`StateMachineError::FailedToResolveNvsNamespace`]: errors::StateMachineError::FailedToResolveNvsNamespace
 
 pub mod errors;
 
@@ -259,7 +327,10 @@ where
     /// Thread pool for managing blink operations
     blink_thread_pool: ThreadPool,
 
-    /// NVS partition for persistent storage
+    /// NVS namespace for persistent configuration storage
+    ///
+    /// This provides access to the Non-Volatile Storage partition where device
+    /// configurations are persisted across power cycles.
     ns: ConfigNamespace<T>,
 }
 

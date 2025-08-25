@@ -131,9 +131,18 @@ The state machine is designed for single-threaded operation but uses thread-safe
 
 The state machine maintains internal metadata:
 
-- **Peripheral Name**: BLE device advertising name
+- **Peripheral Name**: BLE device advertising name (persisted to NVS)
 - **Service-Characteristic Mapping**: UUID relationships for efficient lookups
 - **Connection State**: Active client connections and capabilities
+
+### Non-Volatile Storage (NVS)
+
+The state machine leverages ESP32's NVS subsystem for persistent configuration:
+
+- **Automatic Persistence**: Device configurations survive power cycles and resets
+- **Current Storage**: BLE device name is automatically saved when configured
+- **Namespace Isolation**: Uses dedicated `ConfigNamespace` to prevent conflicts
+- **Future Ready**: Infrastructure supports expansion for service configs, security settings, and custom data
 
 ## Integration with ESP32-Nimble
 
