@@ -143,9 +143,14 @@ pub enum StateMachineError {
     #[error("Failed to restart BLE server with error {0}")]
     ServerRestartError(#[source] BLEError),
 
+    // NVS related errors
     /// Failure to save data to NVS storage
     #[error("Failed to resolve NVS namespace")]
     FailedToResolveNvsNamespace(),
+
+    /// Failure to write data to NVS storage
+    #[error("Failed to write data to NVS storage")]
+    NvsWriteError,
 }
 
 /// Convenient result type for plugin state machine operations

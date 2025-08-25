@@ -191,8 +191,18 @@ struct PluginStateMachineMetadata {
 
 impl PluginStateMachineMetadata {
     /// Set the BLE device name for advertising
-    fn set_name(&mut self, name: String<MAX_NAME_SIZE>) {
-        self.ble_name = Some(name);
+    fn set_name<T>(&mut self, ns: &mut ConfigNamespace<T>, name: String<MAX_NAME_SIZE>)
+    where
+        T: NvsPartitionId,
+    {
+        self.ble_name = Some(name.clone());
+        ns.name_config_key()
+            .write(name.as_bytes())
+            .map_err(|e| {
+                log::error!("Failed to write name to NVS: {:?}", e);
+                StateMachineError::NvsWriteError
+            })
+            .ok();
     }
 }
 
@@ -250,7 +260,6 @@ where
     blink_thread_pool: ThreadPool,
 
     /// NVS partition for persistent storage
-    #[allow(dead_code)]
     ns: ConfigNamespace<T>,
 }
 
@@ -643,7 +652,7 @@ where
             })?;
         }
 
-        self.metadata.set_name(cmd.name.clone());
+        self.metadata.set_name(&mut self.ns, cmd.name.clone());
         self.server = Some(
             self.ble_device
                 .get_server()

@@ -1,7 +1,9 @@
 //! Contains the namespaces used for NVS storage in the plugin.
 use esp_idf_svc::nvs::{EspNvs, NvsPartitionId};
 
-use crate::keys::peripheral_config::PeripheralConfigurationKey;
+use crate::keys::{
+    name_config::NameConfigurationKey, peripheral_config::PeripheralConfigurationKey,
+};
 
 /// Defines the available NVS namespaces.
 pub trait NvsNamespaceTrait<T>
@@ -61,5 +63,10 @@ where
     /// Returns the peripheral configuration key
     pub fn peripheral_config_key<'a>(&'a mut self) -> PeripheralConfigurationKey<'a, P> {
         self.key::<PeripheralConfigurationKey<'a, P>>()
+    }
+
+    /// Returns the name configuration key
+    pub fn name_config_key<'a>(&'a mut self) -> NameConfigurationKey<'a, P> {
+        self.key::<NameConfigurationKey<'a, P>>()
     }
 }
