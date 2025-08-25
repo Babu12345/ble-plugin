@@ -19,7 +19,6 @@ fn main() -> Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     let nvs_default_partition = EspNvsDefaultPartition::take().unwrap();
-
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
 
     let indicator = Arc::new(Mutex::new(
@@ -44,7 +43,7 @@ fn main() -> Result<()> {
             .processors(scope, 20, (Duration::from_millis(10), 10))
             .unwrap();
         scope.spawn(
-            PluginStateMachine::<_>::new(
+            PluginStateMachine::new(
                 usb_processors.0,
                 usb_processors.1,
                 indicator,
