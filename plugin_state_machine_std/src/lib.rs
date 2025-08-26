@@ -285,7 +285,7 @@ impl PluginStateMachineMetadata {
     }
 
     /// Get the BLE device name, initializing from NVS if not already set
-    fn init_or_get_name<T>(&mut self, ns: &mut ConfigNamespace<T>) -> Option<String<MAX_NAME_SIZE>>
+    fn get_or_init_name<T>(&mut self, ns: &mut ConfigNamespace<T>) -> Option<String<MAX_NAME_SIZE>>
     where
         T: NvsPartitionId,
     {
@@ -809,7 +809,7 @@ where
 
         // Note: On the first call, this will auto-configure using any predefined profile settings.
         // Subsequent calls require explicit configuration via configure_profile() or manual service setup.
-        match self.metadata.init_or_get_name(&mut self.ns).as_ref() {
+        match self.metadata.get_or_init_name(&mut self.ns).as_ref() {
             Some(name) => {
                 let mut adv_data_base = esp32_nimble::BLEAdvertisementData::new();
                 let adv_data = adv_data_base.name(name.as_str());
