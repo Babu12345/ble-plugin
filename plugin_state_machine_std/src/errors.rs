@@ -151,6 +151,10 @@ pub enum StateMachineError {
     /// Failure to write data to NVS storage
     #[error("Failed to write data to NVS storage")]
     NvsWriteError,
+
+    /// Failure to read data from NVS storage
+    #[error("Failed to read data from NVS storage")]
+    NvsReadError,
 }
 
 /// Convenient result type for plugin state machine operations

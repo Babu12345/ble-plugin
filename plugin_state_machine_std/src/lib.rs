@@ -116,10 +116,10 @@
 //! ```rust,no_run
 //! use plugin_state_machine_std::PluginStateMachine;
 //! use esp_idf_svc::nvs::{EspNvs, EspNvsPartition, NvsDefault};
-//! 
+//!
 //! // Initialize NVS partition
 //! let nvs_partition = EspNvsPartition::<NvsDefault>::take()?;
-//! 
+//!
 //! // Create state machine with NVS support
 //! let state_machine = PluginStateMachine::new(
 //!     usb_sender,
@@ -127,7 +127,7 @@
 //!     indicator,
 //!     nvs_partition
 //! )?;
-//! 
+//!
 //! // BLE name will be automatically persisted to NVS when configured
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -215,6 +215,7 @@ use threadpool::ThreadPool;
 use throttle::Throttle;
 
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -233,6 +234,9 @@ use protocol::io_types::{
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::{MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
+
+/// Check whether the statemachine has been initialized
+static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 use std::sync::Arc;
 /// Internal metadata storage for the plugin state machine
@@ -258,12 +262,19 @@ struct PluginStateMachineMetadata {
 }
 
 impl PluginStateMachineMetadata {
+    /// Set the local BLE device name
+    /// Does not persist to NVS
+    fn set_name_local(&mut self, name: String<MAX_NAME_SIZE>) {
+        self.ble_name = Some(name);
+    }
+
     /// Set the BLE device name for advertising
+    /// Also persists the name to NVS storage
     fn set_name<T>(&mut self, ns: &mut ConfigNamespace<T>, name: String<MAX_NAME_SIZE>)
     where
         T: NvsPartitionId,
     {
-        self.ble_name = Some(name.clone());
+        self.set_name_local(name.clone());
         ns.name_config_key()
             .write(name.as_bytes())
             .map_err(|e| {
@@ -271,6 +282,37 @@ impl PluginStateMachineMetadata {
                 StateMachineError::NvsWriteError
             })
             .ok();
+    }
+
+    /// Get the BLE device name, initializing from NVS if not already set
+    fn init_or_get_name<T>(&mut self, ns: &mut ConfigNamespace<T>) -> Option<String<MAX_NAME_SIZE>>
+    where
+        T: NvsPartitionId,
+    {
+        if let Some(name) = &self.ble_name {
+            return Some(name.clone());
+        }
+
+        let mut buffer = [0u8; MAX_NAME_SIZE];
+        match ns.name_config_key().read(&mut buffer) {
+            Ok(data) => {
+                if data?.len() > MAX_NAME_SIZE {
+                    log::error!(
+                        "Stored name in NVS exceeds maximum length of {} bytes",
+                        MAX_NAME_SIZE
+                    );
+                    return None;
+                }
+                let mut name: String<MAX_NAME_SIZE> = String::new();
+                name.push_str(core::str::from_utf8(&data?).ok()?).ok()?;
+                self.set_name_local(name.clone());
+                return Some(name);
+            }
+            Err(e) => {
+                log::error!("Failed to read name from NVS: {:?}", e);
+                None
+            }
+        }
     }
 }
 
@@ -715,7 +757,8 @@ where
 
         // If we haven't already initialized then we can set the BLE device address
         // otherwise we cannot without resetting the BLE device
-        if self.metadata.ble_name.is_none() {
+        if !IS_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) {
+            IS_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
             self.ble_device.set_own_addr_type(OwnAddrType::Random);
             self.ble_device.set_rnd_addr(cmd.addr).map_err(|_| {
                 log::error!("Failed to set random address for BLE device");
@@ -766,8 +809,7 @@ where
 
         // Note: On the first call, this will auto-configure using any predefined profile settings.
         // Subsequent calls require explicit configuration via configure_profile() or manual service setup.
-
-        match self.metadata.ble_name.as_ref() {
+        match self.metadata.init_or_get_name(&mut self.ns).as_ref() {
             Some(name) => {
                 let mut adv_data_base = esp32_nimble::BLEAdvertisementData::new();
                 let adv_data = adv_data_base.name(name.as_str());
