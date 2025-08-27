@@ -178,6 +178,8 @@ mod tests {
             src_addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
             src_addr_type: crate::io_types::BluetoothAddressType::Public,
             send_type: crate::io_types::PluginDataSendType::Notify,
+            characteristic_uuid: 0x2A29,
+            service_uuid: 0x180A,
             data: b"Cool test\0",
         };
 
@@ -197,6 +199,8 @@ mod tests {
             src_addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
             src_addr_type: crate::io_types::BluetoothAddressType::Public,
             send_type: crate::io_types::PluginDataSendType::Notify,
+            characteristic_uuid: 0x2A29,
+            service_uuid: 0x180A,
             data: b"Another one\0",
         };
 

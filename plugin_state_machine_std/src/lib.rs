@@ -1155,6 +1155,8 @@ where
                                 args.desc().address().addr_type(),
                             ),
                             send_type: protocol::io_types::PluginDataSendType::Write,
+                            characteristic_uuid: char_uuid_write,
+                            service_uuid: service_uuid_write,
                             data: args.current_data(),
                         })
                         .map_err(|_| StateMachineError::UsbSendError)
@@ -1186,6 +1188,8 @@ where
                                 desc.address().addr_type(),
                             ),
                             send_type: protocol::io_types::PluginDataSendType::Read,
+                            characteristic_uuid: cmd.uuid,
+                            service_uuid: cmd.service_uuid,
                             data: &[],
                         })
                         .map_err(|_| StateMachineError::UsbSendError)

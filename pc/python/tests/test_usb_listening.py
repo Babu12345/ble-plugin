@@ -26,8 +26,10 @@ class TestMessageDecoder:
         # Create a test PluginData message
         original_message = PluginData(
             src_addr=[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc], src_addr_type=BluetoothAddressType.Public,
-            data=b"test_data",
-            send_type=PluginDataSendType.Notify
+            send_type=PluginDataSendType.Notify,
+            characteristic_uuid=0x2A19,  # Battery Level characteristic
+            service_uuid=0x180F,  # Battery Service
+            data=b"test_data"
         )
         
         # Serialize it
@@ -75,8 +77,10 @@ class TestMessageDecoder:
         """Test getting message type names"""
         message = PluginData(
             src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, 0x05], src_addr_type=BluetoothAddressType.Public,
-            data=b"data",
-            send_type=PluginDataSendType.Read
+            send_type=PluginDataSendType.Read,
+            characteristic_uuid=0x2A00,  # Device Name characteristic
+            service_uuid=0x1800,  # Generic Access Service
+            data=b"data"
         )
         
         type_name = MessageDecoder.get_message_type_name(message)
@@ -207,8 +211,10 @@ class TestUSBDataListener:
         # Create a valid message
         test_message = PluginData(
             src_addr=[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc], src_addr_type=BluetoothAddressType.Public,
-            data=b"test",
-            send_type=PluginDataSendType.Notify
+            send_type=PluginDataSendType.Notify,
+            characteristic_uuid=0x2A05,  # Service Changed characteristic
+            service_uuid=0x1801,  # Generic Attribute Service
+            data=b"test"
         )
         serialized = serialize_command(test_message)
         
@@ -299,6 +305,8 @@ class TestUSBMessageHandler:
         test_message = PluginData(
             src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, 0x05], src_addr_type=BluetoothAddressType.Public,
             send_type=PluginDataSendType.Write,
+            characteristic_uuid=0x2A37,  # Heart Rate Measurement characteristic
+            service_uuid=0x180D,  # Heart Rate Service
             data=b"test_data"
         )
         
@@ -340,6 +348,8 @@ class TestUSBMessageHandler:
         filtered_message = PluginData(
             src_addr=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], src_addr_type=BluetoothAddressType.Public,
             send_type=PluginDataSendType.Read,
+            characteristic_uuid=0x2A01,  # Appearance characteristic
+            service_uuid=0x1800,  # Generic Access Service
             data=b"data"
         )
         
@@ -360,6 +370,8 @@ class TestUSBMessageHandler:
             src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, 0x05],
             src_addr_type=BluetoothAddressType.Public,
             send_type=PluginDataSendType.Read,
+            characteristic_uuid=0x2A01,  # Appearance characteristic
+            service_uuid=0x1800,  # Generic Access Service
             data=b"data"
         )
         
@@ -405,7 +417,7 @@ class TestUSBMessageHandler:
         for i in range(3):
             message_info = {
                 'message_type': 'PluginData',
-                'message': PluginData(src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, i % 256], src_addr_type=BluetoothAddressType.Public, send_type=PluginDataSendType.Read, data=b"data"),
+                'message': PluginData(src_addr=[0x00, 0x01, 0x02, 0x03, 0x04, i % 256], src_addr_type=BluetoothAddressType.Public, send_type=PluginDataSendType.Read, characteristic_uuid=0x2A00, service_uuid=0x1800, data=b"data"),
                 'decoded': True
             }
             self.handler.handle_message(message_info)

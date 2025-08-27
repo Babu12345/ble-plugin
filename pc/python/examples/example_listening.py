@@ -115,18 +115,22 @@ def demonstrate_message_handling():
     def handle_plugin_data(data: PluginData, info: dict):
         """Handle incoming plugin data"""
         callback_stats['plugin_data_count'] += 1
+        # Format the source address as a hex string
+        src_addr_str = ':'.join(f'{b:02X}' for b in data.src_addr)
         print(f"🔄 Plugin Data Received:")
-        print(f"   Source: {data.src_id}")
+        print(f"   Source: {src_addr_str} ({data.src_addr_type.name})")
+        print(f"   Service UUID: 0x{data.service_uuid:04X}")
+        print(f"   Characteristic UUID: 0x{data.characteristic_uuid:04X}")
         print(f"   Type: {data.send_type.name}")
         print(f"   Data: {data.data.hex() if len(data.data) <= 16 else data.data[:16].hex() + '...'}")
         
         # Handle different send types
         if data.send_type == PluginDataSendType.Notify:
-            print(f"   📲 Processing notification from {data.src_id}")
+            print(f"   📲 Processing notification from {src_addr_str}")
         elif data.send_type == PluginDataSendType.Read:
-            print(f"   📖 Processing read request from {data.src_id}")
+            print(f"   📖 Processing read request from {src_addr_str}")
         elif data.send_type == PluginDataSendType.Write:
-            print(f"   ✏️  Processing write data from {data.src_id}")
+            print(f"   ✏️  Processing write data from {src_addr_str}")
     
     def handle_service_response(response: PluginServiceInfoResponse, info: dict):
         """Handle service information responses"""
@@ -176,8 +180,15 @@ def demonstrate_message_handling():
     # Add a filter example - only process plugin data from specific sources
     def plugin_data_filter(data: PluginData, info: dict) -> bool:
         """Filter to only process data from allowed sources"""
-        allowed_sources = ["demo-peripheral", "test-device", "example-sensor"]
-        return data.src_id in allowed_sources or data.src_id.startswith("demo")
+        # Filter out broadcast addresses (all 0xFF)
+        if data.src_addr == [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]:
+            return False
+        # Allow specific known addresses
+        allowed_addresses = [
+            [0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34],
+            [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]
+        ]
+        return data.src_addr in allowed_addresses
     
     handler.register_filter(PluginData, plugin_data_filter)
     
@@ -198,8 +209,11 @@ def demonstrate_message_handling():
             'timestamp': time.time(),
             'message_type': 'PluginData',
             'message': PluginData(
-                src_id="demo-peripheral",
+                src_addr=[0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34],
+                src_addr_type=BluetoothAddressType.Public,
                 send_type=PluginDataSendType.Notify,
+                characteristic_uuid=0x2A19,  # Battery Level characteristic
+                service_uuid=0x180F,  # Battery Service
                 data=b"Hello from BLE device!"
             ),
             'raw_data': b'mock_data_1',
@@ -209,8 +223,8 @@ def demonstrate_message_handling():
             'timestamp': time.time() + 1,
             'message_type': 'PluginServiceInfoResponse',
             'message': PluginServiceInfoResponse(
-                service_uuid="battery-service-uuid",
-                characteristic_uuids=["battery-level", "battery-status", "power-state"],
+                service_uuid=0x180F,  # Battery Service UUID
+                characteristic_uuids=[0x2A19, 0x2A1A, 0x2A1B],  # Battery characteristics
                 exists=True
             ),
             'raw_data': b'mock_data_2',
@@ -220,8 +234,11 @@ def demonstrate_message_handling():
             'timestamp': time.time() + 2,
             'message_type': 'PluginData',
             'message': PluginData(
-                src_id="blocked-device",  # This should be filtered out
+                src_addr=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF],  # This should be filtered out
+                src_addr_type=BluetoothAddressType.Public,
                 send_type=PluginDataSendType.Write,
+                characteristic_uuid=0x2A00,  # Device Name characteristic
+                service_uuid=0x1800,  # Generic Access Service
                 data=b"This should be filtered"
             ),
             'raw_data': b'mock_data_3',

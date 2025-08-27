@@ -203,6 +203,10 @@ pub mod plugin {
         pub src_addr_type: BluetoothAddressType,
         /// Send type of the data
         pub send_type: PluginDataSendType,
+        /// Characteristic UUID (u16)
+        pub characteristic_uuid: u16,
+        /// Service UUID (u16) this characteristic belongs to
+        pub service_uuid: u16,
         /// Actual command type
         pub data: &'a [u8],
     }

@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "c1712043596b7350fd900e99db929a20c829dc2d59db9fc5878a7b328c5ae908"
+PROTOCOL_HASH = "a8020d0202b4a08db55682d147a28fc9b28ff6ab9e632b17f8918e0589039d46"
 
 # ==================== CONSTANTS ====================
 
@@ -275,11 +275,15 @@ class PluginData:
         src_addr:Source peripheral addr that this data is orginating from.
         src_addr_type:Address type of the source peripheral
         send_type:Send type of the data
+        characteristic_uuid:Characteristic UUID (u16)
+        service_uuid:Service UUID (u16) this characteristic belongs to
         data:Actual command type
     """
     src_addr: List[attrs2bin.U8]
     src_addr_type: BluetoothAddressType
     send_type: PluginDataSendType
+    characteristic_uuid: attrs2bin.U16
+    service_uuid: attrs2bin.U16
     data: bytes
 
 @attr.s(auto_attribs=True)

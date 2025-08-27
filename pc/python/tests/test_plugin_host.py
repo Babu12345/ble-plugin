@@ -21,7 +21,7 @@ def test_type_serialization() -> None:
     deserialized = attrs2bin.deserialize(serialized, PluginDataSendType)    
     assert enum is deserialized, "Host data send type enum deserialization"
 
-    data = PluginData(send_type=PluginDataSendType.Notify, src_addr=[0x12, 0x30, 0x00, 0x00, 0x00, 0x00], src_addr_type=BluetoothAddressType.Public, data=bytes([0,1,2]))
+    data = PluginData(send_type=PluginDataSendType.Notify, src_addr=[0x12, 0x30, 0x00, 0x00, 0x00, 0x00], src_addr_type=BluetoothAddressType.Public, characteristic_uuid=0x2A19, service_uuid=0x180F, data=bytes([0,1,2]))
     serialized = attrs2bin.serialize(data)
     deserialized = attrs2bin.deserialize(serialized, PluginData)
     assert data == deserialized, "Host data transmission"
