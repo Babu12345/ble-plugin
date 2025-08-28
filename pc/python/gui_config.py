@@ -766,6 +766,49 @@ class BLEConfigurationGUI:
             if self.message_window and self.message_window.winfo_exists():
                 self.root.after(0, lambda: self.message_window_count_label.config(text=f"Messages: {self.message_count}"))
     
+    def format_response_message(self, raw_data):
+        """Format raw USB response data with both hex and deserialized representation"""
+        # Format raw data as hex
+        hex_data = ' '.join([f'{b:02X}' for b in raw_data])
+        
+        # Try to deserialize the response
+        deserialized_msg = None
+        try:
+            from plugin_host.comms import deserialize_response
+            from plugin_host.generated_types import PluginData
+            
+            deserialized = deserialize_response(raw_data)
+            
+            if isinstance(deserialized, PluginData):
+                # Format PluginData fields
+                src_addr = ':'.join([f'{b:02X}' for b in deserialized.src_addr])
+                send_type = str(deserialized.send_type).split('.')[-1]
+                char_uuid = f"0x{deserialized.characteristic_uuid:04X}"
+                service_uuid = f"0x{deserialized.service_uuid:04X}"
+                data_hex = ' '.join([f'{b:02X}' for b in deserialized.data])
+                
+                deserialized_msg = (
+                    f"PluginData:\n"
+                    f"  Source Address: {src_addr} (Type: {deserialized.src_addr_type})\n"
+                    f"  Send Type: {send_type}\n"
+                    f"  Service UUID: {service_uuid}\n"
+                    f"  Characteristic UUID: {char_uuid}\n"
+                    f"  Data: {data_hex} ({len(deserialized.data)} bytes)"
+                )
+            else:
+                # For other message types, use a generic representation
+                deserialized_msg = f"{type(deserialized).__name__}: {deserialized}"
+                
+        except Exception as e:
+            deserialized_msg = f"[Unable to deserialize: {e}]"
+        
+        # Combine both raw and deserialized data
+        full_message = f"RAW: {hex_data}"
+        if deserialized_msg:
+            full_message += f"\n{deserialized_msg}"
+        
+        return full_message
+    
     def message_listener(self):
         """Background thread that listens for incoming messages"""
         while self.is_listening:
@@ -784,9 +827,9 @@ class BLEConfigurationGUI:
                 response = self.host.usb_device.receive_data(timeout=100)  # 100ms timeout
                 
                 if response:
-                    # Format the received data
-                    hex_data = ' '.join([f'{b:02X}' for b in response])
-                    self.root.after(0, lambda data=hex_data: self.add_message(data, "response"))
+                    # Format and display the message
+                    formatted_message = self.format_response_message(response)
+                    self.root.after(0, lambda data=formatted_message: self.add_message(data, "response"))
                     
             except Exception as e:
                 error_str = str(e).lower()
