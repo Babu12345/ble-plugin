@@ -50,10 +50,9 @@ fn main() -> anyhow::Result<()> {
 
     std::thread::scope(|scope| {
         let io = unsafe { cherry_usb_host(scope, 200) };
-
         scope.spawn(move || loop {
             io.0.send(HostCommandConfigurePeripheral {
-                addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
                 name: String::from_str("Portrait").unwrap(),
             })
             .ok();

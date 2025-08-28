@@ -761,7 +761,7 @@ where
         if !IS_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) {
             IS_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
             self.ble_device.set_own_addr_type(OwnAddrType::Random);
-            let addr = slice_to_array(cmd.addr).map_err(|_| {
+            let addr = slice_to_array(&cmd.addr).map_err(|_| {
                 log::error!("Invalid address length: must be 6 bytes");
                 StateMachineError::InvalidBleConfiguration
             })?;
@@ -872,7 +872,12 @@ where
                     log::info!("Authentication completed for client: {:?}", desc);
                     let addr = desc.address().as_be_bytes();
                     let response = PluginAuthenticationCompletedResponse {
-                        address: addr.as_ref(),
+                        address: heapless::Vec::from_slice(&addr)
+                            .map_err(|e| {
+                                log::error!("Failed to copy address to response: {:?}", e);
+                                StateMachineError::UsbSendError
+                            })
+                            .unwrap_or_default(),
                         address_type: Self::ble_address_type_to_bluetooth_address_type(
                             desc.address().addr_type(),
                         ),
@@ -991,7 +996,7 @@ where
                 let conn = server
                     .connections()
                     .find(|desc| {
-                        if let Ok(val) = slice_to_array(cmd.address) {
+                        if let Ok(val) = slice_to_array(&cmd.address) {
                             return desc.address()
                                 == BLEAddress::from_be_bytes(
                                     val,
@@ -1161,7 +1166,14 @@ where
                     );
                     usb_sender
                         .send(PluginData {
-                            src_addr: args.desc().address().as_be_bytes().as_ref(),
+                            src_addr: heapless::Vec::from_slice(
+                                args.desc().address().as_be_bytes().as_ref(),
+                            )
+                            .map_err(|e| {
+                                log::error!("Failed to copy address to response: {:?}", e);
+                                StateMachineError::UsbSendError
+                            })
+                            .unwrap_or_default(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 args.desc().address().addr_type(),
                             ),
@@ -1194,7 +1206,14 @@ where
 
                     usb_sender
                         .send(PluginData {
-                            src_addr: desc.address().as_be_bytes().as_ref(),
+                            src_addr: heapless::Vec::from_slice(
+                                desc.address().as_be_bytes().as_ref(),
+                            )
+                            .map_err(|e| {
+                                log::error!("Failed to copy address to response: {:?}", e);
+                                StateMachineError::UsbSendError
+                            })
+                            .unwrap_or_default(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 desc.address().addr_type(),
                             ),

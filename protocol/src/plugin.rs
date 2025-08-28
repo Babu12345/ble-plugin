@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn test_std_encoding_and_decoding() {
         let cmd = PluginData {
-            src_addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            src_addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
             src_addr_type: crate::io_types::BluetoothAddressType::Public,
             send_type: crate::io_types::PluginDataSendType::Notify,
             characteristic_uuid: 0x2A29,
@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn test_no_std_encoding_and_decoding() {
         let cmd = PluginData {
-            src_addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            src_addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
             src_addr_type: crate::io_types::BluetoothAddressType::Public,
             send_type: crate::io_types::PluginDataSendType::Notify,
             characteristic_uuid: 0x2A29,

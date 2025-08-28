@@ -80,7 +80,7 @@ mod tests {
     fn test_std_encoding_and_decoding() {
         let cmd = HostCommandConfigurePeripheral {
             name: String::from_str("Hello").unwrap(),
-            addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
         };
         let data: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
         let received_data = PluginReceivedData::new(data);
@@ -96,7 +96,7 @@ mod tests {
     fn test_no_std_encoding_and_decoding() {
         let cmd = HostCommandConfigurePeripheral {
             name: String::from_str("Hello").unwrap(),
-            addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
         };
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
         cmd.to_bytes_in_slice(&mut buffer).unwrap();

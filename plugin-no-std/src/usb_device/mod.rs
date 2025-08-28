@@ -5,7 +5,6 @@ use crate::tasks::CHANNEL_SIZE;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_usb::{UsbDevice, class::cdc_acm::CdcAcmClass};
 use esp_hal::otg_fs::asynch::Driver;
-use lib_utils::mk_static;
 use log::info;
 use protocol::io_types::HostCommandConfigurePeripheral;
 use protocol::plugin::PluginReceivedData;
@@ -39,11 +38,8 @@ async fn echo<'d>(
     let mut buf = [0; BUFFER_SIZE as usize];
     loop {
         let _n = class.read_packet(&mut buf).await?;
-        let received_data = mk_static!(
-            PluginReceivedData<BUFFER_SIZE>,
-            PluginReceivedData::new(buf)
-        );
-        let decoded_cmd: Option<HostCommandConfigurePeripheral> = received_data.decode().ok();
+        let decoded_cmd: Option<HostCommandConfigurePeripheral> =
+            PluginReceivedData::new(buf).decode().ok();
         if let Some(cmd) = decoded_cmd {
             match sender.borrow_send_async(&cmd).await.ok() {
                 Some(_) => {}

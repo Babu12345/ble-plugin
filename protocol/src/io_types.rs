@@ -1,5 +1,8 @@
 //! Contains the basic types to reuse
-
+//! Warning. If you use a fixed size array then there will be no length prefix
+//! when serializing. Use heapless::Vec instead to ensure the length is prefixed
+//! and deserialized correctly from different languages and you want to ensure a max size
+//! is enforced.
 use serde::{Deserialize, Serialize};
 
 pub use host::*;
@@ -19,11 +22,11 @@ pub mod host {
     /// Host command. Configure peripheral
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
-    pub struct HostCommandConfigurePeripheral<'a> {
+    pub struct HostCommandConfigurePeripheral {
         /// Peripheral name
         pub name: String<MAX_NAME_SIZE>,
         /// Peripheral addr
-        pub addr: &'a [u8],
+        pub addr: heapless::Vec<u8, 6>,
     }
 
     /// Host command. Configure peripheral
@@ -133,9 +136,9 @@ pub mod host {
     /// Host command. Notify characteristic value
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandNotifyCharacteristicValue)]
-    pub struct HostCommandNotifyCharacteristicValue<'a> {
+    pub struct HostCommandNotifyCharacteristicValue {
         /// Device Address.
-        pub address: &'a [u8],
+        pub address: heapless::Vec<u8, 6>,
         /// Address type
         pub address_type: BluetoothAddressType,
         /// Characteristic UUID (u16)
@@ -198,7 +201,7 @@ pub mod plugin {
     #[PluginIO(MessageTypeId::PluginData)]
     pub struct PluginData<'a> {
         /// Source peripheral addr that this data is orginating from.
-        pub src_addr: &'a [u8],
+        pub src_addr: heapless::Vec<u8, 6>,
         /// Address type of the source peripheral
         pub src_addr_type: BluetoothAddressType,
         /// Send type of the data
@@ -264,9 +267,9 @@ pub mod plugin {
     /// Plugin authentication completed response
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[PluginIO(MessageTypeId::PluginAuthenticationCompletedResponse)]
-    pub struct PluginAuthenticationCompletedResponse<'a> {
+    pub struct PluginAuthenticationCompletedResponse {
         /// Address of the device that was authenticated
-        pub address: &'a [u8],
+        pub address: heapless::Vec<u8, 6>,
         /// Address type
         pub address_type: BluetoothAddressType,
         /// Whether the authentication was successful

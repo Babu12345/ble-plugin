@@ -86,12 +86,12 @@
 //!
 //! ```rust
 //! use protocol::io_types::HostCommandConfigurePeripheral;
-//! use heapless::String;
+//! use heapless::{String, Vec};
 //!
 //! // Create a peripheral configuration command
 //! let command = HostCommandConfigurePeripheral {
 //!     name: String::try_from("MyDevice").unwrap(),
-//!     addr: [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC], // 6-byte BLE address
+//!     addr: Vec::from_slice(&[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]).unwrap(), // 6-byte BLE address using heapless::Vec<u8, 6>
 //! };
 //! ```
 //!
@@ -312,7 +312,8 @@ mod tests {
         // Test HostCommandConfigurePeripheral serialization
         let cmd = HostCommandConfigurePeripheral {
             name: String::try_from("TestDevice").expect("Should create string"),
-            addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06])
+                .expect("Should create address"),
         };
 
         let serialized: [u8; DEFAULT_PACKET_SIZE] =
