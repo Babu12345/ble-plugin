@@ -156,7 +156,7 @@ class BLEConfigurationGUI:
         
         self.mac_vars = []
         for i in range(6):
-            var = tk.StringVar(value=f"{0xA1 if i < 4 else 0xB1:02X}")
+            var = tk.StringVar(value=f"{0x01}")
             self.mac_vars.append(var)
             entry = ttk.Entry(mac_frame, textvariable=var, width=4)
             entry.pack(side="left", padx=2)
