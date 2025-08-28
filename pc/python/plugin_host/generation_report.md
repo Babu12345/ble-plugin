@@ -39,4 +39,4 @@ This report summarizes the Python code generated from the Rust protocol library.
 Replace the existing types.py file with generated_types.py, or carefully merge
 the generated definitions into your existing code.
 
-Generated at: 2025-08-27 02:00:12 UTC
+Generated at: 2025-08-28 03:00:01 UTC

@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
 
         scope.spawn(move || loop {
             io.0.send(PluginData {
-                src_addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                src_addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                 src_addr_type: protocol::io_types::BluetoothAddressType::Public,
                 send_type: protocol::io_types::PluginDataSendType::Notify,
                 characteristic_uuid: 0x2A29,

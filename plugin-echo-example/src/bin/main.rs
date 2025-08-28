@@ -111,8 +111,8 @@ async fn echo<'d>(class: &mut CdcAcmClass<'d, Driver<'d>>) -> Result<(), Disconn
     let mut buf = [0; DEFAULT_PACKET_SIZE as usize];
     loop {
         let n = class.read_packet(&mut buf).await?;
-        let decoded_cmd: Option<HostCommandConfigurePeripheral> =
-            PluginReceivedData::new(buf).decode().ok();
+        let received_data = PluginReceivedData::new(buf);
+        let decoded_cmd: Option<HostCommandConfigurePeripheral> = received_data.decode().ok();
         if let Some(cmd) = decoded_cmd {
             info!("{:?}", cmd)
         }

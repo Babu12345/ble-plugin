@@ -119,7 +119,7 @@ class HostCommandStartAdvertisementTest:
 @attr.s(auto_attribs=True)
 class HostCommandNotifyCharacteristicValueTest:
     """Test host command for characteristic value notification - mirrors Rust struct"""
-    test_device_address: List[U8]  # [u8; 6] in Rust
+    test_device_address: bytes  # &[u8] in Rust (variable-length slice)
     test_address_type: BluetoothAddressTypeTest
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
@@ -171,7 +171,7 @@ class PluginCharacteristicInfoResponseTest:
 @attr.s(auto_attribs=True)
 class PluginAuthenticationCompletedResponseTest:
     """Test plugin authentication completed response - mirrors Rust struct"""
-    test_device_address: List[U8]  # [u8; 6] in Rust
+    test_device_address: bytes  # &[u8] in Rust (variable-length slice)
     test_address_type: BluetoothAddressTypeTest
     test_auth_success: bool
     test_auth_level: U8  # u8 in Rust - keep U8

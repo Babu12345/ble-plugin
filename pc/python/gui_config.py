@@ -25,6 +25,7 @@ class BLEConfigurationGUI:
         self.message_count = 0
         self.listener_paused = False  # Flag to pause listener for manual operations
         self.message_window = None  # Separate window for messages
+        self.show_raw_data = False  # Toggle for raw vs deserialized view
         
         self.setup_ui()
         self.start_connection_monitor()
@@ -266,6 +267,11 @@ class BLEConfigurationGUI:
         self.stop_listening_btn.pack(side="left", padx=5)
         
         ttk.Button(controls_inner, text="Clear Messages", command=self.clear_messages).pack(side="left", padx=5)
+        
+        # Toggle for raw/deserialized view
+        self.raw_data_var = tk.BooleanVar(value=self.show_raw_data)
+        ttk.Checkbutton(controls_inner, text="Show Raw Data", variable=self.raw_data_var, 
+                       command=self.toggle_raw_data).pack(side="left", padx=10)
         
         # Button to open separate window
         ttk.Button(controls_inner, text="Open in Separate Window", command=self.open_message_window).pack(side="left", padx=10)
@@ -668,6 +674,11 @@ class BLEConfigurationGUI:
         
         ttk.Button(control_frame, text="Clear", command=self.clear_messages).pack(side="left", padx=5)
         
+        # Toggle for raw/deserialized view in separate window
+        self.window_raw_data_var = tk.BooleanVar(value=self.show_raw_data)
+        ttk.Checkbutton(control_frame, text="Show Raw Data", variable=self.window_raw_data_var,
+                       command=self.toggle_window_raw_data).pack(side="left", padx=5)
+        
         # Auto-scroll checkbox
         self.auto_scroll_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(control_frame, text="Auto-scroll", 
@@ -767,58 +778,66 @@ class BLEConfigurationGUI:
                 self.root.after(0, lambda: self.message_window_count_label.config(text=f"Messages: {self.message_count}"))
     
     def format_response_message(self, raw_data):
-        """Format raw USB response data with both hex and deserialized representation"""
-        # Format raw data as hex
-        hex_data = ' '.join([f'{b:02X}' for b in raw_data])
-        
-        # Try to deserialize the response
-        deserialized_msg = None
-        try:
-            from plugin_host.comms import deserialize_response
-            from plugin_host.generated_types import PluginData
-            
-            deserialized = deserialize_response(raw_data)
-            
-            if isinstance(deserialized, PluginData):
-                # Format PluginData fields prettily
-                src_addr = ':'.join([f'{b:02X}' for b in deserialized.src_addr])
-                send_type = str(deserialized.send_type).split('.')[-1]
-                char_uuid = f"0x{deserialized.characteristic_uuid:04X}"
-                service_uuid = f"0x{deserialized.service_uuid:04X}"
+        """Format raw USB response data as either raw bytes or deserialized based on toggle"""
+        if self.show_raw_data:
+            # Show raw hex data
+            hex_data = ' '.join([f'{b:02X}' for b in raw_data])
+            return f"Raw Bytes: {hex_data}"
+        else:
+            # Try to deserialize and show formatted data
+            try:
+                from plugin_host.comms import deserialize_response
+                from plugin_host.generated_types import PluginData
                 
-                # Format data payload with better readability
-                if deserialized.data:
-                    data_hex = ' '.join([f'{b:02X}' for b in deserialized.data])
-                    if len(deserialized.data) <= 16:
-                        data_display = data_hex
+                deserialized = deserialize_response(raw_data)
+                
+                if isinstance(deserialized, PluginData):
+                    # Format PluginData fields prettily
+                    src_addr = ':'.join([f'{b:02X}' for b in deserialized.src_addr])
+                    send_type = str(deserialized.send_type).split('.')[-1]
+                    char_uuid = f"0x{deserialized.characteristic_uuid:04X}"
+                    service_uuid = f"0x{deserialized.service_uuid:04X}"
+                    
+                    # Format data payload with better readability
+                    if deserialized.data:
+                        data_hex = ' '.join([f'{b:02X}' for b in deserialized.data])
+                        if len(deserialized.data) <= 16:
+                            data_display = data_hex
+                        else:
+                            # Show first 16 bytes + count for longer data
+                            first_16 = ' '.join([f'{b:02X}' for b in deserialized.data[:16]])
+                            data_display = f"{first_16}... ({len(deserialized.data)} bytes total)"
                     else:
-                        # Show first 16 bytes + count for longer data
-                        first_16 = ' '.join([f'{b:02X}' for b in deserialized.data[:16]])
-                        data_display = f"{first_16}... ({len(deserialized.data)} bytes total)"
+                        data_display = "(empty)"
+                    
+                    return (
+                        f"📱 BLE Data Message:\n"
+                        f"   Device: {src_addr} ({deserialized.src_addr_type})\n"
+                        f"   Action: {send_type}\n"
+                        f"   Service: {service_uuid}\n"
+                        f"   Characteristic: {char_uuid}\n"
+                        f"   Payload: {data_display}"
+                    )
                 else:
-                    data_display = "(empty)"
-                
-                deserialized_msg = (
-                    f"📱 BLE Data Message:\n"
-                    f"   Device: {src_addr} ({deserialized.src_addr_type})\n"
-                    f"   Action: {send_type}\n"
-                    f"   Service: {service_uuid}\n"
-                    f"   Characteristic: {char_uuid}\n"
-                    f"   Payload: {data_display}"
-                )
-            else:
-                # For other message types, show basic info
-                deserialized_msg = f"📦 {type(deserialized).__name__}"
-                
-        except Exception as e:
-            deserialized_msg = f"⚠️  Unable to deserialize: {e}"
-        
-        # Combine both raw and deserialized data
-        full_message = f"Raw Bytes: {hex_data}"
-        if deserialized_msg:
-            full_message += f"\n{deserialized_msg}"
-        
-        return full_message
+                    # For other message types, show basic info
+                    return f"📦 {type(deserialized).__name__}"
+                    
+            except Exception as e:
+                return f"⚠️  Unable to deserialize: {e}"
+    
+    def toggle_raw_data(self):
+        """Toggle between raw and deserialized data view"""
+        self.show_raw_data = self.raw_data_var.get()
+        # Sync with separate window if it exists
+        if hasattr(self, 'window_raw_data_var'):
+            self.window_raw_data_var.set(self.show_raw_data)
+    
+    def toggle_window_raw_data(self):
+        """Toggle raw data view from separate window"""
+        self.show_raw_data = self.window_raw_data_var.get()
+        # Sync with main window
+        if hasattr(self, 'raw_data_var'):
+            self.raw_data_var.set(self.show_raw_data)
     
     def message_listener(self):
         """Background thread that listens for incoming messages"""

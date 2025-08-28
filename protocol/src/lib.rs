@@ -151,6 +151,7 @@ pub mod io;
 pub mod io_types;
 pub mod plugin;
 pub use io::*;
+pub mod utils;
 
 /// Maximum size for BLE peripheral device names
 ///
@@ -311,7 +312,7 @@ mod tests {
         // Test HostCommandConfigurePeripheral serialization
         let cmd = HostCommandConfigurePeripheral {
             name: String::try_from("TestDevice").expect("Should create string"),
-            addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+            addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
         };
 
         let serialized: [u8; DEFAULT_PACKET_SIZE] =
@@ -489,39 +490,38 @@ mod tests {
         assert!((MessageTypeId::PluginCharacteristicInfoResponse as u8) >= 0x80);
     }
 
-
     #[test]
     fn test_configure_profile_serialization() {
-        use crate::io_types::{HostCommandConfigureProfile, BLEProfile};
-        
+        use crate::io_types::{BLEProfile, HostCommandConfigureProfile};
+
         let cmd = HostCommandConfigureProfile {
             profile: BLEProfile::Custom,
         };
-        
+
         // Test serialization
         let serialized: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().expect("Should serialize");
-        
+
         // Verify magic number
         let magic = u16::from_le_bytes([serialized[0], serialized[1]]);
         assert_eq!(magic, MESSAGE_MAGIC);
-        
+
         // Verify message type ID
         let type_id = serialized[MESSAGE_MAGIC_BYTES];
         assert_eq!(type_id, MessageTypeId::HostCommandConfigureProfile as u8);
-        
+
         // Test round-trip
-        let deserialized = HostCommandConfigureProfile::from_bytes(&serialized)
-            .expect("Should deserialize");
+        let deserialized =
+            HostCommandConfigureProfile::from_bytes(&serialized).expect("Should deserialize");
         assert_eq!(cmd, deserialized);
     }
 
     #[test]
     fn test_ble_profile_enum_values() {
         use crate::io_types::BLEProfile;
-        
+
         // Verify enum values
         assert_eq!(BLEProfile::Custom as u8, 0);
-        
+
         // Test that enum can be created and compared
         let profile1 = BLEProfile::Custom;
         let profile2 = BLEProfile::Custom;

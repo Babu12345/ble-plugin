@@ -460,7 +460,7 @@ class USBHostDevice:
     
     # Host Command Methods
     
-    def configure_peripheral(self, name: str, addr: list) -> None:
+    def configure_peripheral(self, name: str, addr: bytes) -> None:
         """
         Configure a peripheral device
         

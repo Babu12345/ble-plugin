@@ -210,6 +210,7 @@ use protocol::io_types::HostCommandNotifyCharacteristicValue;
 use protocol::io_types::HostCommandStopAdvertisement;
 use protocol::io_types::PluginAuthenticationCompletedResponse;
 use protocol::io_types::PluginData;
+use protocol::utils::slice_to_array;
 use protocol::MESSAGE_HEADER_SIZE;
 use threadpool::ThreadPool;
 use throttle::Throttle;
@@ -760,7 +761,11 @@ where
         if !IS_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) {
             IS_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
             self.ble_device.set_own_addr_type(OwnAddrType::Random);
-            self.ble_device.set_rnd_addr(cmd.addr).map_err(|_| {
+            let addr = slice_to_array(cmd.addr).map_err(|_| {
+                log::error!("Invalid address length: must be 6 bytes");
+                StateMachineError::InvalidBleConfiguration
+            })?;
+            self.ble_device.set_rnd_addr(addr).map_err(|_| {
                 log::error!("Failed to set random address for BLE device");
                 StateMachineError::UnableToSetRNDAddress
             })?;
@@ -865,8 +870,9 @@ where
                 let usb_sender = self.usb_sender.clone();
                 server.on_authentication_complete(move |_, desc, status| {
                     log::info!("Authentication completed for client: {:?}", desc);
+                    let addr = desc.address().as_be_bytes();
                     let response = PluginAuthenticationCompletedResponse {
-                        address: desc.address().as_be_bytes(),
+                        address: addr.as_ref(),
                         address_type: Self::ble_address_type_to_bluetooth_address_type(
                             desc.address().addr_type(),
                         ),
@@ -985,11 +991,16 @@ where
                 let conn = server
                     .connections()
                     .find(|desc| {
-                        desc.address()
-                            == BLEAddress::from_be_bytes(
-                                cmd.address,
-                                Self::bluetooth_address_type_to_ble_address_type(cmd.address_type),
-                            )
+                        if let Ok(val) = slice_to_array(cmd.address) {
+                            return desc.address()
+                                == BLEAddress::from_be_bytes(
+                                    val,
+                                    Self::bluetooth_address_type_to_ble_address_type(
+                                        cmd.address_type,
+                                    ),
+                                );
+                        }
+                        return false;
                     })
                     .ok_or_else(|| {
                         log::error!(
@@ -1150,7 +1161,7 @@ where
                     );
                     usb_sender
                         .send(PluginData {
-                            src_addr: args.desc().address().as_be_bytes(),
+                            src_addr: args.desc().address().as_be_bytes().as_ref(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 args.desc().address().addr_type(),
                             ),
@@ -1183,7 +1194,7 @@ where
 
                     usb_sender
                         .send(PluginData {
-                            src_addr: desc.address().as_be_bytes(),
+                            src_addr: desc.address().as_be_bytes().as_ref(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 desc.address().addr_type(),
                             ),

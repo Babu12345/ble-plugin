@@ -25,4 +25,11 @@ pub enum Error {
     ReceiveError,
     /// Send error
     SendError,
+    /// Invalid data length
+    InvalidDataLength {
+        /// Expected length
+        expected: usize,
+        /// Actual length
+        got: usize,
+    },
 }

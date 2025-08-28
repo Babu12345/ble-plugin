@@ -82,7 +82,7 @@ class PluginData:
     """Data message from plugin to host"""
     connection_id: int  # Connection handle
     characteristic_uuid: str  # Characteristic UUID that received data
-    data: List[attrs2bin.U8]  # The actual data payload
+    data: bytes  # The actual data payload (variable-length slice)
     timestamp: int  # Timestamp when data was received
 
 @attr.s(auto_attribs=True)
@@ -97,7 +97,7 @@ class CharacteristicInfo:
     """Information about a BLE characteristic"""
     uuid: str  # Characteristic UUID
     properties: BLEProperties  # Characteristic properties
-    current_value: Optional[List[attrs2bin.U8]]  # Current value if readable
+    current_value: Optional[bytes]  # Current value if readable (variable-length slice)
     notifications_enabled: bool  # Whether notifications are enabled
 
 @attr.s(auto_attribs=True)

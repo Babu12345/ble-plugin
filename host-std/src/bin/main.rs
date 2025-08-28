@@ -53,12 +53,11 @@ fn main() -> anyhow::Result<()> {
 
         scope.spawn(move || loop {
             io.0.send(HostCommandConfigurePeripheral {
-                addr: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                addr: &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                 name: String::from_str("Portrait").unwrap(),
             })
             .ok();
-            io.0.send(HostCommandConfigureService { uuid: 0xAAAA })
-                .ok();
+            io.0.send(HostCommandConfigureService { uuid: 0xAAAA }).ok();
 
             std::thread::sleep(Duration::from_millis(20));
         });

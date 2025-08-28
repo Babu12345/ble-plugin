@@ -10,7 +10,7 @@ from typing import List, Optional
 
 # ==================== PROTOCOL HASH ====================
 # Hash of all protocol source files - used to detect when regeneration is needed
-PROTOCOL_HASH = "a8020d0202b4a08db55682d147a28fc9b28ff6ab9e632b17f8918e0589039d46"
+PROTOCOL_HASH = "f53b2c099fd225c406d15d35ac89ab42265d96c948f7e3266bc45809105d3e50"
 
 # ==================== CONSTANTS ====================
 
@@ -159,7 +159,7 @@ class HostCommandConfigurePeripheral:
         addr:Peripheral addr
     """
     name: str
-    addr: List[attrs2bin.U8]
+    addr: bytes
 
 @attr.s(auto_attribs=True)
 class HostCommandConfigurePeripheralSecurity:
@@ -252,7 +252,7 @@ class HostCommandNotifyCharacteristicValue:
         service_uuid:Service UUID (u16) this characteristic belongs to
         value:Value to notify
     """
-    address: List[attrs2bin.U8]
+    address: bytes
     address_type: BluetoothAddressType
     characteristic_uuid: attrs2bin.U16
     service_uuid: attrs2bin.U16
@@ -279,7 +279,7 @@ class PluginData:
         service_uuid:Service UUID (u16) this characteristic belongs to
         data:Actual command type
     """
-    src_addr: List[attrs2bin.U8]
+    src_addr: bytes
     src_addr_type: BluetoothAddressType
     send_type: PluginDataSendType
     characteristic_uuid: attrs2bin.U16
@@ -323,7 +323,7 @@ class PluginAuthenticationCompletedResponse:
         address_type:Address type
         success:Whether the authentication was successful
     """
-    address: List[attrs2bin.U8]
+    address: bytes
     address_type: BluetoothAddressType
     success: bool
 

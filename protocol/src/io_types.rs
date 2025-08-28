@@ -19,11 +19,11 @@ pub mod host {
     /// Host command. Configure peripheral
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
-    pub struct HostCommandConfigurePeripheral {
+    pub struct HostCommandConfigurePeripheral<'a> {
         /// Peripheral name
         pub name: String<MAX_NAME_SIZE>,
         /// Peripheral addr
-        pub addr: [u8; 6],
+        pub addr: &'a [u8],
     }
 
     /// Host command. Configure peripheral
@@ -133,9 +133,9 @@ pub mod host {
     /// Host command. Notify characteristic value
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[HostIO(MessageTypeId::HostCommandNotifyCharacteristicValue)]
-    pub struct HostCommandNotifyCharacteristicValue {
+    pub struct HostCommandNotifyCharacteristicValue<'a> {
         /// Device Address.
-        pub address: [u8; 6],
+        pub address: &'a [u8],
         /// Address type
         pub address_type: BluetoothAddressType,
         /// Characteristic UUID (u16)
@@ -198,7 +198,7 @@ pub mod plugin {
     #[PluginIO(MessageTypeId::PluginData)]
     pub struct PluginData<'a> {
         /// Source peripheral addr that this data is orginating from.
-        pub src_addr: [u8; 6],
+        pub src_addr: &'a [u8],
         /// Address type of the source peripheral
         pub src_addr_type: BluetoothAddressType,
         /// Send type of the data
@@ -264,9 +264,9 @@ pub mod plugin {
     /// Plugin authentication completed response
     #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
     #[PluginIO(MessageTypeId::PluginAuthenticationCompletedResponse)]
-    pub struct PluginAuthenticationCompletedResponse {
+    pub struct PluginAuthenticationCompletedResponse<'a> {
         /// Address of the device that was authenticated
-        pub address: [u8; 6],
+        pub address: &'a [u8],
         /// Address type
         pub address_type: BluetoothAddressType,
         /// Whether the authentication was successful
