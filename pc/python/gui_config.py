@@ -780,30 +780,41 @@ class BLEConfigurationGUI:
             deserialized = deserialize_response(raw_data)
             
             if isinstance(deserialized, PluginData):
-                # Format PluginData fields
+                # Format PluginData fields prettily
                 src_addr = ':'.join([f'{b:02X}' for b in deserialized.src_addr])
                 send_type = str(deserialized.send_type).split('.')[-1]
                 char_uuid = f"0x{deserialized.characteristic_uuid:04X}"
                 service_uuid = f"0x{deserialized.service_uuid:04X}"
-                data_hex = ' '.join([f'{b:02X}' for b in deserialized.data])
+                
+                # Format data payload with better readability
+                if deserialized.data:
+                    data_hex = ' '.join([f'{b:02X}' for b in deserialized.data])
+                    if len(deserialized.data) <= 16:
+                        data_display = data_hex
+                    else:
+                        # Show first 16 bytes + count for longer data
+                        first_16 = ' '.join([f'{b:02X}' for b in deserialized.data[:16]])
+                        data_display = f"{first_16}... ({len(deserialized.data)} bytes total)"
+                else:
+                    data_display = "(empty)"
                 
                 deserialized_msg = (
-                    f"PluginData:\n"
-                    f"  Source Address: {src_addr} (Type: {deserialized.src_addr_type})\n"
-                    f"  Send Type: {send_type}\n"
-                    f"  Service UUID: {service_uuid}\n"
-                    f"  Characteristic UUID: {char_uuid}\n"
-                    f"  Data: {data_hex} ({len(deserialized.data)} bytes)"
+                    f"📱 BLE Data Message:\n"
+                    f"   Device: {src_addr} ({deserialized.src_addr_type})\n"
+                    f"   Action: {send_type}\n"
+                    f"   Service: {service_uuid}\n"
+                    f"   Characteristic: {char_uuid}\n"
+                    f"   Payload: {data_display}"
                 )
             else:
-                # For other message types, use a generic representation
-                deserialized_msg = f"{type(deserialized).__name__}: {deserialized}"
+                # For other message types, show basic info
+                deserialized_msg = f"📦 {type(deserialized).__name__}"
                 
         except Exception as e:
-            deserialized_msg = f"[Unable to deserialize: {e}]"
+            deserialized_msg = f"⚠️  Unable to deserialize: {e}"
         
         # Combine both raw and deserialized data
-        full_message = f"RAW: {hex_data}"
+        full_message = f"Raw Bytes: {hex_data}"
         if deserialized_msg:
             full_message += f"\n{deserialized_msg}"
         
