@@ -383,7 +383,6 @@ class BLEConfigurationGUI:
             # Validate random Bluetooth address patterns
             first_byte = mac_bytes[0]
             msb_bits = (first_byte >> 6) & 0x03  # Extract top 2 bits
-            print(f"MSB bits: {msb_bits:02b}")
             # Check for valid random address patterns
             if msb_bits == 0b10 or msb_bits == 0b01:  # Invalid patterns (MSB bits = 10 or 01)
                 if msb_bits == 0b10:
