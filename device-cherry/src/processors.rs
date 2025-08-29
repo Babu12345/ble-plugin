@@ -25,7 +25,6 @@ use esp_idf_sys::cherry_device::{
 };
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
-use std::collections::VecDeque;
 use throttle::Throttle;
 
 use crate::utils::{
@@ -47,7 +46,6 @@ const USBD_MAX_POWER: u32 = 100; // 100 mA
 const SIZE: usize = DEFAULT_PACKET_SIZE;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
-static WRITE_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
 // Double buffering for improved throughput
 static mut READ_BUFFER_A: AlignedBuffer<DEFAULT_PACKET_SIZE> = AlignedBuffer::new();
@@ -254,9 +252,6 @@ unsafe fn restart_usb_read_with_delay(busid: u8, ep: u8) {
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
-    // Clear write-in-progress flag to allow next write
-    WRITE_IN_PROGRESS.store(false, Ordering::Release);
-
     let ep_mps = unsafe { usbd_get_ep_mps(busid, ep) as u32 };
     // Send Zero Length Packet if needed (when data is multiple of max packet size)
     if (nbytes % ep_mps) == 0 && nbytes > 0 {
@@ -279,8 +274,6 @@ unsafe extern "C" fn usbd_event_handler(busid: u8, event: u8) {
         usbd_event_type_USBD_EVENT_CONFIGURED => {
             // Start with buffer A
             ACTIVE_BUFFER.store(0, Ordering::Release);
-            // Reset write state on configuration
-            WRITE_IN_PROGRESS.store(false, Ordering::Release);
             unsafe {
                 restart_usb_read_immediate(busid, CDC_OUT_EP as u8);
             }
@@ -402,110 +395,24 @@ impl CdcAcmDevice<POSTINIT> {
         let busid = self.busid.ok_or(Error::BusidUndefined)?;
         // Writing to USB endpoint with proper flow control
         scope.spawn(move || {
-            let mut write_queue: VecDeque<TSendAndReceive> = VecDeque::with_capacity(16);
-            let mut consecutive_errors = 0u32;
-
             loop {
-                // Try to get data from channel
-                match to_usb.1.try_recv() {
-                    Ok(data) => {
-                        // Prevent unbounded queue growth during high-speed bursts
-                        if write_queue.len() < 16 {
-                            write_queue.push_back(data);
-                            // Drain channel to queue (up to capacity)
-                            while write_queue.len() < 16 {
-                                match to_usb.1.try_recv() {
-                                    Ok(data) => write_queue.push_back(data),
-                                    Err(_) => break,
-                                }
-                            }
-                        } else {
-                            // Queue full - drop the oldest packet to prevent memory overflow
-                            write_queue.pop_front();
-                            write_queue.push_back(data);
-                            ::log::debug!("Write queue full, dropping oldest packet");
+                match to_usb.1.recv() {
+                    Ok(mut data) => {
+                        match unsafe {
+                            usbd_ep_start_write(
+                                busid,
+                                CDC_IN_EP as u8,
+                                data.as_mut_ptr(),
+                                min(data.len() as u32, SIZE as u32),
+                            )
+                        } {
+                            x if x < 0 => ::log::error!("Failed to send via usb device: {data:?}"),
+                            _ => {}
                         }
                     }
-                    Err(std::sync::mpsc::TryRecvError::Empty) => {
-                        if write_queue.is_empty() {
-                            // Block waiting for data only if queue is empty
-                            match to_usb.1.recv_timeout(Duration::from_millis(1)) {
-                                Ok(data) => write_queue.push_back(data),
-                                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-                                Err(_) => break, // Channel disconnected
-                            }
-                        }
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
-                }
-
-                // Process write queue with flow control
-                while let Some(mut data) = write_queue.pop_front() {
-                    // Wait for previous write to complete
-                    let mut wait_cycles = 0;
-                    while WRITE_IN_PROGRESS.load(Ordering::Acquire) {
-                        wait_cycles += 1;
-                        if wait_cycles > 1000 {
-                            ::log::warn!("USB write endpoint busy for too long");
-                            std::thread::sleep(Duration::from_micros(100));
-                            wait_cycles = 0;
-                        }
-                        std::thread::yield_now();
-                    }
-
-                    // Set write-in-progress flag
-                    WRITE_IN_PROGRESS.store(true, Ordering::Release);
-
-                    let len = min(data.len() as u32, SIZE as u32);
-                    let result = unsafe {
-                        usbd_ep_start_write(busid, CDC_IN_EP as u8, data.as_mut_ptr(), len)
-                    };
-
-                    if result < 0 {
-                        WRITE_IN_PROGRESS.store(false, Ordering::Release);
-                        consecutive_errors += 1;
-
-                        // Handle specific I/O error codes
-                        let should_retry = match result {
-                            -5 => {
-                                // EIO (Input/Output error)
-                                ::log::warn!("USB I/O error detected, increasing retry delay");
-                                true
-                            }
-                            -16 => {
-                                // EBUSY (Device or resource busy)
-                                ::log::debug!("USB endpoint busy, will retry");
-                                true
-                            }
-                            _ => {
-                                ::log::warn!("USB write failed with error: {}", result);
-                                consecutive_errors <= 5 // Only retry for limited attempts on other errors
-                            }
-                        };
-
-                        if should_retry && consecutive_errors <= 5 {
-                            // Re-queue the data for retry with exponential backoff
-                            write_queue.push_front(data);
-                            let delay_ms = std::cmp::min(50, 5 * consecutive_errors);
-                            std::thread::sleep(Duration::from_millis(delay_ms as u64));
-                        } else {
-                            ::log::error!(
-                                "USB write failed after {} attempts, error: {}",
-                                consecutive_errors,
-                                result
-                            );
-                            consecutive_errors = 0;
-                            // Drop the packet to prevent infinite retry
-                        }
-                    } else {
-                        consecutive_errors = 0;
-                        // Slightly longer delay between successful writes to prevent I/O errors
-                        std::thread::sleep(Duration::from_micros(50));
-                    }
+                    Err(e) => ::log::error!("Unable to recieve data: {e}"),
                 }
             }
-
-            ::log::info!("USB write thread exiting");
         });
 
         // Reading from USB endpoint - optimized for high-speed burst handling
