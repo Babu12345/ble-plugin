@@ -396,7 +396,17 @@ class TestListAndBytesDeserialization:
         assert result.test_properties[1] == BLEPropertiesTest.TestWrite, "Second property should be TestWrite (11)"
         assert result.test_properties[2] == BLEPropertiesTest.TestNotify, "Third property should be TestNotify (12)"
         
-        print("✅ Characteristic properties list (3 elements) deserialized correctly from Rust data")
+        # Verify test_security_level field (line 269)
+        assert result.test_security_level == 2, "Security level should be 2"
+        
+        # Verify UUIDs (lines 266-267)
+        import uuid as uuid_module
+        expected_char_uuid = uuid_module.UUID("abcdef01-2345-6789-abcd-ef0123456789").bytes
+        expected_service_uuid = uuid_module.UUID("87654321-4321-8765-cba9-987654321cba").bytes
+        assert result.test_char_uuid == expected_char_uuid, "Char UUID should match"
+        assert result.test_service_uuid == expected_service_uuid, "Service UUID should match"
+        
+        print("✅ Characteristic properties list (3 elements) and all fields deserialized correctly from Rust data")
     
     def test_characteristic_read_default_value_list(self):
         """Test deserialization of default value byte list from Rust binary data."""
@@ -417,7 +427,17 @@ class TestListAndBytesDeserialization:
         bytes_as_string = bytes([b.value if hasattr(b, 'value') else b for b in result.test_default_value])
         assert bytes_as_string == b"Hello", "Default value should be 'Hello'"
         
-        print("✅ Default value byte list ('Hello') deserialized correctly from Rust data")
+        # Verify test_read_permissions field (line 287)
+        assert result.test_read_permissions == 1, "Read permissions should be 1"
+        
+        # Verify UUIDs (lines 284-285)
+        import uuid as uuid_module
+        expected_char_uuid = uuid_module.UUID("abcdef01-2345-6789-abcd-ef0123456789").bytes
+        expected_service_uuid = uuid_module.UUID("87654321-4321-8765-cba9-987654321cba").bytes
+        assert result.test_char_uuid == expected_char_uuid, "Char UUID should match"
+        assert result.test_service_uuid == expected_service_uuid, "Service UUID should match"
+        
+        print("✅ Default value byte list ('Hello') and all fields deserialized correctly from Rust data")
     
     def test_notification_value_and_device_address_lists(self):
         """Test deserialization of notification value and device address lists from Rust binary data."""
@@ -443,7 +463,20 @@ class TestListAndBytesDeserialization:
         for i, byte_val in enumerate(result.test_device_address):
             assert byte_val == expected_address[i], f"Address byte {i} should be 0x{expected_address[i]:02x}, got 0x{byte_val:02x}"
         
-        print("✅ Notification value list and device address (with length prefix) deserialized correctly")
+        # Verify test_confirm_required field (line 341)
+        assert result.test_confirm_required is True, "Confirm required should be True"
+        
+        # Verify address type (line 337)
+        assert result.test_address_type == BluetoothAddressTypeTest.TestPublic, "Address type should be TestPublic (20)"
+        
+        # Verify UUIDs (lines 338-339)
+        import uuid as uuid_module
+        expected_char_uuid = uuid_module.UUID("abcdef01-2345-6789-abcd-ef0123456789").bytes
+        expected_service_uuid = uuid_module.UUID("87654321-4321-8765-cba9-987654321cba").bytes
+        assert result.test_char_uuid == expected_char_uuid, "Char UUID should match"
+        assert result.test_service_uuid == expected_service_uuid, "Service UUID should match"
+        
+        print("✅ Notification value list, device address (with length prefix), and all fields deserialized correctly")
     
     def test_plugin_data_variable_length_bytes(self):
         """Test deserialization of variable-length bytes payload from Rust binary data."""
@@ -462,7 +495,12 @@ class TestListAndBytesDeserialization:
         assert result.test_timestamp == 123, "Timestamp should be 123"
         assert result.test_connection_handle == 1, "Connection handle should be 1"
         
-        print("✅ Variable-length bytes payload ('Test data') deserialized correctly")
+        # Verify source_id UUID (line 353)
+        import uuid as uuid_module
+        expected_source_id = uuid_module.UUID("fedcba09-8765-4321-0fed-cba987654321").bytes
+        assert result.test_source_id == expected_source_id, "Source ID UUID should match"
+        
+        print("✅ Variable-length bytes payload ('Test data') and all fields deserialized correctly")
     
     def test_service_info_characteristic_uuids_list(self):
         """Test deserialization of list of UUIDs from Rust binary data."""
