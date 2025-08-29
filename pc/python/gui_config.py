@@ -373,6 +373,50 @@ class BLEConfigurationGUI:
             mac_bytes = []
             for var in self.mac_vars:
                 mac_bytes.append(int(var.get(), 16))
+            
+            # Validate MAC address size
+            if len(mac_bytes) != 6:
+                messagebox.showerror("Invalid Address", 
+                    f"MAC address must be exactly 6 bytes. Got {len(mac_bytes)} bytes.")
+                return
+            
+            # Validate random Bluetooth address patterns
+            first_byte = mac_bytes[0]
+            msb_bits = (first_byte >> 6) & 0x03  # Extract top 2 bits
+            print(f"MSB bits: {msb_bits:02b}")
+            # Check for valid random address patterns
+            if msb_bits == 0b10 or msb_bits == 0b01:  # Invalid patterns (MSB bits = 10 or 01)
+                if msb_bits == 0b10:
+                    error_msg = "Invalid random address: MSB bits are 10 (binary)."
+                else:
+                    error_msg = "Resolvable Private addresses not allowed for manual configuration."
+                
+                messagebox.showerror("Invalid Address", 
+                    f"{error_msg}\n\n"
+                    "Valid random address patterns for manual configuration:\n"
+                    "• Static Random: MSB bits = 11 (0xC0-0xFF)\n"
+                    "• Non-Resolvable Private: MSB bits = 00 (0x00-0x3F)")
+                return
+            
+            # For Static Random and Non-Resolvable Private addresses,
+            # check that remaining bits have at least one 0 and one 1
+            if msb_bits == 0b11 or msb_bits == 0b00:  # Static Random or Non-Resolvable Private
+                # Check all 46 bits (6 bytes minus 2 MSB bits)
+                all_bits = 0
+                for i, byte in enumerate(mac_bytes):
+                    if i == 0:
+                        # For first byte, only consider bottom 6 bits (exclude MSB bits)
+                        all_bits |= (byte & 0x3F) << (40)
+                    else:
+                        all_bits |= byte << ((5-i) * 8)
+                
+                # Check if all bits are 0 or all bits are 1 in the 46-bit range
+                if all_bits == 0 or all_bits == 0x3FFFFFFFFFFF:  # All 46 bits same
+                    addr_type = "Static Random" if msb_bits == 0b11 else "Non-Resolvable Private"
+                    messagebox.showerror("Invalid Address", 
+                        f"Invalid {addr_type} address: remaining 46 bits must contain "
+                        "at least one 0 and at least one 1.")
+                    return
                 
             self.log(f"Configuring peripheral: {name}")
             
