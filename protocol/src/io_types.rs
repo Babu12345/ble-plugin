@@ -15,7 +15,6 @@ pub mod host {
     use crate::MAX_NAME_SIZE;
     use crate::{MessageType, MessageTypeId};
     use heapless::String;
-    use heapless::Vec;
     use protocol_io::HostIO;
     use serde::{Deserialize, Serialize};
 
@@ -89,7 +88,7 @@ pub mod host {
         /// Service UUID (u16) this characteristic belongs to
         pub service_uuid: u16,
         /// Read value
-        pub value: Vec<u8, MAX_NAME_SIZE>,
+        pub value: heapless::Vec<u8, MAX_NAME_SIZE>,
     }
 
     /// Host command. Get service info
@@ -150,7 +149,7 @@ pub mod host {
         /// Service UUID (u16) this characteristic belongs to
         pub service_uuid: u16,
         /// Value to notify
-        pub value: Vec<u8, MAX_NAME_SIZE>,
+        pub value: heapless::Vec<u8, MAX_NAME_SIZE>,
     }
 
     /// Profile type enumeration for preconfigured BLE profiles

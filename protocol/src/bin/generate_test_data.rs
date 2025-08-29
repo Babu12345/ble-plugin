@@ -129,7 +129,7 @@ pub struct HostCommandStartAdvertisementTest {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[HostIOMacro(MessageTypeId::HostCommandNotifyCharacteristicValue)]
 pub struct HostCommandNotifyCharacteristicValueTest {
-    pub test_device_address: [u8; 6],
+    pub test_device_address: HeaplessVec<u8, 6>,
     pub test_address_type: BluetoothAddressTypeTest,
     pub test_char_uuid: Uuid,
     pub test_service_uuid: Uuid,
@@ -186,7 +186,7 @@ pub struct PluginCharacteristicInfoResponseTest {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[PluginIOMacro(MessageTypeId::PluginAuthenticationCompletedResponse)]
 pub struct PluginAuthenticationCompletedResponseTest {
-    pub test_device_address: [u8; 6],
+    pub test_device_address: HeaplessVec<u8, 6>,
     pub test_address_type: BluetoothAddressTypeTest,
     pub test_auth_success: bool,
     pub test_auth_level: u8,
@@ -327,8 +327,13 @@ fn create_test_host_commands() -> Vec<(String, Vec<u8>)> {
         .extend_from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05])
         .unwrap();
 
+    let mut device_address = HeaplessVec::new();
+    device_address
+        .extend_from_slice(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
+        .unwrap();
+
     let test_notify_cmd = HostCommandNotifyCharacteristicValueTest {
-        test_device_address: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
+        test_device_address: device_address,
         test_address_type: BluetoothAddressTypeTest::TestPublic,
         test_char_uuid: Uuid::parse_str("abcdef01-2345-6789-abcd-ef0123456789").unwrap(),
         test_service_uuid: Uuid::parse_str("87654321-4321-8765-cba9-987654321cba").unwrap(),
@@ -413,8 +418,13 @@ fn create_test_plugin_responses() -> Vec<(String, Vec<u8>)> {
     ));
 
     // Test plugin authentication completed response
+    let mut auth_device_address = HeaplessVec::new();
+    auth_device_address
+        .extend_from_slice(&[0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])
+        .unwrap();
+
     let test_auth_completed = PluginAuthenticationCompletedResponseTest {
-        test_device_address: [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff],
+        test_device_address: auth_device_address,
         test_address_type: BluetoothAddressTypeTest::TestRandom,
         test_auth_success: true,
         test_auth_level: 3,

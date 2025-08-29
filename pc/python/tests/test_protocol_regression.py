@@ -21,16 +21,21 @@ import attrs2bin
 from test_structures import (
     # Test enums
     BLEPropertiesTest,
+    BluetoothAddressTypeTest,
     DataSendTypeTest,
     
     # Test host command structures
     HostCommandConfigurePeripheralTest,
     HostCommandConfigureServiceTest,
     HostCommandConfigureCharacteristicTest,
+    HostCommandConfigureCharacteristicReadTest,
+    HostCommandNotifyCharacteristicValueTest,
     
     # Test plugin response structures
     PluginDataTest,
     PluginServiceInfoResponseTest,
+    PluginCharacteristicInfoResponseTest,
+    PluginAuthenticationCompletedResponseTest,
     
     # Integer type test structures
     IntegerTypesTestSmall,
@@ -372,6 +377,273 @@ class TestPythonStructures:
             pytest.skip("Integer types mixed test data not generated yet")
         
         print("✅ All integer types cross-language compatibility verified")
+
+
+class TestListAndBytesDeserialization:
+    """Test correct deserialization of lists and bytes with length prefixes from Rust-generated data."""
+    
+    def test_characteristic_properties_list_deserialization(self):
+        """Test deserialization of characteristic properties list from Rust binary data."""
+        # Load the Rust-generated binary with a 3-element properties list
+        binary_data = load_binary_test_file("test_host_configure_characteristic.bin")
+        header = parse_protocol_header(binary_data)
+        
+        result = attrs2bin.deserialize(header['payload'], HostCommandConfigureCharacteristicTest)
+        
+        # Verify the exact values from Rust generate_test_data.rs lines 260-263
+        assert len(result.test_properties) == 3, "Should have exactly 3 properties"
+        assert result.test_properties[0] == BLEPropertiesTest.TestRead, "First property should be TestRead (10)"
+        assert result.test_properties[1] == BLEPropertiesTest.TestWrite, "Second property should be TestWrite (11)"
+        assert result.test_properties[2] == BLEPropertiesTest.TestNotify, "Third property should be TestNotify (12)"
+        
+        print("✅ Characteristic properties list (3 elements) deserialized correctly from Rust data")
+    
+    def test_characteristic_read_default_value_list(self):
+        """Test deserialization of default value byte list from Rust binary data."""
+        # Load the Rust-generated binary with default_value = [0x48, 0x65, 0x6c, 0x6c, 0x6f] ("Hello")
+        binary_data = load_binary_test_file("test_host_configure_characteristic_read.bin")
+        header = parse_protocol_header(binary_data)
+        
+        result = attrs2bin.deserialize(header['payload'], HostCommandConfigureCharacteristicReadTest)
+        
+        # Verify the exact values from Rust generate_test_data.rs lines 279-281
+        assert len(result.test_default_value) == 5, "Should have 5 bytes ('Hello')"
+        expected_hello = [0x48, 0x65, 0x6c, 0x6c, 0x6f]  # "Hello" in hex
+        for i, byte_val in enumerate(result.test_default_value):
+            val = byte_val.value if hasattr(byte_val, 'value') else byte_val
+            assert val == expected_hello[i], f"Byte {i} should be 0x{expected_hello[i]:02x}, got {val}"
+        
+        # Convert to string to verify it's "Hello"
+        bytes_as_string = bytes([b.value if hasattr(b, 'value') else b for b in result.test_default_value])
+        assert bytes_as_string == b"Hello", "Default value should be 'Hello'"
+        
+        print("✅ Default value byte list ('Hello') deserialized correctly from Rust data")
+    
+    def test_notification_value_and_device_address_lists(self):
+        """Test deserialization of notification value and device address lists from Rust binary data."""
+        # Load the Rust-generated binary with notification_value = [0x01, 0x02, 0x03, 0x04, 0x05]
+        # and device_address = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66] (now as HeaplessVec)
+        binary_data = load_binary_test_file("test_host_notify_characteristic_value.bin")
+        header = parse_protocol_header(binary_data)
+        
+        result = attrs2bin.deserialize(header['payload'], HostCommandNotifyCharacteristicValueTest)
+        
+        # Verify the notification value from lines 326-328
+        assert len(result.test_notification_value) == 5, "Should have 5 bytes in notification value"
+        expected_values = [0x01, 0x02, 0x03, 0x04, 0x05]
+        for i, byte_val in enumerate(result.test_notification_value):
+            val = byte_val.value if hasattr(byte_val, 'value') else byte_val
+            assert val == expected_values[i], f"Notification byte {i} should be 0x{expected_values[i]:02x}, got {val}"
+        
+        # Verify the device address (now HeaplessVec from lines 330-333)
+        expected_address = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66]
+        assert len(result.test_device_address) == 6, "Device address should be 6 bytes"
+        
+        # Device address is now bytes with length prefix
+        for i, byte_val in enumerate(result.test_device_address):
+            assert byte_val == expected_address[i], f"Address byte {i} should be 0x{expected_address[i]:02x}, got 0x{byte_val:02x}"
+        
+        print("✅ Notification value list and device address (with length prefix) deserialized correctly")
+    
+    def test_plugin_data_variable_length_bytes(self):
+        """Test deserialization of variable-length bytes payload from Rust binary data."""
+        # Load the Rust-generated binary with payload = b"Test data"
+        binary_data = load_binary_test_file("test_plugin_data.bin")
+        header = parse_protocol_header(binary_data)
+        
+        result = attrs2bin.deserialize(header['payload'], PluginDataTest)
+        
+        # Verify the exact payload from Rust generate_test_data.rs line 351
+        assert result.test_payload == b"Test data", "Payload should be 'Test data'"
+        assert len(result.test_payload) == 9, "Payload should be 9 bytes long"
+        
+        # Also verify other fields
+        assert result.test_send_type == DataSendTypeTest.TestWrite, "Data type should be TestWrite (32)"
+        assert result.test_timestamp == 123, "Timestamp should be 123"
+        assert result.test_connection_handle == 1, "Connection handle should be 1"
+        
+        print("✅ Variable-length bytes payload ('Test data') deserialized correctly")
+    
+    def test_service_info_characteristic_uuids_list(self):
+        """Test deserialization of list of UUIDs from Rust binary data."""
+        # Load the Rust-generated binary with 2 characteristic UUIDs
+        binary_data = load_binary_test_file("test_plugin_service_info_response.bin")
+        header = parse_protocol_header(binary_data)
+        
+        result = attrs2bin.deserialize(header['payload'], PluginServiceInfoResponseTest)
+        
+        # Verify the exact UUIDs from Rust generate_test_data.rs lines 375-381
+        assert len(result.test_characteristic_uuids) == 2, "Should have 2 characteristic UUIDs"
+        
+        import uuid as uuid_module
+        expected_uuids = [
+            uuid_module.UUID("abcdef01-2345-6789-abcd-ef0123456789").bytes,
+            uuid_module.UUID("11111111-2222-3333-4444-555555555555").bytes,
+        ]
+        
+        for i, uuid_bytes in enumerate(result.test_characteristic_uuids):
+            assert uuid_bytes == expected_uuids[i], f"UUID {i} should match expected"
+            assert len(uuid_bytes) == 16, f"UUID {i} should be 16 bytes"
+        
+        # Also verify the count field
+        assert result.test_characteristic_count == 2, "Characteristic count should be 2"
+        assert result.test_service_exists is True, "Service exists should be true"
+        assert result.test_service_active is True, "Service active should be true"
+        
+        print("✅ List of characteristic UUIDs (2 UUIDs) deserialized correctly")
+    
+    def test_characteristic_info_properties_list(self):
+        """Test deserialization of characteristic info properties list from Rust binary data."""
+        # Load the Rust-generated binary with 2-element properties list
+        binary_data = load_binary_test_file("test_plugin_characteristic_info_response.bin")
+        header = parse_protocol_header(binary_data)
+        
+        result = attrs2bin.deserialize(header['payload'], PluginCharacteristicInfoResponseTest)
+        
+        # Verify the exact values from Rust generate_test_data.rs lines 397-399
+        assert len(result.test_properties) == 2, "Should have exactly 2 properties"
+        assert result.test_properties[0] == BLEPropertiesTest.TestRead, "First property should be TestRead (10)"
+        assert result.test_properties[1] == BLEPropertiesTest.TestNotify, "Second property should be TestNotify (12)"
+        
+        # Also verify other fields
+        assert result.test_char_exists is True, "Char exists should be true"
+        assert result.test_value_length == 20, "Value length should be 20"
+        assert result.test_client_config == 1, "Client config should be 1"
+        
+        print("✅ Characteristic info properties list (2 elements) deserialized correctly")
+    
+    def test_authentication_device_address_with_length_prefix(self):
+        """Test deserialization of device address with length prefix from Rust binary data."""
+        # Load the Rust-generated binary with device_address = [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
+        # Now using HeaplessVec instead of fixed array
+        binary_data = load_binary_test_file("test_plugin_authentication_completed_response.bin")
+        header = parse_protocol_header(binary_data)
+        
+        result = attrs2bin.deserialize(header['payload'], PluginAuthenticationCompletedResponseTest)
+        
+        # Verify the exact address from Rust generate_test_data.rs lines 421-424
+        expected_address = [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
+        assert len(result.test_device_address) == 6, "Device address should be 6 bytes"
+        
+        # Device address is now bytes with length prefix
+        for i, byte_val in enumerate(result.test_device_address):
+            assert byte_val == expected_address[i], f"Address byte {i} should be 0x{expected_address[i]:02x}, got 0x{byte_val:02x}"
+        
+        # Also verify other fields
+        assert result.test_address_type == BluetoothAddressTypeTest.TestRandom, "Address type should be TestRandom (21)"
+        assert result.test_auth_success is True, "Auth success should be true"
+        assert result.test_auth_level == 3, "Auth level should be 3"
+        assert result.test_bond_created is True, "Bond created should be true"
+        
+        print("✅ Device address with length prefix deserialized correctly")
+    
+    def test_empty_lists_round_trip(self):
+        """Test that empty lists deserialize correctly in Python round-trip."""
+        import uuid as uuid_module
+        
+        # Test empty properties list
+        char_empty = HostCommandConfigureCharacteristicTest(
+            test_char_uuid=uuid_module.uuid4().bytes,
+            test_service_uuid=uuid_module.uuid4().bytes,
+            test_properties=[],  # Empty list
+            test_security_level=attrs2bin.U8(0)
+        )
+        
+        serialized = attrs2bin.serialize(char_empty)
+        deserialized = attrs2bin.deserialize(serialized, HostCommandConfigureCharacteristicTest)
+        
+        assert isinstance(deserialized.test_properties, list), "Properties should be a list"
+        assert len(deserialized.test_properties) == 0, "Properties list should be empty"
+        
+        # Test empty characteristic UUIDs list
+        service_empty = PluginServiceInfoResponseTest(
+            test_service_uuid=uuid_module.uuid4().bytes,
+            test_characteristic_uuids=[],  # Empty list
+            test_service_exists=False,
+            test_service_active=False,
+            test_characteristic_count=attrs2bin.U8(0)
+        )
+        
+        serialized = attrs2bin.serialize(service_empty)
+        deserialized = attrs2bin.deserialize(serialized, PluginServiceInfoResponseTest)
+        
+        assert isinstance(deserialized.test_characteristic_uuids, list), "UUIDs should be a list"
+        assert len(deserialized.test_characteristic_uuids) == 0, "UUIDs list should be empty"
+        
+        # Test empty bytes payload
+        plugin_empty = PluginDataTest(
+            test_source_id=uuid_module.uuid4().bytes,
+            test_send_type=DataSendTypeTest.TestWrite,
+            test_payload=b"",  # Empty bytes
+            test_timestamp=attrs2bin.U8(0),
+            test_connection_handle=attrs2bin.U8(0)
+        )
+        
+        serialized = attrs2bin.serialize(plugin_empty)
+        deserialized = attrs2bin.deserialize(serialized, PluginDataTest)
+        
+        assert isinstance(deserialized.test_payload, bytes), "Payload should be bytes"
+        assert len(deserialized.test_payload) == 0, "Payload should be empty"
+        
+        print("✅ Empty lists and bytes handle length prefixes correctly")
+    
+    def test_maximum_capacity_lists(self):
+        """Test lists at their maximum capacity with proper length prefixes."""
+        import uuid as uuid_module
+        
+        # Test max capacity for characteristic UUIDs list (HeaplessVec<Uuid, 8>)
+        max_uuids = [uuid_module.uuid4().bytes for _ in range(8)]
+        service_info = PluginServiceInfoResponseTest(
+            test_service_uuid=uuid_module.uuid4().bytes,
+            test_characteristic_uuids=max_uuids,  # 8 UUIDs (max capacity)
+            test_service_exists=True,
+            test_service_active=True,
+            test_characteristic_count=attrs2bin.U8(8)
+        )
+        
+        serialized = attrs2bin.serialize(service_info)
+        deserialized = attrs2bin.deserialize(serialized, PluginServiceInfoResponseTest)
+        
+        assert len(deserialized.test_characteristic_uuids) == 8, "Should have 8 UUIDs"
+        for i, uuid_bytes in enumerate(deserialized.test_characteristic_uuids):
+            assert uuid_bytes == max_uuids[i], f"UUID {i} should match"
+            assert len(uuid_bytes) == 16, f"UUID {i} should be 16 bytes"
+        
+        # Test max capacity for default value (HeaplessVec<u8, 16>)
+        max_default = [attrs2bin.U8(i) for i in range(16)]
+        char_read_max = HostCommandConfigureCharacteristicReadTest(
+            test_char_uuid=uuid_module.uuid4().bytes,
+            test_service_uuid=uuid_module.uuid4().bytes,
+            test_default_value=max_default,  # 16 bytes (max capacity)
+            test_read_permissions=attrs2bin.U8(1)
+        )
+        
+        serialized = attrs2bin.serialize(char_read_max)
+        deserialized = attrs2bin.deserialize(serialized, HostCommandConfigureCharacteristicReadTest)
+        
+        assert len(deserialized.test_default_value) == 16, "Should have 16 bytes"
+        for i, value in enumerate(deserialized.test_default_value):
+            assert value == i, f"Byte {i} should have value {i}"
+        
+        # Test max capacity for notification value (HeaplessVec<u8, 20>)
+        max_notification = [attrs2bin.U8(i % 256) for i in range(20)]
+        notify_max = HostCommandNotifyCharacteristicValueTest(
+            test_device_address=bytes([i % 256 for i in range(6)]),  # Now bytes with length prefix
+            test_address_type=BluetoothAddressTypeTest.TestPublic,
+            test_char_uuid=uuid_module.uuid4().bytes,
+            test_service_uuid=uuid_module.uuid4().bytes,
+            test_notification_value=max_notification,  # 20 bytes (max capacity)
+            test_confirm_required=False
+        )
+        
+        serialized = attrs2bin.serialize(notify_max)
+        deserialized = attrs2bin.deserialize(serialized, HostCommandNotifyCharacteristicValueTest)
+        
+        assert len(deserialized.test_notification_value) == 20, "Should have 20 bytes"
+        for i, value in enumerate(deserialized.test_notification_value):
+            assert value == i % 256, f"Byte {i} should have value {i % 256}"
+        
+        print("✅ Maximum capacity lists with length prefixes deserialized correctly")
 
 
 class TestBinaryDataIntegrity:
