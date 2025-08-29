@@ -732,7 +732,7 @@ def test_compatibility_status():
     print("4. ✅ Rust bincode round-trip - WORKS (tested in Rust)")
     print("5. ✅ Cross-language payload deserialization - COMPATIBLE!")
     print("\nCompatibility achieved by:")
-    print("- Using only U8 types for numeric values (avoiding u16, i8, u64)")
+    print("- Supporting all integer types (U8, U16, U32, I8, I16, I32, U64, I64)")
     print("- Consistent string and UUID handling")
     print("- Matching enum value assignments")
     print("- Identical struct field ordering")
