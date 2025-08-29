@@ -1162,7 +1162,7 @@ where
                         "BLE write received for characteristic {} in service {}: {:?} bytes",
                         char_uuid_write,
                         service_uuid_write,
-                        args.current_data()
+                        args.recv_data()
                     );
                     usb_sender
                         .send(PluginData {
@@ -1180,7 +1180,7 @@ where
                             send_type: protocol::io_types::PluginDataSendType::Write,
                             characteristic_uuid: char_uuid_write,
                             service_uuid: service_uuid_write,
-                            data: args.current_data(),
+                            data: args.recv_data(),
                         })
                         .map_err(|_| StateMachineError::UsbSendError)
                         .ok();
