@@ -218,14 +218,12 @@ unsafe fn restart_usb_read_with_delay(busid: u8, ep: u8) {
         }
     };
 
-    // No initial delay for maximum throughput
-    // std::thread::sleep(Duration::from_micros(1));
-
     // Start read with error checking and retry logic - increased retries for high-speed
     let mut retry_count = 0;
     const MAX_RETRIES: i32 = 20; // Increased from 10 for better resilience
 
     loop {
+        // No initial delay for maximum throughput
         let result =
             unsafe { usbd_ep_start_read(busid, ep, next_buffer.as_mut_ptr(), SIZE as u32) };
         if result >= 0 {
@@ -257,6 +255,8 @@ unsafe extern "C" fn usbd_cdc_acm_bulk_in(busid: u8, ep: u8, nbytes: u32) {
     if (nbytes % ep_mps) == 0 && nbytes > 0 {
         // Don't send ZLP immediately - let the next write handle it
         // This prevents endpoint busy errors
+        // Also prevents flooding the host with unnecessary packets that need processing and
+        // can cause confusion on the host side
     }
 }
 
@@ -419,23 +419,52 @@ impl CdcAcmDevice<POSTINIT> {
         scope.spawn(move || {
             let mut throttle = Throttle::new(throttle_info.0, throttle_info.1);
             let mut packet_count = 0u64;
-            let mut dropped_packets = 0u64;
+
+            // Sliding window for dropped packet tracking
+            const WINDOW_SIZE: usize = 10000; // Track last 10k packets
+            let mut window_total = 0u64;
+            let mut window_dropped = 0u64;
+            let mut total_dropped = 0u64; // Keep total for overall stats
 
             loop {
                 let data = block_on(SIGNAL.wait());
                 packet_count += 1;
+                window_total += 1;
+
+                // Reset window when it reaches the size limit
+                if window_total >= WINDOW_SIZE as u64 {
+                    // Log window statistics before reset
+                    if window_dropped > 0 {
+                        let drop_rate = (window_dropped as f64 / window_total as f64) * 100.0;
+                        ::log::info!(
+                            "Window stats: {:.2}% drop rate ({}/{} packets dropped)",
+                            drop_rate,
+                            window_dropped,
+                            window_total
+                        );
+                    }
+                    // Reset window counters
+                    window_total = 0;
+                    window_dropped = 0;
+                }
 
                 // More aggressive throttle bypass for high-speed scenarios
                 if packet_count > 100 {
                     // Increased from 10 to 100
                     if let Err(_) = throttle.accept() {
-                        dropped_packets += 1;
+                        window_dropped += 1;
+                        total_dropped += 1;
                         // Log periodically but don't spam
-                        if dropped_packets % 1000 == 0 {
+                        if total_dropped % 1000 == 0 {
+                            let recent_rate = if window_total > 0 {
+                                (window_dropped as f64 / window_total as f64) * 100.0
+                            } else {
+                                0.0
+                            };
                             ::log::debug!(
-                                "Throttle dropped {} packets out of {}",
-                                dropped_packets,
-                                packet_count
+                                "Throttle: recent drop rate {:.2}%, total dropped {}",
+                                recent_rate,
+                                total_dropped
                             );
                         }
                         continue;
@@ -445,21 +474,32 @@ impl CdcAcmDevice<POSTINIT> {
                 // Try non-blocking send with better error handling
                 match from_usb.0.try_send(data) {
                     Ok(_) => {
-                        // Reset dropped packet counter on successful sends
-                        if dropped_packets > 0 && packet_count % 1000 == 0 {
+                        // Log successful processing periodically with window stats
+                        if packet_count % 5000 == 0 && window_total > 0 {
+                            let recent_rate = (window_dropped as f64 / window_total as f64) * 100.0;
                             ::log::debug!(
-                                "Channel processing {} packets, {} dropped",
+                                "Processing: {} total packets, recent drop rate {:.2}%",
                                 packet_count,
-                                dropped_packets
+                                recent_rate
                             );
                         }
                     }
                     Err(std::sync::mpsc::TrySendError::Full(_)) => {
-                        dropped_packets += 1;
+                        window_dropped += 1;
+                        total_dropped += 1;
                         // Channel full - drop packet to maintain USB responsiveness
                         // Log channel overflow periodically
-                        if dropped_packets % 1000 == 0 {
-                            ::log::warn!("Channel overflow: dropped {} packets", dropped_packets);
+                        if total_dropped % 1000 == 0 {
+                            let recent_rate = if window_total > 0 {
+                                (window_dropped as f64 / window_total as f64) * 100.0
+                            } else {
+                                0.0
+                            };
+                            ::log::warn!(
+                                "Channel overflow: recent drop rate {:.2}%, total dropped {}",
+                                recent_rate,
+                                total_dropped
+                            );
                         }
                     }
                     Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
