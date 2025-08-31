@@ -6,7 +6,9 @@ edition = "2021"
 [dependencies]
 ## Files in shared directory
 lib_utils = { path = "../lib_utils" }
-protocol = { path = "../protocol", default-features = false }
+protocol = { path = "../protocol", default-features = false, features = [
+    "bincode_serialization",
+] }
 
 ## External crates
 anyhow = { version = "1.0", default-features = false }

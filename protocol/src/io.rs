@@ -303,8 +303,11 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
     #[inline(always)]
     #[cfg(feature = "std")]
     fn serialize_bytes(&self) -> Result<std::vec::Vec<u8>> {
-        bincode::serde::encode_to_vec(self, bincode::config::standard())
-            .map_err(|_| Error::UnableToSerializeToBincode)
+        #[cfg(feature = "bincode_serialization")]
+        return bincode::serde::encode_to_vec(self, bincode::config::standard())
+            .map_err(|_| Error::UnableToSerializeToBincode);
+        #[cfg(not(feature = "bincode_serialization"))]
+        compile_error!("Serialization requires the 'bincode_serialization' feature");
     }
 
     /// Serialize the message to a provided slice (no allocation)
@@ -334,8 +337,27 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
     /// ```
     #[inline(always)]
     fn serialize_bytes_in_slice(&self, out: &'a mut [u8]) -> Result<usize> {
-        bincode::serde::encode_into_slice(self, out, bincode::config::standard())
-            .map_err(|_| Error::UnableToSerializeToBincode)
+        #[cfg(feature = "bincode_serialization")]
+        return bincode::serde::encode_into_slice(self, out, bincode::config::standard())
+            .map_err(|_| Error::UnableToSerializeToBincode);
+        #[cfg(not(feature = "bincode_serialization"))]
+        compile_error!("Serialization requires the 'bincode_serialization' feature");
+    }
+
+    /// Deserialize the message from a byte slice (no allocation)
+    #[inline(always)]
+    #[allow(unused_variables)]
+    fn deserialize_bytes(payload: &'a [u8]) -> Result<Self> {
+        #[cfg(feature = "bincode_serialization")]
+        {
+            let res: Self =
+                bincode::serde::borrow_decode_from_slice(&payload, bincode::config::standard())
+                    .map_err(|_| Error::UnableToDeserializeFromBincode(""))?
+                    .0;
+            return Ok(res);
+        }
+        #[cfg(not(feature = "bincode_serialization"))]
+        compile_error!("Deserialization requires the 'bincode_serialization' feature");
     }
 
     /// Convert from bytes
@@ -351,14 +373,7 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
             ));
         }
 
-        let res: Self = bincode::serde::borrow_decode_from_slice(
-            &input[MESSAGE_HEADER_SIZE..(MESSAGE_HEADER_SIZE + length)],
-            bincode::config::standard(),
-        )
-        .map_err(|_| Error::UnableToDeserializeFromBincode(""))?
-        .0;
-
-        Ok(res)
+        Self::deserialize_bytes(&input[MESSAGE_HEADER_SIZE..(MESSAGE_HEADER_SIZE + length)])
     }
 
     /// Serialize to bytes

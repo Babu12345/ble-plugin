@@ -196,3 +196,7 @@ When adding new message types:
 3. Implement `MessageType` trait
 4. Add comprehensive tests
 5. Update documentation
+
+
+## Configuration options
+- Add `"rust-analyzer.cargo.features": [ "bincode_serialization" ],` to settings.json in the .vscode settings to make sure that the rust analyzer doesn't show the complier_error! at all times even when the cfg isn't valid for that error branch
