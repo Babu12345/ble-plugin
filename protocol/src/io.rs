@@ -36,7 +36,7 @@
 //! use protocol::{IO, MessageTypeId, DEFAULT_PACKET_SIZE};
 //!
 //! #[derive(Serialize, Deserialize)]
-//! #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
+//! #[HostIO(MessageTypeId::TypeHostCommandConfigurePeripheral)]
 //! struct MyCommand {
 //!     data: u32,
 //! }
@@ -52,7 +52,6 @@ use crate::{
     errors::{Error, Result},
     DEFAULT_PACKET_SIZE,
 };
-use heapless::Vec;
 use serde::{Deserialize, Serialize};
 /// Size in bytes of the message type identifier field
 ///
@@ -116,7 +115,7 @@ pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 ///
 /// impl MessageType for MyCommand {
 ///     fn message_type_id() -> MessageTypeId {
-///         MessageTypeId::HostCommandConfigurePeripheral
+///         MessageTypeId::TypeHostCommandConfigurePeripheral
 ///     }
 /// }
 /// ```
@@ -158,7 +157,7 @@ pub trait MessageType {
 /// use protocol::MessageTypeId;
 ///
 /// #[derive(Serialize, Deserialize)]
-/// #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
+/// #[HostIO(MessageTypeId::TypeHostCommandConfigurePeripheral)]
 /// struct MyCommand {
 ///     data: u32,
 /// }
@@ -347,7 +346,7 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
         let length = self.serialize_bytes_in_slice(payload)? as usize;
 
         // Create header: magic + type_id + length
-        let mut header_bytes: Vec<u8, MESSAGE_HEADER_SIZE> = Vec::new();
+        let mut header_bytes: Vec<u8> = Vec::new();
 
         // Add magic bytes (0xDEAD)
         let _ = header_bytes.extend_from_slice(&MESSAGE_MAGIC.to_le_bytes());

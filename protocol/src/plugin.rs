@@ -168,19 +168,19 @@ pub mod plugin {
 mod tests {
 
     use crate::host::HostReceivedData;
-    use crate::io_types::PluginData;
+    use crate::protocol::*;
     use crate::DEFAULT_PACKET_SIZE;
     use crate::IO;
 
     #[test]
     fn test_std_encoding_and_decoding() {
         let cmd = PluginData {
-            src_addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
-            src_addr_type: crate::io_types::BluetoothAddressType::Public,
-            send_type: crate::io_types::PluginDataSendType::Notify,
+            src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
+            src_addr_type: BluetoothAddressType::Public as _,
+            send_type: PluginDataSendType::NotifyType as _,
             characteristic_uuid: 0x2A29,
             service_uuid: 0x180A,
-            data: b"Cool test\0",
+            data: Vec::from(b"Cool test"),
         };
 
         let data: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
@@ -196,12 +196,12 @@ mod tests {
     #[test]
     fn test_no_std_encoding_and_decoding() {
         let cmd = PluginData {
-            src_addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
-            src_addr_type: crate::io_types::BluetoothAddressType::Public,
-            send_type: crate::io_types::PluginDataSendType::Notify,
+            src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
+            src_addr_type: BluetoothAddressType::Public as _,
+            send_type: PluginDataSendType::NotifyType as _,
             characteristic_uuid: 0x2A29,
             service_uuid: 0x180A,
-            data: b"Another one\0",
+            data: Vec::from(b"Another one\0"),
         };
 
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];

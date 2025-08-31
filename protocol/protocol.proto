@@ -12,39 +12,39 @@ enum MessageTypeId {
   
   // Host Commands (0x01-0x0F)
   // Configure BLE peripheral device with name and 6-byte address
-  HOST_COMMAND_CONFIGURE_PERIPHERAL = 0x01;
+  TypeHostCommandConfigurePeripheral = 0x01;
   // Create a new BLE service with specified u16 UUID
-  HOST_COMMAND_CONFIGURE_SERVICE = 0x02;
+  TypeHostCommandConfigureService = 0x02;
   // Create a BLE characteristic with properties
-  HOST_COMMAND_CONFIGURE_CHARACTERISTIC = 0x03;
+  TypeHostCommandConfigureCharacteristic = 0x03;
   // Configure characteristic for read operations with default value
-  HOST_COMMAND_CONFIGURE_CHARACTERISTIC_READ = 0x04;
+  TypeHostCommandConfigureCharacteristicRead = 0x04;
   // Query information about a BLE service
-  HOST_COMMAND_GET_SERVICE_INFO = 0x05;
+  TypeHostCommandGetServiceInfo = 0x05;
   // Query information about a BLE characteristic
-  HOST_COMMAND_GET_CHARACTERISTIC_INFO = 0x06;
+  TypeHostCommandGetCharacteristicInfo = 0x06;
   // Start BLE advertising with optional multi-connect support
-  HOST_COMMAND_START_ADVERTISEMENT = 0x07;
+  TypeHostCommandStartAdvertisement = 0x07;
   // Send notification/indication to connected BLE client
-  HOST_COMMAND_NOTIFY_CHARACTERISTIC_VALUE = 0x08;
+  TypeHostCommandNotifyCharacteristicValue = 0x08;
   // Configure BLE security settings (pairing, bonding, passkey, etc.)
-  HOST_COMMAND_CONFIGURE_PERIPHERAL_SECURITY = 0x09;
+  TypeHostCommandConfigurePeripheralSecurity = 0x09;
   // Configure BLE profile with predefined services and characteristics
-  HOST_COMMAND_CONFIGURE_PROFILE = 0x0A;
+  TypeHostCommandConfigureProfile = 0x0A;
   // Stop BLE advertising
-  HOST_COMMAND_STOP_ADVERTISEMENT = 0x0B;
+  TypeHostCommandStopAdvertisement = 0x0B;
   
   // Plugin Responses (0x80+)
   // Data forwarded from BLE client to BLE plugin
-  PLUGIN_DATA = 0x80;
+  TypePluginData = 0x80;
   // Configuration error response from plugin
-  PLUGIN_CONFIGURATION_ERROR = 0x81;
+  TypePluginConfigurationError = 0x81;
   // Service information response with characteristic list
-  PLUGIN_SERVICE_INFO_RESPONSE = 0x82;
+  TypePluginServiceInfoResponse = 0x82;
   // Characteristic information response with properties
-  PLUGIN_CHARACTERISTIC_INFO_RESPONSE = 0x83;
+  TypePluginCharacteristicInfoResponse = 0x83;
   // Authentication completed response from plugin
-  PLUGIN_AUTHENTICATION_COMPLETED_RESPONSE = 0x84;
+  TypePluginAuthenticationCompletedResponse = 0x84;
 }
 
 // Host messages
@@ -54,6 +54,8 @@ enum MessageTypeId {
 // - Static Random: MSB bits = 11 (0xC0-0xFF), remaining 46 bits must have at least one 0 and one 1
 // - Non-Resolvable Private: MSB bits = 00 (0x00-0x3F), remaining 46 bits must have at least one 0 and one 1
 // Invalid pattern like 0xa1a1a1a1a1a1 has MSB bits = 10 (not allowed)
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheral))
 message HostCommandConfigurePeripheral {
   // Peripheral name
   string name = 1;
@@ -62,18 +64,23 @@ message HostCommandConfigurePeripheral {
 }
 
 // Host command. Configure peripheral security
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheralSecurity))
 message HostCommandConfigurePeripheralSecurity {
   // Passkey for pairing (6 digit numeric)
   uint32 passkey = 1;
 }
 
 // Host command. Configure service
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureService))
 message HostCommandConfigureService {
   // Service UUID (u16)
   uint32 uuid = 1; // u16 in Rust, using uint32 in proto3
 }
 
 // Properties enumeration for BLE characteristics
+// @derive(serde::Deserialize, serde::Serialize)
 enum BLEProperties {
   BLE_PROPERTIES_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Read property
@@ -89,6 +96,8 @@ enum BLEProperties {
 }
 
 // Host command. Configure characteristic
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristic))
 message HostCommandConfigureCharacteristic {
   // Characteristic UUID (u16)
   uint32 uuid = 1; // u16 in Rust
@@ -99,6 +108,8 @@ message HostCommandConfigureCharacteristic {
 }
 
 // Host command. Configure characteristic read
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristicRead))
 message HostCommandConfigureCharacteristicRead {
   // Characteristic UUID (u16)
   uint32 uuid = 1; // u16 in Rust
@@ -109,12 +120,16 @@ message HostCommandConfigureCharacteristicRead {
 }
 
 // Host command. Get service info
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandGetServiceInfo))
 message HostCommandGetServiceInfo {
   // Service UUID (u16)
   uint32 uuid = 1; // u16 in Rust
 }
 
 // Host command. Get characteristic info
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandGetCharacteristicInfo))
 message HostCommandGetCharacteristicInfo {
   // Characteristic UUID (u16)
   uint32 characteristic_uuid = 1; // u16 in Rust
@@ -123,17 +138,22 @@ message HostCommandGetCharacteristicInfo {
 }
 
 // Host command. Start advertisement. TODO: Allow selecting which services you want to advertise
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandStartAdvertisement))
 message HostCommandStartAdvertisement {
   // Allow multiple central connections
   bool allow_multi_connect = 1;
 }
 
 // Host command. Stop all advertisement
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandStopAdvertisement))
 message HostCommandStopAdvertisement {
   // Empty message
 }
 
 // Bluetooth Device address type
+// @derive(serde::Deserialize, serde::Serialize)
 enum BluetoothAddressType {
   BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Public address
@@ -147,6 +167,8 @@ enum BluetoothAddressType {
 }
 
 // Host command. Notify characteristic value
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandNotifyCharacteristicValue))
 message HostCommandNotifyCharacteristicValue {
   // Device Address
   bytes address = 1; // 6 bytes
@@ -161,6 +183,7 @@ message HostCommandNotifyCharacteristicValue {
 }
 
 // Profile type enumeration for preconfigured BLE profiles
+// @derive(serde::Deserialize, serde::Serialize)
 enum BLEProfile {
   BLE_PROFILE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Custom profile - user-defined services
@@ -174,6 +197,8 @@ enum BLEProfile {
 }
 
 // Host command. Configure BLE profile
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureProfile))
 message HostCommandConfigureProfile {
   // Profile type to configure
   BLEProfile profile = 1;
@@ -185,6 +210,7 @@ message HostCommandConfigureProfile {
 // write event (central -> peripheral), notify event (peripheral -> central),
 // or read attempt (central -> peripheral). Depending on which, a response
 // might be expected or sent
+// @derive(serde::Deserialize, serde::Serialize)
 enum PluginDataSendType {
   PLUGIN_DATA_SEND_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Notified from the central bluetooth device
@@ -196,6 +222,8 @@ enum PluginDataSendType {
 }
 
 // Plugin data
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginData))
 message PluginData {
   // Source peripheral addr that this data is originating from
   bytes src_addr = 1; // 6 bytes
@@ -212,6 +240,8 @@ message PluginData {
 }
 
 // Represents the error that can occur during plugin configuration
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginConfigurationError))
 enum PluginConfigurationError {
   PLUGIN_CONFIGURATION_ERROR_UNSPECIFIED = 0; // Proto3 requires a zero value
   // The peripheral name is too long
@@ -231,6 +261,8 @@ enum PluginConfigurationError {
 }
 
 // Service information response
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginServiceInfoResponse))
 message PluginServiceInfoResponse {
   // Service UUID (u16)
   uint32 service_uuid = 1; // u16 in Rust
@@ -241,6 +273,8 @@ message PluginServiceInfoResponse {
 }
 
 // Characteristic information response
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginCharacteristicInfoResponse))
 message PluginCharacteristicInfoResponse {
   // Characteristic UUID (u16)
   uint32 characteristic_uuid = 1; // u16 in Rust
@@ -253,6 +287,8 @@ message PluginCharacteristicInfoResponse {
 }
 
 // Plugin authentication completed response
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginAuthenticationCompletedResponse))
 message PluginAuthenticationCompletedResponse {
   // Address of the device that was authenticated
   bytes address = 1; // 6 bytes

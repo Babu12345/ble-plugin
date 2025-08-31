@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 fn main() {
@@ -24,20 +25,34 @@ fn main() {
                 }
             }
             
-            // Check for @rust_macro annotation for custom macros like HostIO, PluginIO
+            // Check for @rust_macro annotation - handle nested parentheses
             if line.contains("@rust_macro(") {
                 if let Some(start) = line.find("@rust_macro(") {
                     let macro_start = start + "@rust_macro(".len();
-                    if let Some(end) = line[macro_start..].find(')') {
-                        let macro_content = &line[macro_start..macro_start + end];
-                        // Handle special cases for HostIO and PluginIO with MessageTypeId
-                        if macro_content.starts_with("HostIO(") || macro_content.starts_with("PluginIO(") {
-                            // Convert MessageTypeId:: references to crate::protocol::MessageTypeId::
-                            let processed = macro_content.replace("MessageTypeId::", "crate::protocol::MessageTypeId::");
-                            pending_attributes.push(format!("#[{}]", processed));
-                        } else {
-                            pending_attributes.push(format!("#[{}]", macro_content));
+                    // Find matching closing parenthesis, accounting for nested ones
+                    let rest = &line[macro_start..];
+                    let mut paren_count = 1;
+                    let mut end_pos = 0;
+                    
+                    for (i, ch) in rest.chars().enumerate() {
+                        if ch == '(' {
+                            paren_count += 1;
+                        } else if ch == ')' {
+                            paren_count -= 1;
+                            if paren_count == 0 {
+                                end_pos = i;
+                                break;
+                            }
                         }
+                    }
+                    
+                    if paren_count == 0 {
+                        let macro_content = &rest[..end_pos];
+                        // For HostIO and PluginIO, we need to add the proper imports
+                        // The macros expect just the variant name, not the full path
+                        let processed = macro_content
+                            .replace("MessageTypeId::", "crate::protocol::MessageTypeId::");
+                        pending_attributes.push(format!("#[{}]", processed));
                     }
                 }
             }
@@ -58,15 +73,30 @@ fn main() {
 
         let out_dir = PathBuf::from("src");
         let mut config = prost_build::Config::new();
-        config.out_dir(out_dir);
+        config.out_dir(&out_dir);
 
-        // Add all attributes (derives and custom macros) for each type
+        // Add all attributes (derives and macros) for each type
         for (type_path, attributes) in type_attributes {
             for attribute in attributes {
                 config.type_attribute(&type_path, &attribute);
             }
         }
 
-        config.compile_protos(&["protocol.proto"], &["."]).unwrap();
+        config.compile_protos(&["protocol.proto"], &["."])
+            .expect("Failed to compile protos");
+            
+        // Post-process the generated file to add necessary imports
+        let protocol_file = out_dir.join("protocol.rs");
+        let content = fs::read_to_string(&protocol_file)
+            .expect("Failed to read generated protocol.rs");
+            
+        // Add imports at the beginning of the file
+        let imports = "use crate::{IO, HostIO, PluginIO, MessageType};\n\n";
+        let new_content = format!("{}{}", imports, content);
+        
+        let mut file = fs::File::create(&protocol_file)
+            .expect("Failed to open protocol.rs for writing");
+        file.write_all(new_content.as_bytes())
+            .expect("Failed to write modified protocol.rs");
     }
 }

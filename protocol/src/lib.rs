@@ -207,13 +207,13 @@ pub const DEFAULT_PACKET_SIZE: usize = 64;
 
 #[cfg(test)]
 mod tests {
-    use crate::io_types::*;
+    use crate::protocol::*;
     use crate::{
         io::{
             DATA_BYTES_LENGTH_IN_BYTES, MESSAGE_HEADER_SIZE, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES,
             MESSAGE_TYPE_ID_BYTES,
         },
-        MessageType, MessageTypeId, DEFAULT_PACKET_SIZE, IO,
+        MessageType, DEFAULT_PACKET_SIZE, IO,
     };
     use strum::IntoEnumIterator;
 
@@ -249,27 +249,36 @@ mod tests {
     #[test]
     fn test_message_type_id_values() {
         // Test that message type IDs have expected values
-        assert_eq!(MessageTypeId::HostCommandConfigurePeripheral as u8, 0x01);
-        assert_eq!(MessageTypeId::HostCommandConfigureService as u8, 0x02);
         assert_eq!(
-            MessageTypeId::HostCommandConfigureCharacteristic as u8,
+            MessageTypeId::TypeHostCommandConfigurePeripheral as u8,
+            0x01
+        );
+        assert_eq!(MessageTypeId::TypeHostCommandConfigureService as u8, 0x02);
+        assert_eq!(
+            MessageTypeId::TypeHostCommandConfigureCharacteristic as u8,
             0x03
         );
         assert_eq!(
-            MessageTypeId::HostCommandConfigureCharacteristicRead as u8,
+            MessageTypeId::TypeHostCommandConfigureCharacteristicRead as u8,
             0x04
         );
-        assert_eq!(MessageTypeId::HostCommandGetServiceInfo as u8, 0x05);
-        assert_eq!(MessageTypeId::HostCommandGetCharacteristicInfo as u8, 0x06);
-        assert_eq!(MessageTypeId::HostCommandStartAdvertisement as u8, 0x07);
+        assert_eq!(MessageTypeId::TypeHostCommandGetServiceInfo as u8, 0x05);
         assert_eq!(
-            MessageTypeId::HostCommandNotifyCharacteristicValue as u8,
+            MessageTypeId::TypeHostCommandGetCharacteristicInfo as u8,
+            0x06
+        );
+        assert_eq!(MessageTypeId::TypeHostCommandStartAdvertisement as u8, 0x07);
+        assert_eq!(
+            MessageTypeId::TypeHostCommandNotifyCharacteristicValue as u8,
             0x08
         );
-        assert_eq!(MessageTypeId::PluginData as u8, 0x80);
-        assert_eq!(MessageTypeId::PluginConfigurationError as u8, 0x81);
-        assert_eq!(MessageTypeId::PluginServiceInfoResponse as u8, 0x82);
-        assert_eq!(MessageTypeId::PluginCharacteristicInfoResponse as u8, 0x83);
+        assert_eq!(MessageTypeId::TypePluginData as u8, 0x80);
+        assert_eq!(MessageTypeId::TypePluginConfigurationError as u8, 0x81);
+        assert_eq!(MessageTypeId::TypePluginServiceInfoResponse as u8, 0x82);
+        assert_eq!(
+            MessageTypeId::TypePluginCharacteristicInfoResponse as u8,
+            0x83
+        );
     }
 
     #[test]
@@ -277,60 +286,57 @@ mod tests {
         // Test that each message type has correct MessageType implementation
         assert_eq!(
             HostCommandConfigurePeripheral::message_type_id() as u8,
-            MessageTypeId::HostCommandConfigurePeripheral as u8
+            MessageTypeId::TypeHostCommandConfigurePeripheral as u8
         );
         assert_eq!(
             HostCommandConfigureService::message_type_id() as u8,
-            MessageTypeId::HostCommandConfigureService as u8
+            MessageTypeId::TypeHostCommandConfigureService as u8
         );
         assert_eq!(
             HostCommandConfigureCharacteristic::message_type_id() as u8,
-            MessageTypeId::HostCommandConfigureCharacteristic as u8
+            MessageTypeId::TypeHostCommandConfigureCharacteristic as u8
         );
         assert_eq!(
             HostCommandConfigureCharacteristicRead::message_type_id() as u8,
-            MessageTypeId::HostCommandConfigureCharacteristicRead as u8
+            MessageTypeId::TypeHostCommandConfigureCharacteristicRead as u8
         );
         assert_eq!(
             HostCommandGetServiceInfo::message_type_id() as u8,
-            MessageTypeId::HostCommandGetServiceInfo as u8
+            MessageTypeId::TypeHostCommandGetServiceInfo as u8
         );
         assert_eq!(
             HostCommandGetCharacteristicInfo::message_type_id() as u8,
-            MessageTypeId::HostCommandGetCharacteristicInfo as u8
+            MessageTypeId::TypeHostCommandGetCharacteristicInfo as u8
         );
         assert_eq!(
             HostCommandStartAdvertisement::message_type_id() as u8,
-            MessageTypeId::HostCommandStartAdvertisement as u8
+            MessageTypeId::TypeHostCommandStartAdvertisement as u8
         );
         assert_eq!(
             HostCommandNotifyCharacteristicValue::message_type_id() as u8,
-            MessageTypeId::HostCommandNotifyCharacteristicValue as u8
+            MessageTypeId::TypeHostCommandNotifyCharacteristicValue as u8
         );
         assert_eq!(
             PluginConfigurationError::message_type_id() as u8,
-            MessageTypeId::PluginConfigurationError as u8
+            MessageTypeId::TypePluginConfigurationError as u8
         );
         assert_eq!(
             PluginServiceInfoResponse::message_type_id() as u8,
-            MessageTypeId::PluginServiceInfoResponse as u8
+            MessageTypeId::TypePluginServiceInfoResponse as u8
         );
         assert_eq!(
             PluginCharacteristicInfoResponse::message_type_id() as u8,
-            MessageTypeId::PluginCharacteristicInfoResponse as u8
+            MessageTypeId::TypePluginCharacteristicInfoResponse as u8
         );
     }
 
     #[cfg(feature = "std")]
     #[test]
     fn test_host_command_serialization_with_header() {
-        use heapless::String;
-
         // Test HostCommandConfigurePeripheral serialization
         let cmd = HostCommandConfigurePeripheral {
             name: String::try_from("TestDevice").expect("Should create string"),
-            addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06])
-                .expect("Should create address"),
+            addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
         };
 
         let serialized: [u8; DEFAULT_PACKET_SIZE] =
@@ -347,7 +353,7 @@ mod tests {
         let type_id = serialized[MESSAGE_MAGIC_BYTES];
         assert_eq!(
             type_id,
-            MessageTypeId::HostCommandConfigurePeripheral as u8,
+            MessageTypeId::TypeHostCommandConfigurePeripheral as u8,
             "Message type ID should be correct"
         );
 
@@ -367,12 +373,10 @@ mod tests {
     #[cfg(feature = "std")]
     #[test]
     fn test_plugin_response_serialization_with_header() {
-        use heapless::Vec;
-
         // Test PluginServiceInfoResponse serialization
-        let mut char_uuids: Vec<u16, 16> = Vec::new();
-        char_uuids.push(0).ok();
-        char_uuids.push(u16::MAX).ok();
+        let mut char_uuids: Vec<u32> = Vec::new();
+        char_uuids.push(0);
+        char_uuids.push(u32::MAX);
 
         let response = PluginServiceInfoResponse {
             service_uuid: 0,
@@ -391,7 +395,7 @@ mod tests {
         let type_id = serialized[MESSAGE_MAGIC_BYTES];
         assert_eq!(
             type_id,
-            MessageTypeId::PluginServiceInfoResponse as u8,
+            MessageTypeId::TypePluginServiceInfoResponse as u8,
             "Message type ID should be correct for plugin response"
         );
     }
@@ -412,7 +416,7 @@ mod tests {
         assert_eq!(magic, MESSAGE_MAGIC);
 
         let type_id = buffer[MESSAGE_MAGIC_BYTES];
-        assert_eq!(type_id, MessageTypeId::HostCommandGetServiceInfo as u8);
+        assert_eq!(type_id, MessageTypeId::TypeHostCommandGetServiceInfo as u8);
 
         // Deserialize and verify round-trip
         let deserialized_cmd = HostCommandGetServiceInfo::from_bytes(&buffer)
@@ -472,7 +476,7 @@ mod tests {
         // Set correct magic and type ID
         invalid_buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
         invalid_buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
-        invalid_buffer[2] = MessageTypeId::HostCommandGetServiceInfo as u8;
+        invalid_buffer[2] = MessageTypeId::TypeHostCommandGetServiceInfo as u8;
 
         // Set impossibly large length (bigger than packet size)
         let invalid_length = DEFAULT_PACKET_SIZE + 100;
@@ -490,30 +494,28 @@ mod tests {
     #[test]
     fn test_message_type_id_ranges() {
         // Verify host commands are in 0x01-0x7F range
-        assert!((MessageTypeId::HostCommandConfigurePeripheral as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandConfigureService as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandConfigureCharacteristic as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandConfigureCharacteristicRead as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandGetServiceInfo as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandGetCharacteristicInfo as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandStartAdvertisement as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandNotifyCharacteristicValue as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandConfigurePeripheralSecurity as u8) < 0x80);
-        assert!((MessageTypeId::HostCommandConfigureProfile as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandConfigurePeripheral as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandConfigureService as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandConfigureCharacteristic as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandConfigureCharacteristicRead as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandGetServiceInfo as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandGetCharacteristicInfo as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandStartAdvertisement as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandNotifyCharacteristicValue as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandConfigurePeripheralSecurity as u8) < 0x80);
+        assert!((MessageTypeId::TypeHostCommandConfigureProfile as u8) < 0x80);
 
         // Verify plugin responses are in 0x80+ range
-        assert!((MessageTypeId::PluginData as u8) >= 0x80);
-        assert!((MessageTypeId::PluginConfigurationError as u8) >= 0x80);
-        assert!((MessageTypeId::PluginServiceInfoResponse as u8) >= 0x80);
-        assert!((MessageTypeId::PluginCharacteristicInfoResponse as u8) >= 0x80);
+        assert!((MessageTypeId::TypePluginData as u8) >= 0x80);
+        assert!((MessageTypeId::TypePluginConfigurationError as u8) >= 0x80);
+        assert!((MessageTypeId::TypePluginServiceInfoResponse as u8) >= 0x80);
+        assert!((MessageTypeId::TypePluginCharacteristicInfoResponse as u8) >= 0x80);
     }
 
     #[test]
     fn test_configure_profile_serialization() {
-        use crate::io_types::{BLEProfile, HostCommandConfigureProfile};
-
         let cmd = HostCommandConfigureProfile {
-            profile: BLEProfile::Custom,
+            profile: BleProfile::Custom as _,
         };
 
         // Test serialization
@@ -525,7 +527,10 @@ mod tests {
 
         // Verify message type ID
         let type_id = serialized[MESSAGE_MAGIC_BYTES];
-        assert_eq!(type_id, MessageTypeId::HostCommandConfigureProfile as u8);
+        assert_eq!(
+            type_id,
+            MessageTypeId::TypeHostCommandConfigureProfile as u8
+        );
 
         // Test round-trip
         let deserialized =
@@ -535,14 +540,12 @@ mod tests {
 
     #[test]
     fn test_ble_profile_enum_values() {
-        use crate::io_types::BLEProfile;
-
         // Verify enum values
-        assert_eq!(BLEProfile::Custom as u8, 0);
+        assert_eq!(BleProfile::Custom as u8, 1);
 
         // Test that enum can be created and compared
-        let profile1 = BLEProfile::Custom;
-        let profile2 = BLEProfile::Custom;
+        let profile1 = BleProfile::Custom;
+        let profile2 = BleProfile::Custom;
         assert_eq!(profile1, profile2);
     }
 }

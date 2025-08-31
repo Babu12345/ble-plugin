@@ -72,15 +72,15 @@ mod tests {
     use core::str::FromStr;
 
     use crate::plugin::PluginReceivedData;
+    use crate::protocol::*;
+    use crate::DEFAULT_PACKET_SIZE;
     use crate::IO;
-    use crate::{io_types::HostCommandConfigurePeripheral, DEFAULT_PACKET_SIZE};
-    use heapless::String;
 
     #[test]
     fn test_std_encoding_and_decoding() {
         let cmd = HostCommandConfigurePeripheral {
             name: String::from_str("Hello").unwrap(),
-            addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
+            addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
         };
         let data: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
         let received_data = PluginReceivedData::new(data);
@@ -96,7 +96,7 @@ mod tests {
     fn test_no_std_encoding_and_decoding() {
         let cmd = HostCommandConfigurePeripheral {
             name: String::from_str("Hello").unwrap(),
-            addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
+            addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
         };
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
         cmd.to_bytes_in_slice(&mut buffer).unwrap();
