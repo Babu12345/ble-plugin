@@ -6,8 +6,16 @@ import threading
 import time
 import queue
 import os
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from plugin_host.generated_types import *
+
+# Optional protobuf support
+try:
+    import plugin_host.protocol_pb2 as protocol_pb2
+    PROTOBUF_AVAILABLE = True
+except ImportError:
+    PROTOBUF_AVAILABLE = False
+    protocol_pb2 = None
 def parse_uuid_u16(uuid_value) -> int:
     """Parse UUID as u16 value
     
@@ -278,6 +286,77 @@ def serialize_command(command: Any) -> bytes:
     except Exception as e:
         raise USBCommunicationError(f"Failed to serialize command: {e}")
 
+def serialize_command_protobuf(command: Any) -> bytes:
+    """
+    Serialize a protocol command object to bytes using protobuf with full message header
+    
+    Format: [2-byte magic][1-byte type_id][2-byte length][serialized data][padding to DEFAULT_PACKET_SIZE]
+    
+    Args:
+        command: Protobuf command object
+        
+    Returns:
+        bytes: Serialized command data with full message header and padding
+        
+    Raises:
+        USBCommunicationError: If serialization fails or protobuf not available
+    """
+    if not PROTOBUF_AVAILABLE:
+        raise USBCommunicationError("Protobuf support is not available")
+    
+    try:
+        # Map protobuf classes to their message type IDs
+        protobuf_to_type_id = {
+            protocol_pb2.HostCommandConfigurePeripheral: MessageTypeId.TypeHostCommandConfigurePeripheral,
+            protocol_pb2.HostCommandConfigurePeripheralSecurity: MessageTypeId.TypeHostCommandConfigurePeripheralSecurity,
+            protocol_pb2.HostCommandConfigureService: MessageTypeId.TypeHostCommandConfigureService,
+            protocol_pb2.HostCommandConfigureCharacteristic: MessageTypeId.TypeHostCommandConfigureCharacteristic,
+            protocol_pb2.HostCommandConfigureCharacteristicRead: MessageTypeId.TypeHostCommandConfigureCharacteristicRead,
+            protocol_pb2.HostCommandGetServiceInfo: MessageTypeId.TypeHostCommandGetServiceInfo,
+            protocol_pb2.HostCommandGetCharacteristicInfo: MessageTypeId.TypeHostCommandGetCharacteristicInfo,
+            protocol_pb2.HostCommandStartAdvertisement: MessageTypeId.TypeHostCommandStartAdvertisement,
+            protocol_pb2.HostCommandStopAdvertisement: MessageTypeId.TypeHostCommandStopAdvertisement,
+            protocol_pb2.HostCommandNotifyCharacteristicValue: MessageTypeId.TypeHostCommandNotifyCharacteristicValue,
+            protocol_pb2.HostCommandConfigureProfile: MessageTypeId.TypeHostCommandConfigureProfile,
+        }
+        
+        # Get message type ID for this command
+        command_type = type(command)
+        if command_type not in protobuf_to_type_id:
+            raise USBCommunicationError(f"Unknown protobuf message type: {command_type}")
+        
+        message_type_id = protobuf_to_type_id[command_type]
+        
+        # Use protobuf to serialize the command
+        serialized_data = command.SerializeToString()
+        data_length = len(serialized_data)
+        
+        # Ensure the data fits within the packet size (accounting for full header)
+        if data_length + MESSAGE_HEADER_SIZE > DEFAULT_PACKET_SIZE:
+            raise USBCommunicationError(f"Command size ({data_length}) + header ({MESSAGE_HEADER_SIZE}) exceeds packet size ({DEFAULT_PACKET_SIZE})")
+        
+        # Create message header
+        header = bytearray()
+        
+        # Add magic bytes (0xDEAD, little-endian)
+        header.extend(struct.pack('<H', MESSAGE_MAGIC))
+        
+        # Add message type ID
+        header.append(message_type_id.value)
+        
+        # Add length (2-byte little-endian)
+        header.extend(struct.pack('<H', data_length))
+        
+        # Combine header with serialized data
+        complete_data = bytes(header) + serialized_data
+        
+        # Pad to packet size for consistent USB transfers
+        padded_data = complete_data + b'\x00' * (DEFAULT_PACKET_SIZE - len(complete_data))
+        return padded_data
+        
+    except Exception as e:
+        raise USBCommunicationError(f"Failed to serialize protobuf command: {e}")
+
 def deserialize_response(data: bytes, response_type: type = None) -> Any:
     """
     Deserialize bytes to a protocol response object using attrs2bin with full message header
@@ -342,13 +421,91 @@ def deserialize_response(data: bytes, response_type: type = None) -> Any:
     except Exception as e:
         raise USBCommunicationError(f"Failed to deserialize response: {e}")
 
-def usb_send_command(device: USBDevice, command: Any) -> bool:
+def deserialize_response_protobuf(data: bytes, response_type: type = None) -> Any:
+    """
+    Deserialize bytes to a protocol response object using protobuf with full message header
+    
+    Format: [2-byte magic][1-byte type_id][2-byte length][serialized data][padding]
+    
+    Args:
+        data: Raw bytes received from USB
+        response_type: Optional expected protobuf response type class (if None, auto-detect from type ID)
+        
+    Returns:
+        Any: Deserialized protobuf response object
+        
+    Raises:
+        USBCommunicationError: If deserialization fails or protobuf not available
+    """
+    if not PROTOBUF_AVAILABLE:
+        raise USBCommunicationError("Protobuf support is not available")
+    
+    try:
+        # Check minimum header size
+        if len(data) < MESSAGE_HEADER_SIZE:
+            raise USBCommunicationError(f"Data too short to contain message header: {len(data)} bytes")
+        
+        # Verify magic number
+        magic = struct.unpack('<H', data[:MESSAGE_MAGIC_BYTES])[0]
+        if magic != MESSAGE_MAGIC:
+            raise USBCommunicationError(f"Invalid magic number: expected 0x{MESSAGE_MAGIC:04X}, got 0x{magic:04X}")
+        
+        # Extract message type ID
+        type_id_byte = data[MESSAGE_MAGIC_BYTES]
+        try:
+            message_type_id = MessageTypeId(type_id_byte)
+        except ValueError:
+            raise USBCommunicationError(f"Unknown message type ID: 0x{type_id_byte:02X}")
+        
+        # Extract data length
+        length_start = MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES
+        length_end = length_start + DATA_BYTES_LENGTH_IN_BYTES
+        data_length = struct.unpack('<H', data[length_start:length_end])[0]
+        
+        # Validate length
+        if data_length > DEFAULT_PACKET_SIZE:
+            raise USBCommunicationError(f"Data length ({data_length}) exceeds packet size ({DEFAULT_PACKET_SIZE})")
+        
+        # Map message type IDs to protobuf classes
+        type_id_to_protobuf = {
+            MessageTypeId.TypePluginData: protocol_pb2.PluginData,
+            MessageTypeId.TypePluginConfigurationError: protocol_pb2.PluginConfigurationError,
+            MessageTypeId.TypePluginServiceInfoResponse: protocol_pb2.PluginServiceInfoResponse,
+            MessageTypeId.TypePluginCharacteristicInfoResponse: protocol_pb2.PluginCharacteristicInfoResponse,
+            MessageTypeId.TypePluginAuthenticationCompletedResponse: protocol_pb2.PluginAuthenticationCompletedResponse,
+        }
+        
+        # Determine response type from message ID if not provided
+        if response_type is None:
+            if message_type_id not in type_id_to_protobuf:
+                raise USBCommunicationError(f"No protobuf handler for message type ID: {message_type_id}")
+            response_type = type_id_to_protobuf[message_type_id]
+        
+        # Extract the actual serialized data using the length
+        data_start = MESSAGE_HEADER_SIZE
+        data_end = data_start + data_length
+        
+        if data_end > len(data):
+            raise USBCommunicationError(f"Insufficient data: expected {data_length} bytes, got {len(data) - MESSAGE_HEADER_SIZE}")
+        
+        serialized_data = data[data_start:data_end]
+        
+        # Use protobuf to deserialize the response
+        response = response_type()
+        response.ParseFromString(serialized_data)
+        return response
+        
+    except Exception as e:
+        raise USBCommunicationError(f"Failed to deserialize protobuf response: {e}")
+
+def usb_send_command(device: USBDevice, command: Any, use_protobuf: bool = False) -> bool:
     """
     Send a protocol command over USB with optional delay after sending
     
     Args:
         device: Connected USB device
         command: Protocol command object to send
+        use_protobuf: Use protobuf serialization if True, otherwise use attrs2bin
         
     Returns:
         bool: True if successful
@@ -357,7 +514,10 @@ def usb_send_command(device: USBDevice, command: Any) -> bool:
         USBCommunicationError: If sending fails
     """
     try:
-        serialized_data = serialize_command(command)
+        if use_protobuf:
+            serialized_data = serialize_command_protobuf(command)
+        else:
+            serialized_data = serialize_command(command)
         bytes_sent = device.send_data(serialized_data)
         result = bytes_sent == len(serialized_data)
         
@@ -371,13 +531,14 @@ def usb_send_command(device: USBDevice, command: Any) -> bool:
     except Exception as e:
         raise USBCommunicationError(f"Failed to send command: {e}")
 
-def usb_receive_response(device: USBDevice, response_type: type = None) -> Any:
+def usb_receive_response(device: USBDevice, response_type: type = None, use_protobuf: bool = False) -> Any:
     """
     Receive and deserialize a protocol response over USB
     
     Args:
         device: Connected USB device
         response_type: Optional expected response type class (auto-detected if None)
+        use_protobuf: Use protobuf deserialization if True, otherwise use attrs2bin
         
     Returns:
         Any: Deserialized response object
@@ -387,12 +548,15 @@ def usb_receive_response(device: USBDevice, response_type: type = None) -> Any:
     """
     try:
         raw_data = device.receive_data()
-        response = deserialize_response(raw_data, response_type)
+        if use_protobuf:
+            response = deserialize_response_protobuf(raw_data, response_type)
+        else:
+            response = deserialize_response(raw_data, response_type)
         return response
     except Exception as e:
         raise USBCommunicationError(f"Failed to receive response: {e}")
 
-def usb_send_and_receive(device: USBDevice, command: Any, response_type: type = None) -> Any:
+def usb_send_and_receive(device: USBDevice, command: Any, response_type: type = None, use_protobuf: bool = False) -> Any:
     """
     Send a command and receive response in one operation
     
@@ -400,6 +564,7 @@ def usb_send_and_receive(device: USBDevice, command: Any, response_type: type = 
         device: Connected USB device
         command: Protocol command object to send
         response_type: Optional expected response type class (auto-detected if None)
+        use_protobuf: Use protobuf serialization/deserialization if True, otherwise use attrs2bin
         
     Returns:
         Any: Deserialized response object
@@ -407,8 +572,8 @@ def usb_send_and_receive(device: USBDevice, command: Any, response_type: type = 
     Raises:
         USBCommunicationError: If communication fails
     """
-    usb_send_command(device, command)
-    return usb_receive_response(device, response_type)
+    usb_send_command(device, command, use_protobuf)
+    return usb_receive_response(device, response_type, use_protobuf)
 
 
 class USBHostDevice:
@@ -650,24 +815,26 @@ class USBHostDevice:
     
     # Generic sending and receiving methods
     
-    def send_command(self, command: Any) -> None:
+    def send_command(self, command: Any, use_protobuf: bool = False) -> None:
         """
         Send any protocol command with automatic serialization
         
         Args:
             command: Protocol command object
+            use_protobuf: Use protobuf serialization if True, otherwise use attrs2bin
             
         Raises:
             USBCommunicationError: If sending fails
         """
-        usb_send_command(self.usb_device, command)
+        usb_send_command(self.usb_device, command, use_protobuf)
     
-    def receive_response(self, response_type: type = None) -> Any:
+    def receive_response(self, response_type: type = None, use_protobuf: bool = False) -> Any:
         """
         Receive and deserialize a protocol response
         
         Args:
             response_type: Optional expected response type class (auto-detected if None)
+            use_protobuf: Use protobuf deserialization if True, otherwise use attrs2bin
             
         Returns:
             Any: Deserialized response object
@@ -675,15 +842,16 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If receiving fails
         """
-        return usb_receive_response(self.usb_device, response_type)
+        return usb_receive_response(self.usb_device, response_type, use_protobuf)
     
-    def send_and_receive(self, command: Any, response_type: type = None) -> Any:
+    def send_and_receive(self, command: Any, response_type: type = None, use_protobuf: bool = False) -> Any:
         """
         Send a command and receive response with automatic serialization/deserialization
         
         Args:
             command: Protocol command object to send
             response_type: Optional expected response type class (auto-detected if None)
+            use_protobuf: Use protobuf serialization/deserialization if True, otherwise use attrs2bin
             
         Returns:
             Any: Deserialized response object
@@ -691,7 +859,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If communication fails
         """
-        return usb_send_and_receive(self.usb_device, command, response_type)
+        return usb_send_and_receive(self.usb_device, command, response_type, use_protobuf)
     
     # Context manager support
     
@@ -712,19 +880,23 @@ class MessageDecoder:
     """Utility class to decode incoming plugin messages using message type IDs"""
     
     @classmethod
-    def decode_message(cls, raw_data: bytes) -> Optional[Any]:
+    def decode_message(cls, raw_data: bytes, use_protobuf: bool = False) -> Optional[Any]:
         """
         Decode raw bytes using message type ID for fast and accurate dispatch
         
         Args:
             raw_data: Raw bytes received from USB device
+            use_protobuf: Use protobuf deserialization if True, otherwise use attrs2bin
             
         Returns:
             Decoded message object or None if decoding failed
         """
         try:
-            # Use the updated deserialize_response which auto-detects type from header
-            decoded = deserialize_response(raw_data)
+            # Use the appropriate deserialize function based on use_protobuf flag
+            if use_protobuf:
+                decoded = deserialize_response_protobuf(raw_data)
+            else:
+                decoded = deserialize_response(raw_data)
             return decoded
         except Exception:
             # Return None if decoding failed
@@ -770,16 +942,18 @@ class USBDataListener:
     automatically decodes message types, and queues them for processing.
     """
     
-    def __init__(self, host_device: USBHostDevice, receive_timeout_ms: int = 500):
+    def __init__(self, host_device: USBHostDevice, receive_timeout_ms: int = 500, use_protobuf: bool = False):
         """
         Initialize the USB data listener
         
         Args:
             host_device: Connected USBHostDevice instance
             receive_timeout_ms: Timeout for USB receive operations in milliseconds
+            use_protobuf: Use protobuf deserialization if True, otherwise use attrs2bin
         """
         self.host_device = host_device
         self.receive_timeout_ms = receive_timeout_ms
+        self.use_protobuf = use_protobuf
         self.message_queue = queue.Queue()
         self._stop_event = threading.Event()
         self.listener_thread = None
@@ -857,7 +1031,7 @@ class USBDataListener:
                         self._stats['messages_received'] += 1
                     
                     # Try to decode the message
-                    decoded_message = self.decoder.decode_message(raw_data)
+                    decoded_message = self.decoder.decode_message(raw_data, self.use_protobuf)
                     
                     if decoded_message:
                         with self._stats_lock:

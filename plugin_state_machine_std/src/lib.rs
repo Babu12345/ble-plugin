@@ -202,14 +202,26 @@ use esp_idf_svc::nvs::EspNvsPartition;
 use esp_idf_svc::nvs::NvsPartitionId;
 use plugin_nvs::namespace;
 use plugin_nvs::namespaces::ConfigNamespace;
-use protocol::io_types::BLEProfile;
-use protocol::io_types::BLEProperties;
-use protocol::io_types::HostCommandConfigureCharacteristicRead;
-use protocol::io_types::HostCommandConfigurePeripheralSecurity;
-use protocol::io_types::HostCommandNotifyCharacteristicValue;
-use protocol::io_types::HostCommandStopAdvertisement;
-use protocol::io_types::PluginAuthenticationCompletedResponse;
-use protocol::io_types::PluginData;
+use protocol::protocol::BleProfile;
+use protocol::protocol::BleProperties;
+use protocol::protocol::BluetoothAddressType;
+use protocol::protocol::HostCommandConfigureCharacteristic;
+use protocol::protocol::HostCommandConfigureCharacteristicRead;
+use protocol::protocol::HostCommandConfigurePeripheral;
+use protocol::protocol::HostCommandConfigurePeripheralSecurity;
+use protocol::protocol::HostCommandConfigureProfile;
+use protocol::protocol::HostCommandConfigureService;
+use protocol::protocol::HostCommandGetCharacteristicInfo;
+use protocol::protocol::HostCommandGetServiceInfo;
+use protocol::protocol::HostCommandNotifyCharacteristicValue;
+use protocol::protocol::HostCommandStartAdvertisement;
+use protocol::protocol::HostCommandStopAdvertisement;
+use protocol::protocol::PluginAuthenticationCompletedResponse;
+use protocol::protocol::PluginCharacteristicInfoResponse;
+use protocol::protocol::PluginConfigurationError;
+use protocol::protocol::PluginConfigurationErrorType;
+use protocol::protocol::PluginData;
+use protocol::protocol::PluginServiceInfoResponse;
 use protocol::utils::slice_to_array;
 use protocol::MESSAGE_HEADER_SIZE;
 use threadpool::ThreadPool;
@@ -225,16 +237,13 @@ use esp32_nimble::utilities::BleUuid;
 use esp32_nimble::{BLEDevice, BLEServer, BLEService, NimbleProperties};
 use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use heapless::String;
-use protocol::io_types::{
-    HostCommandConfigureCharacteristic, HostCommandConfigurePeripheral,
-    HostCommandConfigureProfile, HostCommandConfigureService, HostCommandGetCharacteristicInfo,
-    HostCommandGetServiceInfo, HostCommandStartAdvertisement, PluginCharacteristicInfoResponse,
-    PluginConfigurationError, PluginServiceInfoResponse, MAX_CHARACTERISTICS_PER_SERVICE,
-    MAX_PROPERTIES,
-};
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
-use protocol::{MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
+use protocol::protocol::MessageTypeId;
 use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
+use protocol::{MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
+
+/// Maximum number of characteristics per service
+const MAX_CHARACTERISTICS_PER_SERVICE: usize = 16;
 
 /// Check whether the statemachine has been initialized
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
@@ -253,13 +262,8 @@ struct PluginStateMachineMetadata {
     ///
     /// This enables efficient lookup of characteristics within services and
     /// provides quick access to characteristic properties for validation.
-    service_to_characteristic_uuids: HashMap<
-        u16,
-        heapless::Vec<
-            (u16, heapless::Vec<BLEProperties, MAX_PROPERTIES>),
-            MAX_CHARACTERISTICS_PER_SERVICE,
-        >,
-    >, // (UUID, properties)
+    service_to_characteristic_uuids:
+        HashMap<u16, heapless::Vec<(u16, Vec<i32>), MAX_CHARACTERISTICS_PER_SERVICE>>, // (UUID, properties)
 }
 
 impl PluginStateMachineMetadata {
@@ -494,7 +498,7 @@ where
 
         // Extract message type ID
         let type_id = data[MESSAGE_MAGIC_BYTES];
-        MessageTypeId::try_from(type_id).map_err(|_| {
+        MessageTypeId::try_from(type_id as i32).map_err(|_| {
             log::error!("Unknown message type ID: 0x{:02X}", type_id);
             StateMachineError::UnknownMessageType
         })
@@ -551,7 +555,7 @@ where
                     match Self::extract_message_type_id(data.raw_bytes()) {
                         Ok(message_type) => {
                             let result = match message_type {
-                                MessageTypeId::HostCommandConfigurePeripheral => {
+                                MessageTypeId::TypeHostCommandConfigurePeripheral => {
                                     match data.decode::<HostCommandConfigurePeripheral>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -562,7 +566,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandConfigureService => {
+                                MessageTypeId::TypeHostCommandConfigureService => {
                                     match data.decode::<HostCommandConfigureService>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -573,7 +577,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandConfigureCharacteristic => {
+                                MessageTypeId::TypeHostCommandConfigureCharacteristic => {
                                     match data.decode::<HostCommandConfigureCharacteristic>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -584,7 +588,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandConfigureCharacteristicRead => {
+                                MessageTypeId::TypeHostCommandConfigureCharacteristicRead => {
                                     match data.decode::<HostCommandConfigureCharacteristicRead>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -595,7 +599,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandNotifyCharacteristicValue => {
+                                MessageTypeId::TypeHostCommandNotifyCharacteristicValue => {
                                     match data.decode::<HostCommandNotifyCharacteristicValue>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -606,7 +610,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandGetServiceInfo => {
+                                MessageTypeId::TypeHostCommandGetServiceInfo => {
                                     match data.decode::<HostCommandGetServiceInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -617,7 +621,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandGetCharacteristicInfo => {
+                                MessageTypeId::TypeHostCommandGetCharacteristicInfo => {
                                     match data.decode::<HostCommandGetCharacteristicInfo>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -628,7 +632,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandStartAdvertisement => {
+                                MessageTypeId::TypeHostCommandStartAdvertisement => {
                                     match data.decode::<HostCommandStartAdvertisement>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -640,7 +644,7 @@ where
                                     }
                                 }
 
-                                MessageTypeId::HostCommandConfigurePeripheralSecurity => {
+                                MessageTypeId::TypeHostCommandConfigurePeripheralSecurity => {
                                     match data.decode::<HostCommandConfigurePeripheralSecurity>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -651,7 +655,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandConfigureProfile => {
+                                MessageTypeId::TypeHostCommandConfigureProfile => {
                                     match data.decode::<HostCommandConfigureProfile>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -662,7 +666,7 @@ where
                                         )),
                                     }
                                 }
-                                MessageTypeId::HostCommandStopAdvertisement => {
+                                MessageTypeId::TypeHostCommandStopAdvertisement => {
                                     match data.decode::<HostCommandStopAdvertisement>() {
                                         Ok(cmd) => {
                                             log::info!("Received USB command: {:?}", cmd);
@@ -761,7 +765,7 @@ where
         if !IS_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) {
             IS_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
             self.ble_device.set_own_addr_type(OwnAddrType::Random);
-            let addr = slice_to_array(&cmd.addr).map_err(|_| {
+            let addr = slice_to_array(cmd.addr.as_slice()).map_err(|_| {
                 log::error!("Invalid address length: must be 6 bytes");
                 StateMachineError::InvalidBleConfiguration
             })?;
@@ -771,7 +775,9 @@ where
             })?;
         }
 
-        self.metadata.set_name(&mut self.ns, cmd.name.clone());
+        let name: heapless::String<30> = heapless::String::try_from(cmd.name.as_str())
+            .map_err(|_| StateMachineError::InvalidBleConfiguration)?;
+        self.metadata.set_name(&mut self.ns, name);
         self.server = Some(
             self.ble_device
                 .get_server()
@@ -839,7 +845,7 @@ where
                     "Error: Received advertisement command without peripheral configuration"
                 );
                 self.usb_sender
-                    .send(PluginConfigurationError::AdvertisementWithoutPeripheralConfiguration)
+                    .send(PluginConfigurationError { error_type: PluginConfigurationErrorType::AdvertisementWithoutPeripheralConfiguration as i32 })
                     .map_err(|_| StateMachineError::UsbSendError)?;
                 return Err(StateMachineError::InvalidBleConfiguration);
             }
@@ -872,15 +878,10 @@ where
                     log::info!("Authentication completed for client: {:?}", desc);
                     let addr = desc.address().as_be_bytes();
                     let response = PluginAuthenticationCompletedResponse {
-                        address: heapless::Vec::from_slice(&addr)
-                            .map_err(|e| {
-                                log::error!("Failed to copy address to response: {:?}", e);
-                                StateMachineError::UsbSendError
-                            })
-                            .unwrap_or_default(),
+                        address: addr.to_vec(),
                         address_type: Self::ble_address_type_to_bluetooth_address_type(
                             desc.address().addr_type(),
-                        ),
+                        ) as i32,
                         success: status.is_ok(),
                     };
                     usb_sender
@@ -909,21 +910,25 @@ where
             None => {
                 log::error!("BLE server not initialized - peripheral must be configured first");
                 self.usb_sender
-                    .send(PluginConfigurationError::ServiceWithoutPeripheralConfiguration)
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
+                                as i32,
+                    })
                     .map_err(|_| StateMachineError::UsbSendError)?;
                 return Err(StateMachineError::ServerNotInitialized);
             }
         };
 
         // Create the BLE service converting from u16 to BleUuid
-        server.create_service(BleUuid::from_uuid16(cmd.uuid));
+        server.create_service(BleUuid::from_uuid16(cmd.uuid as u16));
 
         log::info!("Successfully created BLE service with UUID: {}", cmd.uuid);
 
         // Create a serivce entry and clear any existing characteristics for this service
         self.metadata
             .service_to_characteristic_uuids
-            .entry(cmd.uuid)
+            .entry(cmd.uuid as u16)
             .or_default()
             .clear();
 
@@ -963,14 +968,18 @@ where
 
         // Get the service that this characteristic belongs to
         let service = self
-            .get_service(cmd.service_uuid)
+            .get_service(cmd.service_uuid as u16)
             .ok_or_else(|| {
                 log::error!(
                     "Service with UUID {} not found - service must be configured first",
                     cmd.service_uuid
                 );
                 self.usb_sender
-                    .send(PluginConfigurationError::CharacteristicWithoutServiceConfiguration)
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
+                                as i32,
+                    })
                     .ok();
                 StateMachineError::InvalidBleConfiguration
             })?
@@ -978,15 +987,15 @@ where
 
         // Get the characteristic
         let characteristic =
-            block_on(service.get_characteristic(BleUuid::Uuid16(cmd.characteristic_uuid)))
+            block_on(service.get_characteristic(BleUuid::Uuid16(cmd.characteristic_uuid as u16)))
                 .ok_or_else(|| {
-                    log::error!(
-                        "Characteristic with UUID {} not found in service {}",
-                        cmd.characteristic_uuid,
-                        cmd.service_uuid
-                    );
-                    StateMachineError::InvalidBleConfiguration
-                })?;
+                log::error!(
+                    "Characteristic with UUID {} not found in service {}",
+                    cmd.characteristic_uuid,
+                    cmd.service_uuid
+                );
+                StateMachineError::InvalidBleConfiguration
+            })?;
 
         // Get the characteristic
         let characteristic_lock = characteristic.lock();
@@ -996,14 +1005,15 @@ where
                 let conn = server
                     .connections()
                     .find(|desc| {
-                        if let Ok(val) = slice_to_array(&cmd.address) {
-                            return desc.address()
-                                == BLEAddress::from_be_bytes(
-                                    val,
-                                    Self::bluetooth_address_type_to_ble_address_type(
-                                        cmd.address_type,
-                                    ),
-                                );
+                        if let Ok(val) = slice_to_array(cmd.address.as_slice()) {
+                            if let Ok(addr_type) = BluetoothAddressType::try_from(cmd.address_type)
+                            {
+                                return desc.address()
+                                    == BLEAddress::from_be_bytes(
+                                        val,
+                                        Self::bluetooth_address_type_to_ble_address_type(addr_type),
+                                    );
+                            }
                         }
                         return false;
                     })
@@ -1031,7 +1041,11 @@ where
             None => {
                 log::error!("BLE server not initialized - peripheral must be configured first");
                 self.usb_sender
-                    .send(PluginConfigurationError::ServiceWithoutPeripheralConfiguration)
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
+                                as i32,
+                    })
                     .map_err(|_| StateMachineError::UsbSendError)?;
                 return Err(StateMachineError::ServerNotInitialized);
             }
@@ -1059,20 +1073,24 @@ where
 
         // Get the service that this characteristic belongs to
         let service = self
-            .get_service(cmd.service_uuid)
+            .get_service(cmd.service_uuid as u16)
             .ok_or_else(|| {
                 log::error!(
                     "Service with UUID {} not found - service must be configured first",
                     cmd.service_uuid
                 );
                 self.usb_sender
-                    .send(PluginConfigurationError::CharacteristicWithoutServiceConfiguration)
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
+                                as i32,
+                    })
                     .ok();
                 StateMachineError::InvalidBleConfiguration
             })?
             .lock();
 
-        let characteristic = block_on(service.get_characteristic(BleUuid::Uuid16(cmd.uuid)))
+        let characteristic = block_on(service.get_characteristic(BleUuid::Uuid16(cmd.uuid as u16)))
             .ok_or_else(|| StateMachineError::InvalidBleConfiguration)?;
 
         characteristic.lock().set_value(cmd.value.as_slice());
@@ -1091,35 +1109,39 @@ where
         );
 
         // Get the service that this characteristic belongs to
-        let service = self.get_service(cmd.service_uuid).ok_or_else(|| {
+        let service = self.get_service(cmd.service_uuid as u16).ok_or_else(|| {
             log::error!(
                 "Service with UUID {} not found - service must be configured first",
                 cmd.service_uuid
             );
             self.usb_sender
-                .send(PluginConfigurationError::CharacteristicWithoutServiceConfiguration)
+                .send(PluginConfigurationError {
+                    error_type:
+                        PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
+                            as i32,
+                })
                 .ok();
             StateMachineError::InvalidBleConfiguration
         })?;
 
         // Convert UUID to BleUuid
-        let ble_uuid = BleUuid::from_uuid16(cmd.uuid);
+        let ble_uuid = BleUuid::from_uuid16(cmd.uuid as u16);
 
         // Convert properties from u8 to NimbleProperties
         let mut nimble_properties = NimbleProperties::empty();
-        if cmd.properties.contains(&BLEProperties::READ) {
+        if cmd.properties.contains(&(BleProperties::Read as i32)) {
             nimble_properties |= NimbleProperties::READ;
         }
-        if cmd.properties.contains(&BLEProperties::WRITE) {
+        if cmd.properties.contains(&(BleProperties::Write as i32)) {
             nimble_properties |= NimbleProperties::WRITE;
         }
-        if cmd.properties.contains(&BLEProperties::WriteNoRsp) {
+        if cmd.properties.contains(&(BleProperties::WriteNoRsp as i32)) {
             nimble_properties |= NimbleProperties::WRITE_NO_RSP;
         }
-        if cmd.properties.contains(&BLEProperties::NOTIFY) {
+        if cmd.properties.contains(&(BleProperties::Notify as i32)) {
             nimble_properties |= NimbleProperties::NOTIFY;
         }
-        if cmd.properties.contains(&BLEProperties::INDICATE) {
+        if cmd.properties.contains(&(BleProperties::Indicate as i32)) {
             nimble_properties |= NimbleProperties::INDICATE;
         }
 
@@ -1132,11 +1154,14 @@ where
         let characteristics = self
             .metadata
             .service_to_characteristic_uuids
-            .entry(cmd.service_uuid)
+            .entry(cmd.service_uuid as u16)
             .or_default();
 
         // Check if characteristic with this UUID already exists
-        match characteristics.iter().any(|(uuid, _)| *uuid == cmd.uuid) {
+        match characteristics
+            .iter()
+            .any(|(uuid, _)| *uuid == (cmd.uuid as u16))
+        {
             true => log::info!(
                 "Characteristic {} already exists for service {}, skipping",
                 cmd.uuid,
@@ -1144,7 +1169,7 @@ where
             ),
             false => {
                 characteristics
-                    .push((cmd.uuid, cmd.properties))
+                    .push((cmd.uuid as u16, cmd.properties))
                     .map_err(|_| {
                         log::error!("Failed to store characteristic UUID: {}", cmd.uuid);
                         StateMachineError::CharacteristicUuidStorageError
@@ -1166,21 +1191,14 @@ where
                     );
                     usb_sender
                         .send(PluginData {
-                            src_addr: heapless::Vec::from_slice(
-                                args.desc().address().as_be_bytes().as_ref(),
-                            )
-                            .map_err(|e| {
-                                log::error!("Failed to copy address to response: {:?}", e);
-                                StateMachineError::UsbSendError
-                            })
-                            .unwrap_or_default(),
+                            src_addr: args.desc().address().as_be_bytes().as_ref().to_vec(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 args.desc().address().addr_type(),
-                            ),
-                            send_type: protocol::io_types::PluginDataSendType::Write,
+                            ) as i32,
+                            send_type: protocol::protocol::PluginDataSendType::WriteType as i32,
                             characteristic_uuid: char_uuid_write,
                             service_uuid: service_uuid_write,
-                            data: args.recv_data(),
+                            data: args.recv_data().to_vec(),
                         })
                         .map_err(|_| StateMachineError::UsbSendError)
                         .ok();
@@ -1206,21 +1224,14 @@ where
 
                     usb_sender
                         .send(PluginData {
-                            src_addr: heapless::Vec::from_slice(
-                                desc.address().as_be_bytes().as_ref(),
-                            )
-                            .map_err(|e| {
-                                log::error!("Failed to copy address to response: {:?}", e);
-                                StateMachineError::UsbSendError
-                            })
-                            .unwrap_or_default(),
+                            src_addr: desc.address().as_be_bytes().as_ref().to_vec(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 desc.address().addr_type(),
-                            ),
-                            send_type: protocol::io_types::PluginDataSendType::Read,
+                            ) as i32,
+                            send_type: protocol::protocol::PluginDataSendType::ReadType as i32,
                             characteristic_uuid: cmd.uuid,
                             service_uuid: cmd.service_uuid,
-                            data: &[],
+                            data: Vec::new(),
                         })
                         .map_err(|_| StateMachineError::UsbSendError)
                         .ok();
@@ -1246,23 +1257,23 @@ where
         let characteristic_uuids = self
             .metadata
             .service_to_characteristic_uuids
-            .get(&cmd.uuid)
+            .get(&(cmd.uuid as u16))
             .map(|chars| {
-                let mut uuids = heapless::Vec::new();
+                let mut uuids = Vec::new();
                 for (uuid, _properties) in chars {
-                    uuids.push(*uuid).ok();
+                    uuids.push(*uuid as u32);
                 }
                 uuids
             })
             .unwrap_or_else(|| {
                 log::warn!("No characteristics found for service {}", cmd.uuid);
-                heapless::Vec::new()
+                Vec::new()
             });
 
         let response = PluginServiceInfoResponse {
             service_uuid: cmd.uuid,
             characteristic_uuids,
-            exists: self.get_service(cmd.uuid).is_some(),
+            exists: self.get_service(cmd.uuid as u16).is_some(),
         };
 
         // Send the response to USB
@@ -1292,10 +1303,10 @@ where
         let (exists, properties) = self
             .metadata
             .service_to_characteristic_uuids
-            .get(&cmd.service_uuid)
+            .get(&(cmd.service_uuid as u16))
             .and_then(|chars| {
                 chars.iter().find_map(|(uuid, properties)| {
-                    if *uuid == cmd.characteristic_uuid {
+                    if *uuid == (cmd.characteristic_uuid as u16) {
                         Some((true, properties.clone()))
                     } else {
                         None
@@ -1309,7 +1320,7 @@ where
                     cmd.service_uuid
                 );
 
-                (false, heapless::Vec::new())
+                (false, Vec::new())
             });
 
         let response = PluginCharacteristicInfoResponse {
@@ -1334,24 +1345,25 @@ where
     }
 
     fn bluetooth_address_type_to_ble_address_type(
-        address_type: protocol::io_types::BluetoothAddressType,
+        address_type: protocol::protocol::BluetoothAddressType,
     ) -> BLEAddressType {
         match address_type {
-            protocol::io_types::BluetoothAddressType::Public => BLEAddressType::Public,
-            protocol::io_types::BluetoothAddressType::Random => BLEAddressType::Random,
-            protocol::io_types::BluetoothAddressType::PublicID => BLEAddressType::PublicID,
-            protocol::io_types::BluetoothAddressType::RandomID => BLEAddressType::RandomID,
+            protocol::protocol::BluetoothAddressType::Public => BLEAddressType::Public,
+            protocol::protocol::BluetoothAddressType::Random => BLEAddressType::Random,
+            protocol::protocol::BluetoothAddressType::PublicId => BLEAddressType::PublicID,
+            protocol::protocol::BluetoothAddressType::RandomId => BLEAddressType::RandomID,
+            protocol::protocol::BluetoothAddressType::Unspecified => todo!(),
         }
     }
 
     fn ble_address_type_to_bluetooth_address_type(
         address_type: BLEAddressType,
-    ) -> protocol::io_types::BluetoothAddressType {
+    ) -> protocol::protocol::BluetoothAddressType {
         match address_type {
-            BLEAddressType::Public => protocol::io_types::BluetoothAddressType::Public,
-            BLEAddressType::Random => protocol::io_types::BluetoothAddressType::Random,
-            BLEAddressType::PublicID => protocol::io_types::BluetoothAddressType::PublicID,
-            BLEAddressType::RandomID => protocol::io_types::BluetoothAddressType::RandomID,
+            BLEAddressType::Public => protocol::protocol::BluetoothAddressType::Public,
+            BLEAddressType::Random => protocol::protocol::BluetoothAddressType::Random,
+            BLEAddressType::PublicID => protocol::protocol::BluetoothAddressType::PublicId,
+            BLEAddressType::RandomID => protocol::protocol::BluetoothAddressType::RandomId,
         }
     }
 
@@ -1369,8 +1381,8 @@ where
     fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<()> {
         log::info!("Configuring BLE profile: {:?}", cmd.profile);
 
-        match cmd.profile {
-            BLEProfile::Custom => {
+        match BleProfile::try_from(cmd.profile) {
+            Ok(BleProfile::Custom) => {
                 log::info!("Using custom profile with predefined services and characteristics");
                 // Get the server
                 let server = match self.server.as_mut() {
@@ -1387,11 +1399,15 @@ where
                     StateMachineError::ServerRestartError(source)
                 })?;
             }
-            _ => {
+            Ok(other_profile) => {
                 log::warn!(
                     "Predefined BLE profile {:?} is not implemented yet",
-                    cmd.profile
+                    other_profile
                 );
+            }
+            Err(_) => {
+                log::error!("Unknown BLE profile ID: {}", cmd.profile);
+                return Err(StateMachineError::InvalidBleConfiguration);
             }
         }
 

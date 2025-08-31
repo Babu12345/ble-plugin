@@ -128,17 +128,6 @@ pub trait MessageType {
     fn message_type_id() -> MessageTypeId;
 }
 
-/// Base trait for all protocol I/O types
-#[cfg(feature = "protocol_buffers")]
-pub trait IOBase<'a>:
-    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
-{
-}
-
-/// Base trait for all protocol I/O types
-#[cfg(not(feature = "protocol_buffers"))]
-pub trait IOBase<'a>: Serialize + Deserialize<'a> + Sized + MessageType {}
-
 /// Core I/O trait for protocol message serialization and deserialization
 ///
 /// This trait provides a complete interface for converting between Rust types and
@@ -372,7 +361,7 @@ pub trait IO<'a>: IOBase<'a> {
         let length = self.serialize_bytes_in_slice(payload)? as usize;
 
         // Create header: magic + type_id + length
-        let mut header_bytes: Vec<u8> = Vec::new();
+        let mut header_bytes: heapless::Vec<u8, MESSAGE_HEADER_SIZE> = heapless::Vec::new();
 
         // Add magic bytes (0xDEAD)
         let _ = header_bytes.extend_from_slice(&MESSAGE_MAGIC.to_le_bytes());
@@ -392,6 +381,17 @@ pub trait IO<'a>: IOBase<'a> {
         Ok(())
     }
 }
+
+/// Base trait for all protocol I/O types
+#[cfg(feature = "protocol_buffers")]
+pub trait IOBase<'a>:
+    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
+{
+}
+
+/// Base trait for all protocol I/O types
+#[cfg(not(feature = "protocol_buffers"))]
+pub trait IOBase<'a>: Serialize + Deserialize<'a> + Sized + MessageType {}
 
 /// Plugin specific input and output types
 pub trait PluginIO<'a>: IO<'a> {}

@@ -6,7 +6,7 @@ use esp32_nimble::{
 };
 
 use host_cherry::cherry_usb_host_for_plugin;
-use protocol::io_types::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
+use protocol::protocol::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -27,12 +27,12 @@ fn main() -> anyhow::Result<()> {
 
         scope.spawn(move || loop {
             io.0.send(PluginData {
-                src_addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
-                src_addr_type: protocol::io_types::BluetoothAddressType::Public,
-                send_type: protocol::io_types::PluginDataSendType::Notify,
+                src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
+                src_addr_type: protocol::protocol::BluetoothAddressType::Public as _,
+                send_type: protocol::protocol::PluginDataSendType::NotifyType as _,
                 characteristic_uuid: 0x2A29,
                 service_uuid: 0x180A,
-                data: b"Data incoming\0",
+                data: Vec::from(b"Data incoming\0"),
             })
             .ok();
 

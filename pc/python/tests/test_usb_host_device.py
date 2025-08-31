@@ -161,7 +161,7 @@ class TestUSBHostDevice:
         
         self.host_device.send_command(cmd)
         
-        mock_send.assert_called_once_with(self.host_device.usb_device, cmd)
+        mock_send.assert_called_once_with(self.host_device.usb_device, cmd, False)
     
     @patch('plugin_host.comms.usb_receive_response')
     def test_receive_response_generic(self, mock_receive) -> None:
@@ -176,7 +176,7 @@ class TestUSBHostDevice:
         result = self.host_device.receive_response(PluginServiceInfoResponse)
         
         assert result == expected_response
-        mock_receive.assert_called_once_with(self.host_device.usb_device, PluginServiceInfoResponse)
+        mock_receive.assert_called_once_with(self.host_device.usb_device, PluginServiceInfoResponse, False)
     
     def test_context_manager(self) -> None:
         """Test context manager functionality"""

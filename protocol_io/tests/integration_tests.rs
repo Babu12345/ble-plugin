@@ -23,13 +23,14 @@ pub trait MessageType {
     fn message_type_id() -> MessageTypeId;
 }
 
-pub trait IO<'a> {}
+pub trait IOBase<'a> {}
+pub trait IO<'a>: IOBase<'a> {}
 pub trait HostIO<'a>: IO<'a> {}
 pub trait PluginIO<'a>: IO<'a> {}
 
 // Test helper functions to check if a type implements the expected traits
 #[allow(unused)]
-fn assert_host_io_traits<T>() 
+fn assert_host_io_traits<T>()
 where
     T: MessageType,
 {
@@ -38,11 +39,11 @@ where
 }
 
 #[allow(unused)]
-fn assert_plugin_io_traits<T>() 
+fn assert_plugin_io_traits<T>()
 where
     T: MessageType,
 {
-    // This function will only compile if T implements MessageType  
+    // This function will only compile if T implements MessageType
     // For IO/PluginIO traits, we'll test them implicitly through usage
 }
 
@@ -97,17 +98,17 @@ mod zero_lifetimes {
             SimpleHostCommand::message_type_id(),
             MessageTypeId::HostCommandConfigurePeripheral
         );
-        
+
         assert_eq!(
             SimplePluginResponse::message_type_id(),
             MessageTypeId::PluginData
         );
-        
+
         assert_eq!(
             HostCommandEnum::message_type_id(),
             MessageTypeId::HostCommandConfigureService
         );
-        
+
         assert_eq!(
             PluginResponseEnum::message_type_id(),
             MessageTypeId::PluginConfigurationError
@@ -153,12 +154,12 @@ mod single_lifetime {
             SingleLifetimeHostCommand::message_type_id(),
             MessageTypeId::HostCommandConfigureCharacteristic
         );
-        
+
         assert_eq!(
             SingleLifetimePluginResponse::message_type_id(),
             MessageTypeId::PluginServiceInfoResponse
         );
-        
+
         assert_eq!(
             SingleLifetimeHostEnum::message_type_id(),
             MessageTypeId::HostCommandGetServiceInfo
@@ -169,12 +170,12 @@ mod single_lifetime {
     fn test_single_lifetime_usage() {
         let data = b"test data";
         let name = "test command";
-        
+
         let _cmd = SingleLifetimeHostCommand { data, name };
-        
+
         let message = "response message";
         let buffer = b"response buffer";
-        
+
         let _response = SingleLifetimePluginResponse { message, buffer };
     }
 }
@@ -220,12 +221,12 @@ mod multiple_lifetimes {
             MultipleLifetimeHostCommand::message_type_id(),
             MessageTypeId::HostCommandConfigureCharacteristicRead
         );
-        
+
         assert_eq!(
             MultipleLifetimePluginResponse::message_type_id(),
             MessageTypeId::PluginCharacteristicInfoResponse
         );
-        
+
         assert_eq!(
             MultipleLifetimeEnum::message_type_id(),
             MessageTypeId::HostCommandStartAdvertisement
@@ -236,22 +237,26 @@ mod multiple_lifetimes {
     fn test_multiple_lifetimes_usage() {
         let primary = b"primary data";
         let secondary = "secondary string";
-        
+
         let _cmd = MultipleLifetimeHostCommand {
             primary_data: primary,
             secondary_data: secondary,
             id: 42,
         };
-        
+
         let first = "first string";
         let second = b"second bytes";
         let third = "third string";
-        
-        let _response = MultipleLifetimePluginResponse { first, second, third };
-        
+
+        let _response = MultipleLifetimePluginResponse {
+            first,
+            second,
+            third,
+        };
+
         let data = b"enum data";
         let name = "enum name";
-        
+
         let _enum_first = MultipleLifetimeEnum::First { data };
         let _enum_second = MultipleLifetimeEnum::Second { name };
         let _enum_both = MultipleLifetimeEnum::Both { data, name };
@@ -289,7 +294,7 @@ mod generic_types {
             GenericHostCommand::message_type_id(),
             MessageTypeId::HostCommandNotifyCharacteristicValue
         );
-        
+
         assert_eq!(
             GenericPluginResponse::message_type_id(),
             MessageTypeId::PluginAuthenticationCompletedResponse
@@ -300,17 +305,17 @@ mod generic_types {
     fn test_generic_types_usage() {
         let data = b"generic data";
         let payload = 42u32;
-        
+
         let _cmd = GenericHostCommand { data, payload };
-        
+
         let message = "generic response";
         let first_data = "first".to_string();
         let second_data = 100u64;
-        
-        let _response = GenericPluginResponse { 
-            message, 
-            first_data, 
-            second_data 
+
+        let _response = GenericPluginResponse {
+            message,
+            first_data,
+            second_data,
         };
     }
 }
@@ -334,7 +339,7 @@ mod edge_cases {
         let data_a = b"data a";
         let data_b = "data b";
         let _cmd = FirstLifetimeUsed { data_a, data_b };
-        
+
         assert_eq!(
             FirstLifetimeUsed::message_type_id(),
             MessageTypeId::HostCommandConfigurePeripheral
@@ -354,7 +359,7 @@ mod edge_cases {
     fn test_empty_structs() {
         assert_host_io_traits::<EmptyStruct>();
         assert_plugin_io_traits::<EmptyStructPlugin>();
-        
+
         let _host = EmptyStruct;
         let _plugin = EmptyStructPlugin;
     }
@@ -371,7 +376,7 @@ mod edge_cases {
     #[test]
     fn test_unit_enum() {
         assert_host_io_traits::<UnitEnum>();
-        
+
         let _a = UnitEnum::A;
         let _b = UnitEnum::B;
         let _c = UnitEnum::C;
@@ -383,7 +388,7 @@ mod compilation_tests {
     use super::*;
 
     // These tests primarily check that the generated code compiles correctly
-    
+
     #[derive(Serialize, Deserialize)]
     #[HostIO(MessageTypeId::HostCommandConfigurePeripheral)]
     struct ComplexHost<'a, 'b> {
@@ -409,18 +414,15 @@ mod compilation_tests {
             lifetime_b,
             regular_field: 42,
         };
-        
+
         let data = b"plugin data";
         let _plugin = ComplexPlugin { data, value: 100 };
-        
+
         assert_eq!(
             ComplexHost::message_type_id(),
             MessageTypeId::HostCommandConfigurePeripheral
         );
-        
-        assert_eq!(
-            ComplexPlugin::message_type_id(),
-            MessageTypeId::PluginData
-        );
+
+        assert_eq!(ComplexPlugin::message_type_id(), MessageTypeId::PluginData);
     }
 }

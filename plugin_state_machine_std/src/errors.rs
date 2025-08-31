@@ -30,7 +30,7 @@
 //! ```
 
 use esp32_nimble::BLEError;
-use protocol::MessageTypeId;
+use protocol::protocol::MessageTypeId;
 use thiserror_no_std::Error;
 
 /// Comprehensive error types for plugin state machine operations

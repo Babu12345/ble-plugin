@@ -22,7 +22,7 @@ use log::info;
 
 use esp_hal_embassy::main;
 use protocol::{
-    io_types::HostCommandConfigurePeripheral, plugin::PluginReceivedData, DEFAULT_PACKET_SIZE,
+    plugin::PluginReceivedData, protocol::HostCommandConfigurePeripheral, DEFAULT_PACKET_SIZE,
 };
 
 const CONTROL_EP_BUFFER_SIZE: u8 = 64;

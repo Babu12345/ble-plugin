@@ -8,9 +8,8 @@ use esp_idf_svc::hal::{
     },
     units::Hertz,
 };
-use heapless::String;
 use host_cherry::cherry_usb_host;
-use protocol::io_types::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
+use protocol::protocol::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
 
 /**
  * General protocal is as follows:
@@ -52,7 +51,7 @@ fn main() -> anyhow::Result<()> {
         let io = unsafe { cherry_usb_host(scope, 200) };
         scope.spawn(move || loop {
             io.0.send(HostCommandConfigurePeripheral {
-                addr: heapless::Vec::from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
+                addr: Vec::try_from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
                 name: String::from_str("Portrait").unwrap(),
             })
             .ok();

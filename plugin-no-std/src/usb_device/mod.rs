@@ -6,9 +6,9 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_usb::{UsbDevice, class::cdc_acm::CdcAcmClass};
 use esp_hal::otg_fs::asynch::Driver;
 use log::info;
-use protocol::io_types::HostCommandConfigurePeripheral;
 use protocol::plugin::PluginReceivedData;
 use protocol::plugin::{AsyncPluginReceiver, AsyncPluginSender};
+use protocol::protocol::HostCommandConfigurePeripheral;
 /// Usb runner
 pub async fn run(usb_device: &mut UsbDevice<'static, Driver<'static>>) -> ! {
     loop {
