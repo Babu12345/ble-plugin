@@ -1,11 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 from plugin_host.comms import USBHostDevice, USBCommunicationError
-from plugin_host.generated_types import BLEProperties, BLEProfile
+# from plugin_host.generated_types import BLEProperties, BLEProfile
 import threading
 import time
 import usb.core
-
+import plugin_host.protocol_pb2 as protocol_pb2
 
 class BLEConfigurationGUI:
     def __init__(self, root):
@@ -241,9 +241,9 @@ class BLEConfigurationGUI:
         frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         ttk.Label(frame, text="Profile:").grid(row=0, column=0, sticky="w", pady=5)
-        self.profile_var = tk.StringVar(value="Custom")
+        self.profile_var = tk.StringVar(value="CUSTOM")
         profile_combo = ttk.Combobox(frame, textvariable=self.profile_var, width=20)
-        profile_combo['values'] = ["Custom", "HeartRate", "Cycling", "Running"]
+        profile_combo['values'] = ["CUSTOM", "HeartRate", "Cycling", "Running"]
         profile_combo.grid(row=0, column=1, pady=5)
         
         ttk.Label(frame, text="Profile Delay (seconds):").grid(row=1, column=0, sticky="w", pady=5)
@@ -536,7 +536,7 @@ class BLEConfigurationGUI:
             properties = []
             for prop_name, var in self.prop_vars.items():
                 if var.get():
-                    properties.append(getattr(BLEProperties, prop_name))
+                    properties.append(getattr(protocol_pb2.BLEProperties, prop_name))
                     
             self.log(f"Configuring characteristic: {char_uuid_str} for service {service_uuid_str}")
             
@@ -560,7 +560,7 @@ class BLEConfigurationGUI:
             
         try:
             profile_name = self.profile_var.get()
-            profile = getattr(BLEProfile, profile_name)
+            profile = getattr(protocol_pb2.BLEProfile, profile_name)
             delay = float(self.profile_delay_var.get())
             
             self.log(f"Configuring profile: {profile_name} with delay {delay}s")

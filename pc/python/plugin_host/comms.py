@@ -7,15 +7,8 @@ import time
 import queue
 import os
 from typing import Any, Optional, Union
-from plugin_host.generated_types import *
+import plugin_host.protocol_pb2 as protocol_pb2
 
-# Optional protobuf support
-try:
-    import plugin_host.protocol_pb2 as protocol_pb2
-    PROTOBUF_AVAILABLE = True
-except ImportError:
-    PROTOBUF_AVAILABLE = False
-    protocol_pb2 = None
 def parse_uuid_u16(uuid_value) -> int:
     """Parse UUID as u16 value
     
@@ -301,8 +294,6 @@ def serialize_command_protobuf(command: Any) -> bytes:
     Raises:
         USBCommunicationError: If serialization fails or protobuf not available
     """
-    if not PROTOBUF_AVAILABLE:
-        raise USBCommunicationError("Protobuf support is not available")
     
     try:
         # Map protobuf classes to their message type IDs
@@ -437,8 +428,6 @@ def deserialize_response_protobuf(data: bytes, response_type: type = None) -> An
     Raises:
         USBCommunicationError: If deserialization fails or protobuf not available
     """
-    if not PROTOBUF_AVAILABLE:
-        raise USBCommunicationError("Protobuf support is not available")
     
     try:
         # Check minimum header size
@@ -639,7 +628,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigurePeripheral(name=name, addr=addr)
+        cmd = protocol_pb2.HostCommandConfigurePeripheral(name=name, addr=bytes(addr))
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
     
     def configure_service(self, uuid: str) -> None:
@@ -652,7 +641,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigureService(uuid=parse_uuid_u16(uuid))
+        cmd = protocol_pb2.HostCommandConfigureService(uuid=parse_uuid_u16(uuid))
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
     
     def configure_characteristic(self, uuid: str, service_uuid: str, properties: list) -> None:
@@ -667,7 +656,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigureCharacteristic(
+        cmd = protocol_pb2.HostCommandConfigureCharacteristic(
             uuid=parse_uuid_u16(uuid),
             service_uuid=parse_uuid_u16(service_uuid),
             properties=properties
@@ -686,14 +675,14 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigureCharacteristicRead(
+        cmd = protocol_pb2.HostCommandConfigureCharacteristicRead(
             uuid=parse_uuid_u16(uuid),
             service_uuid=parse_uuid_u16(service_uuid),
             value=value
         )
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
     
-    def get_service_info(self, uuid: str) -> PluginServiceInfoResponse:
+    def get_service_info(self, uuid: str) -> (protocol_pb2.PluginServiceInfoResponse):
         """
         Get service information
         
@@ -706,10 +695,10 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If communication fails
         """
-        cmd = HostCommandGetServiceInfo(uuid=parse_uuid_u16(uuid))
-        return usb_send_and_receive(self.usb_device, cmd, PluginServiceInfoResponse, self.use_protobuf)
+        cmd = protocol_pb2.HostCommandGetServiceInfo(uuid=parse_uuid_u16(uuid))
+        return usb_send_and_receive(self.usb_device, cmd, protocol_pb2.PluginServiceInfoResponse, self.use_protobuf)
     
-    def get_characteristic_info(self, characteristic_uuid: str, service_uuid: str) -> PluginCharacteristicInfoResponse:
+    def get_characteristic_info(self, characteristic_uuid: str, service_uuid: str) -> protocol_pb2.PluginCharacteristicInfoResponse:
         """
         Get characteristic information
         
@@ -723,11 +712,11 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If communication fails
         """
-        cmd = HostCommandGetCharacteristicInfo(
+        cmd = protocol_pb2.HostCommandGetCharacteristicInfo(
             characteristic_uuid=parse_uuid_u16(characteristic_uuid),
             service_uuid=parse_uuid_u16(service_uuid)
         )
-        return usb_send_and_receive(self.usb_device, cmd, PluginCharacteristicInfoResponse, self.use_protobuf)
+        return usb_send_and_receive(self.usb_device, cmd, protocol_pb2.PluginCharacteristicInfoResponse, self.use_protobuf)
     
     def configure_peripheral_security(self, passkey: int) -> None:
         """
@@ -743,7 +732,7 @@ class USBHostDevice:
         if not (0 <= passkey <= 999999):
             raise ValueError("Passkey must be a 6-digit number between 000000 and 999999")
         
-        cmd = HostCommandConfigurePeripheralSecurity(passkey=passkey)
+        cmd = protocol_pb2.HostCommandConfigurePeripheralSecurity(passkey=passkey)
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
     
     def start_advertisement(self, allow_multi_connect: bool = False) -> None:
@@ -759,7 +748,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandStartAdvertisement(allow_multi_connect=allow_multi_connect)
+        cmd = protocol_pb2.HostCommandStartAdvertisement(allow_multi_connect=allow_multi_connect)
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
     
     def stop_advertisement(self) -> None:
@@ -771,10 +760,10 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandStopAdvertisement()
+        cmd = protocol_pb2.HostCommandStopAdvertisement()
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
     
-    def notify_characteristic_value(self, address: bytes, address_type: BluetoothAddressType, 
+    def notify_characteristic_value(self, address: bytes, address_type: protocol_pb2.BluetoothAddressType, 
                                   characteristic_uuid: str, service_uuid: str, value: bytes) -> None:
         """
         Notify characteristic value
@@ -789,7 +778,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandNotifyCharacteristicValue(
+        cmd = protocol_pb2.HostCommandNotifyCharacteristicValue(
             address=address,
             address_type=address_type,
             characteristic_uuid=parse_uuid_u16(characteristic_uuid),
@@ -798,7 +787,7 @@ class USBHostDevice:
         )
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
     
-    def configure_profile(self, profile: BLEProfile, delay = 0.05) -> None:
+    def configure_profile(self, profile: protocol_pb2.BLEProfile, delay = 0.05) -> None:
         """
         Configure BLE profile using predefined settings
         
@@ -813,7 +802,7 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
-        cmd = HostCommandConfigureProfile(profile=profile)
+        cmd = protocol_pb2.HostCommandConfigureProfile(profile=profile)
         usb_send_command(self.usb_device, cmd, self.use_protobuf)
         time.sleep(delay)
     
