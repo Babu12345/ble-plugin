@@ -281,10 +281,14 @@ pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
-    /// Serialize the message to a Vec using bincode (std only)
+    /// Serialize the message to a Vec (std only)
     ///
     /// This method serializes the message content (without header) to a
     /// dynamically allocated Vec. Available only when the `std` feature is enabled.
+    /// 
+    /// The serialization method is determined by cfg flags:
+    /// - `bincode_serialization`: Uses bincode for efficient binary serialization (default)
+    /// - Future serialization methods can be added with additional cfg flags
     ///
     /// # Returns
     ///
@@ -315,6 +319,10 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
     /// This method serializes the message content (without header) into a
     /// provided buffer slice. This is the primary serialization method for
     /// no_std environments and memory-constrained applications.
+    /// 
+    /// The serialization method is determined by cfg flags:
+    /// - `bincode_serialization`: Uses bincode for efficient binary serialization (default)
+    /// - Future serialization methods can be added with additional cfg flags
     ///
     /// # Arguments
     ///
@@ -345,6 +353,21 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
     }
 
     /// Deserialize the message from a byte slice (no allocation)
+    ///
+    /// This method deserializes message content from a byte slice without
+    /// allocating additional memory. The deserialization method is determined
+    /// by cfg flags:
+    /// - `bincode_serialization`: Uses bincode for binary deserialization (default)
+    /// - Future deserialization methods can be added with additional cfg flags
+    ///
+    /// # Arguments
+    ///
+    /// * `payload` - Byte slice containing the serialized message data
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Self)` - Successfully deserialized message
+    /// - `Err(Error)` - Deserialization failed or invalid data
     #[inline(always)]
     #[allow(unused_variables)]
     fn deserialize_bytes(payload: &'a [u8]) -> Result<Self> {

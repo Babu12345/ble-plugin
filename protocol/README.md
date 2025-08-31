@@ -163,6 +163,17 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 - `serde`: Serde serialization support
 - `defmt`: Defmt logging support for embedded systems
 
+## Serialization Configuration
+
+The protocol supports configurable serialization methods through cfg settings:
+
+- `bincode_serialization`: Use bincode for binary serialization (default)
+  - Efficient binary format with minimal overhead
+  - Suitable for embedded systems and high-performance applications
+  - Configure with: `cfg(bincode_serialization)`
+
+Future serialization methods can be added by implementing the appropriate cfg flags. This allows switching between different serialization formats without changing the protocol API.
+
 ## Compatibility
 
 - **Rust Version**: 1.70+
@@ -198,5 +209,9 @@ When adding new message types:
 5. Update documentation
 
 
-## Configuration options
-- Add `"rust-analyzer.cargo.features": [ "bincode_serialization" ],` to settings.json in the .vscode settings to make sure that the rust analyzer doesn't show the complier_error! at all times even when the cfg isn't valid for that error branch
+## IDE Configuration
+
+### VS Code / rust-analyzer
+To ensure rust-analyzer properly handles the serialization cfg flags:
+- Add `"rust-analyzer.cargo.features": [ "bincode_serialization" ],` to your `.vscode/settings.json`
+- This prevents rust-analyzer from showing compiler errors for cfg-gated code branches when the appropriate cfg flag is set
