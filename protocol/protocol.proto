@@ -239,11 +239,9 @@ message PluginData {
   bytes data = 6;
 }
 
-// Represents the error that can occur during plugin configuration
-// @derive(serde::Deserialize, serde::Serialize)
-// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginConfigurationError))
-enum PluginConfigurationError {
-  PLUGIN_CONFIGURATION_ERROR_UNSPECIFIED = 0; // Proto3 requires a zero value
+// Error type enumeration for plugin configuration errors
+enum PluginConfigurationErrorType {
+  PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // The peripheral name is too long
   PERIPHERAL_NAME_TOO_LONG = 1;
   // The peripheral address is invalid
@@ -258,6 +256,14 @@ enum PluginConfigurationError {
   SERVICE_WITHOUT_PERIPHERAL_CONFIGURATION = 6;
   // Characteristic without proper service configuration
   CHARACTERISTIC_WITHOUT_SERVICE_CONFIGURATION = 7;
+}
+
+// Plugin configuration error message
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginConfigurationError))
+message PluginConfigurationError {
+  // The type of configuration error
+  PluginConfigurationErrorType error_type = 1;
 }
 
 // Service information response

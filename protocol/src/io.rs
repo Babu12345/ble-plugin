@@ -128,6 +128,17 @@ pub trait MessageType {
     fn message_type_id() -> MessageTypeId;
 }
 
+/// Base trait for all protocol I/O types
+#[cfg(feature = "protocol_buffers")]
+pub trait IOBase<'a>:
+    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
+{
+}
+
+/// Base trait for all protocol I/O types
+#[cfg(not(feature = "protocol_buffers"))]
+pub trait IOBase<'a>: Serialize + Deserialize<'a> + Sized + MessageType {}
+
 /// Core I/O trait for protocol message serialization and deserialization
 ///
 /// This trait provides a complete interface for converting between Rust types and
@@ -190,7 +201,7 @@ pub trait MessageType {
 /// let deserialized = HostCommandConfigurePeripheral::from_bytes(&serialized)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
+pub trait IO<'a>: IOBase<'a> {
     /// Serialize the message to a Vec (std only)
     ///
     /// This method serializes the message content (without header) to a
@@ -220,7 +231,9 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_to_vec(self, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(not(feature = "bincode_serialization"))]
+        #[cfg(all(feature = "protocol_buffers", not(feature = "bincode_serialization")))]
+        return Ok(prost::Message::encode_to_vec(self));
+        #[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
         compile_error!("Serialization requires the 'bincode_serialization' feature");
     }
 
@@ -254,11 +267,18 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     #[inline(always)]
-    fn serialize_bytes_in_slice(&self, out: &'a mut [u8]) -> Result<usize> {
+    #[allow(unused_mut)]
+    fn serialize_bytes_in_slice(&self, mut out: &'a mut [u8]) -> Result<usize> {
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_into_slice(self, out, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(not(feature = "bincode_serialization"))]
+        #[cfg(all(feature = "protocol_buffers", not(feature = "bincode_serialization")))]
+        {
+            prost::Message::encode(self, &mut out)
+                .map_err(|_| Error::UnableToSerializeToProtobuf)?;
+            return Ok(self.encoded_len());
+        }
+        #[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
         compile_error!("Serialization requires the 'bincode_serialization' feature");
     }
 
@@ -289,7 +309,13 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
                     .0;
             return Ok(res);
         }
-        #[cfg(not(feature = "bincode_serialization"))]
+        #[cfg(all(feature = "protocol_buffers", not(feature = "bincode_serialization")))]
+        {
+            let res =
+                prost::Message::decode(payload).map_err(|_| Error::UnableToSerializeToProtobuf)?;
+            return Ok(res);
+        }
+        #[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
         compile_error!("Deserialization requires the 'bincode_serialization' feature");
     }
 

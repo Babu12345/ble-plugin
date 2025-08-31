@@ -20,6 +20,11 @@ pub enum Error {
     UnableToSerializeToBincode,
     /// Unable to deserialize from bincode
     UnableToDeserializeFromBincode(&'static str),
+    // Protocol Buffers
+    /// Unable to serialize to protocol buffers
+    UnableToSerializeToProtobuf,
+    /// Unable to deserialize from protocol buffers
+    UnableToDeserializeFromProtobuf,
     // Transfers
     /// Send error
     ReceiveError,

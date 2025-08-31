@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-use std::fs;
-use std::io::Write;
-use std::path::PathBuf;
-
 fn main() {
     #[cfg(feature = "protocol_buffers")]
     {
+        use std::collections::HashMap;
+        use std::fs;
+        use std::io::Write;
+        use std::path::PathBuf;
         // Parse the proto file to find @derive and @rust_macro annotations
         let proto_content =
             fs::read_to_string("protocol.proto").expect("Failed to read protocol.proto");
@@ -24,7 +23,7 @@ fn main() {
                     }
                 }
             }
-            
+
             // Check for @rust_macro annotation - handle nested parentheses
             if line.contains("@rust_macro(") {
                 if let Some(start) = line.find("@rust_macro(") {
@@ -33,7 +32,7 @@ fn main() {
                     let rest = &line[macro_start..];
                     let mut paren_count = 1;
                     let mut end_pos = 0;
-                    
+
                     for (i, ch) in rest.chars().enumerate() {
                         if ch == '(' {
                             paren_count += 1;
@@ -45,7 +44,7 @@ fn main() {
                             }
                         }
                     }
-                    
+
                     if paren_count == 0 {
                         let macro_content = &rest[..end_pos];
                         // For HostIO and PluginIO, we need to add the proper imports
@@ -63,8 +62,10 @@ fn main() {
                 if parts.len() >= 2 {
                     let type_name = parts[1].trim_end_matches('{');
                     if !pending_attributes.is_empty() {
-                        type_attributes
-                            .insert(format!("protocol.{}", type_name), pending_attributes.clone());
+                        type_attributes.insert(
+                            format!("protocol.{}", type_name),
+                            pending_attributes.clone(),
+                        );
                         pending_attributes.clear();
                     }
                 }
@@ -82,20 +83,21 @@ fn main() {
             }
         }
 
-        config.compile_protos(&["protocol.proto"], &["."])
+        config
+            .compile_protos(&["protocol.proto"], &["."])
             .expect("Failed to compile protos");
-            
+
         // Post-process the generated file to add necessary imports
         let protocol_file = out_dir.join("protocol.rs");
-        let content = fs::read_to_string(&protocol_file)
-            .expect("Failed to read generated protocol.rs");
-            
+        let content =
+            fs::read_to_string(&protocol_file).expect("Failed to read generated protocol.rs");
+
         // Add imports at the beginning of the file
-        let imports = "use crate::{IO, HostIO, PluginIO, MessageType};\n\n";
+        let imports = "use crate::{IO, HostIO, PluginIO, IOBase, MessageType};\n\n";
         let new_content = format!("{}{}", imports, content);
-        
-        let mut file = fs::File::create(&protocol_file)
-            .expect("Failed to open protocol.rs for writing");
+
+        let mut file =
+            fs::File::create(&protocol_file).expect("Failed to open protocol.rs for writing");
         file.write_all(new_content.as_bytes())
             .expect("Failed to write modified protocol.rs");
     }

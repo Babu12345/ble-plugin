@@ -313,12 +313,14 @@ pub fn HostIO(args: TokenStream, input: TokenStream) -> TokenStream {
     let io_impl = match lifetimes.next() {
         None => {
             quote! {
+                impl <'a> IOBase<'a> for #name {}
                 impl<'a> IO<'a> for #name {}
                 impl<'a> HostIO<'a> for #name {}
             }
         }
         Some(first_lt) => {
             quote! {
+                impl #impl_generics IOBase<#first_lt> for #name #ty_generics #where_clause {}
                 impl #impl_generics IO<#first_lt> for #name #ty_generics #where_clause {}
                 impl #impl_generics HostIO<#first_lt> for #name #ty_generics #where_clause {}
             }
@@ -398,12 +400,14 @@ pub fn PluginIO(args: TokenStream, input: TokenStream) -> TokenStream {
     let io_impl = match lifetimes.next() {
         None => {
             quote! {
+                impl <'a> IOBase<'a> for #name {}
                 impl<'a> IO<'a> for #name {}
                 impl<'a> PluginIO<'a> for #name {}
             }
         }
         Some(first_lt) => {
             quote! {
+                impl #impl_generics IOBase<#first_lt> for #name #ty_generics #where_clause {}
                 impl #impl_generics IO<#first_lt> for #name #ty_generics #where_clause {}
                 impl #impl_generics PluginIO<#first_lt> for #name #ty_generics #where_clause {}
             }

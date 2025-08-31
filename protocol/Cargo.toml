@@ -28,7 +28,7 @@ prost-build = { version = "0.13", optional = true }
 doctest = false
 
 [features]
-default = ["std", "bincode_serialization", "protocol_buffers"]
+default = ["std", "protocol_buffers"]
 std = ["serde/std", "bincode/alloc", "prost/std"]
 bincode_serialization = ["bincode"]
 protocol_buffers = ["prost", "prost-build"]

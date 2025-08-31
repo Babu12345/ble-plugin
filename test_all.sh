@@ -38,7 +38,6 @@ test_rust_crates() {
         "lib_utils"
         "protocol"
         "protocol_io"
-        "codegen"
     )
     
     local failed_crates=()

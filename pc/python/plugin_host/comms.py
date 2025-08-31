@@ -8,7 +8,6 @@ import queue
 import os
 from typing import Any, Optional
 from plugin_host.generated_types import *
-
 def parse_uuid_u16(uuid_value) -> int:
     """Parse UUID as u16 value
     
@@ -931,6 +930,7 @@ class USBDataListener:
             return None
     
     def has_messages(self) -> bool:
+        
         """Check if there are pending messages in the queue"""
         return not self.message_queue.empty()
     
