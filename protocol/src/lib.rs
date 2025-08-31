@@ -164,8 +164,9 @@
 pub mod errors;
 pub mod host;
 pub mod io;
-pub mod io_types;
 pub mod plugin;
+/// Types to interface with the plugin io
+pub mod protocol;
 pub use io::*;
 pub mod utils;
 

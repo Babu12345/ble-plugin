@@ -6,7 +6,8 @@
 // dependencies are introduced.
 
 use heapless::{String as HeaplessString, Vec as HeaplessVec};
-use protocol::{HostIO, MessageType, MessageTypeId, PluginIO, DEFAULT_PACKET_SIZE, IO};
+use protocol::protocol::MessageTypeId;
+use protocol::{HostIO, MessageType, PluginIO, DEFAULT_PACKET_SIZE, IO};
 use protocol_io::{HostIO as HostIOMacro, PluginIO as PluginIOMacro};
 use serde::{Deserialize, Serialize};
 use std::fs;

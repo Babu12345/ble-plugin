@@ -215,3 +215,7 @@ When adding new message types:
 To ensure rust-analyzer properly handles the serialization cfg flags:
 - Add `"rust-analyzer.cargo.features": [ "bincode_serialization" ],` to your `.vscode/settings.json`
 - This prevents rust-analyzer from showing compiler errors for cfg-gated code branches when the appropriate cfg flag is set
+
+
+## Protocol buffer
+- brew install protobuf

@@ -47,14 +47,13 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+use crate::protocol::MessageTypeId;
 use crate::{
     errors::{Error, Result},
     DEFAULT_PACKET_SIZE,
 };
 use heapless::Vec;
 use serde::{Deserialize, Serialize};
-use strum::{EnumIter, IntoEnumIterator};
-
 /// Size in bytes of the message type identifier field
 ///
 /// Each message includes a single byte identifying its type, enabling
@@ -89,93 +88,14 @@ pub const MESSAGE_MAGIC_BYTES: usize = 2;
 pub const MESSAGE_HEADER_SIZE: usize =
     MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES + DATA_BYTES_LENGTH_IN_BYTES;
 
-/// Message type identifiers for efficient command dispatch
+/// Size in bytes of the payload length field
 ///
-/// This enum defines unique identifiers for each message type in the protocol,
-/// enabling O(1) message dispatch without trial-and-error deserialization.
-/// The type IDs are organized into logical ranges for easy identification.
-///
-/// ## Type ID Ranges
-///
-/// - **0x01-0x7F**: Host commands sent to plugin device
-/// - **0x80-0xFF**: Plugin responses sent to host device
-///
-/// ## Usage
-///
-/// ```rust
-/// use protocol::MessageTypeId;
-///
-/// // Check if message is a host command
-/// let is_host_command = (type_id as u8) < 0x80;
-///
-/// // Check if message is a plugin response  
-/// let is_plugin_response = (type_id as u8) >= 0x80;
-/// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
-#[repr(u8)]
-pub enum MessageTypeId {
-    // Host Commands (0x01-0x0F)
-    /// Configure BLE peripheral device with name and 6-byte address
-    HostCommandConfigurePeripheral = 0x01,
-
-    /// Create a new BLE service with specified u16 UUID
-    HostCommandConfigureService = 0x02,
-
-    /// Create a BLE characteristic with properties
-    HostCommandConfigureCharacteristic = 0x03,
-
-    /// Configure characteristic for read operations with default value
-    HostCommandConfigureCharacteristicRead = 0x04,
-
-    /// Query information about a BLE service
-    HostCommandGetServiceInfo = 0x05,
-
-    /// Query information about a BLE characteristic
-    HostCommandGetCharacteristicInfo = 0x06,
-
-    /// Start BLE advertising with optional multi-connect support
-    HostCommandStartAdvertisement = 0x07,
-
-    /// Send notification/indication to connected BLE client
-    HostCommandNotifyCharacteristicValue = 0x08,
-
-    /// Configure BLE security settings (pairing, bonding, passkey, etc.)
-    HostCommandConfigurePeripheralSecurity = 0x09,
-
-    /// Configure BLE profile with predefined services and characteristics
-    HostCommandConfigureProfile = 0x0A,
-
-    /// Stop BLE advertising
-    HostCommandStopAdvertisement = 0x0B,
-
-    // Plugin Responses (0x80+)
-    /// Data forwarded from BLE client to BLE plugin
-    PluginData = 0x80,
-
-    /// Configuration error response from plugin
-    PluginConfigurationError = 0x81,
-
-    /// Service information response with characteristic list
-    PluginServiceInfoResponse = 0x82,
-
-    /// Characteristic information response with properties
-    PluginCharacteristicInfoResponse = 0x83,
-
-    /// Authentication completed response from plugin
-    PluginAuthenticationCompletedResponse = 0x84,
-}
-
-/// Error type for converting from u8 to MessageTypeId
-pub struct InvalidMessageTypeIdForConversion;
-
-impl TryFrom<u8> for MessageTypeId {
-    type Error = InvalidMessageTypeIdForConversion;
-    fn try_from(value: u8) -> core::result::Result<Self, Self::Error> {
-        MessageTypeId::iter()
-            .find(|&x| x as u8 == value)
-            .ok_or(InvalidMessageTypeIdForConversion)
-    }
-}
+/// The length field is a 2-byte little-endian value specifying the size
+/// of the serialized payload data following the header. While the field
+/// theoretically allows payloads up to 65,535 bytes, the practical limit
+/// is [`DEFAULT_PACKET_SIZE`] - [`MESSAGE_HEADER_SIZE`] bytes due to the USB
+/// packet size constraint of [`DEFAULT_PACKET_SIZE`].
+pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 
 /// Trait for associating types with their message type identifiers
 ///
@@ -208,15 +128,6 @@ pub trait MessageType {
     /// a unique identifier.
     fn message_type_id() -> MessageTypeId;
 }
-
-/// Size in bytes of the payload length field
-///
-/// The length field is a 2-byte little-endian value specifying the size
-/// of the serialized payload data following the header. While the field
-/// theoretically allows payloads up to 65,535 bytes, the practical limit
-/// is [`DEFAULT_PACKET_SIZE`] - [`MESSAGE_HEADER_SIZE`] bytes due to the USB
-/// packet size constraint of [`DEFAULT_PACKET_SIZE`].
-pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 
 /// Core I/O trait for protocol message serialization and deserialization
 ///
@@ -285,7 +196,7 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
     ///
     /// This method serializes the message content (without header) to a
     /// dynamically allocated Vec. Available only when the `std` feature is enabled.
-    /// 
+    ///
     /// The serialization method is determined by cfg flags:
     /// - `bincode_serialization`: Uses bincode for efficient binary serialization (default)
     /// - Future serialization methods can be added with additional cfg flags
@@ -319,7 +230,7 @@ pub trait IO<'a>: Serialize + Deserialize<'a> + Sized + MessageType {
     /// This method serializes the message content (without header) into a
     /// provided buffer slice. This is the primary serialization method for
     /// no_std environments and memory-constrained applications.
-    /// 
+    ///
     /// The serialization method is determined by cfg flags:
     /// - `bincode_serialization`: Uses bincode for efficient binary serialization (default)
     /// - Future serialization methods can be added with additional cfg flags

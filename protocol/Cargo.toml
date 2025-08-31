@@ -18,12 +18,18 @@ uuid = { version = "1.17.0", default-features = false, features = ["serde"] }
 log = "0.4"
 embassy-sync = { version = "0.6.1", default-features = false }
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
+prost = { version = "0.14.1", default-features = false, optional = true, features = [
+    "derive",
+] }
 
+[build-dependencies]
+prost-build = { version = "0.13", optional = true }
 
 [lib]
 doctest = false
 
 [features]
-default = ["std", "bincode_serialization"]
-std = ["serde/std", "bincode/alloc"]
+default = ["std", "bincode_serialization", "protocol_buffers"]
+std = ["serde/std", "bincode/alloc", "prost/std"]
 bincode_serialization = ["bincode"]
+protocol_buffers = ["prost", "prost-build"]
