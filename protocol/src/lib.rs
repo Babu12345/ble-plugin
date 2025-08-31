@@ -27,7 +27,7 @@
 //! ## Protocol Features
 //!
 //! - **Type-Safe Messages**: Rust type system ensures protocol correctness
-//! - **Efficient Serialization**: Binary serialization using bincode
+//! - **Efficient Serialization**: Configurable binary serialization
 //! - **Message Validation**: Magic number and header integrity checking  
 //! - **Version Compatibility**: Structured message IDs for protocol evolution
 //! - **Cross-Platform**: Supports both embedded (no_std) and standard environments
@@ -47,7 +47,7 @@
 //! - **Magic Number**: 0xDEAD (little-endian) for message integrity validation
 //! - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
 //! - **Length**: Payload size in bytes (little-endian)
-//! - **Payload**: Bincode-serialized message data
+//! - **Payload**: Binary-serialized message data
 //!
 //! **Size Constraints**: The total message size (header + payload) cannot exceed
 //! [`DEFAULT_PACKET_SIZE`]. With a [`MESSAGE_HEADER_SIZE`] header, the maximum payload
@@ -122,6 +122,21 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
+//! ### Serialization Configuration
+//!
+//! The protocol supports configurable serialization methods via cfg flags.
+//! By default, `bincode_serialization` is enabled for efficient binary serialization.
+//!
+//! ```toml
+//! # In your Cargo.toml
+//! [dependencies]
+//! protocol = { version = "...", features = ["bincode_serialization"] }
+//! ```
+//!
+//! When `cfg(feature = "bincode_serialization")` is enabled (default), the protocol uses
+//! bincode for all message serialization and deserialization operations. Future versions
+//! may support additional serialization backends.
+//!
 //! ## Protocol Constants
 //!
 //! - [`MAX_NAME_SIZE`]: Maximum length for device names (30 characters)
@@ -134,6 +149,7 @@
 //! - `std`: Standard library support (enabled by default)
 //! - `serde`: Serde serialization support
 //! - `defmt`: Defmt logging support for embedded systems
+//! - `bincode_serialization`: Enable bincode for binary message serialization (default)
 //!
 //! ## Compatibility
 //!
