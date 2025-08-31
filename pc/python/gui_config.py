@@ -854,12 +854,14 @@ class BLEConfigurationGUI:
         else:
             # Try to deserialize and show formatted data
             try:
-                from plugin_host.comms import deserialize_response
-                from plugin_host.generated_types import PluginData
+                from plugin_host.comms import deserialize_response,deserialize_response_protobuf
+                # from plugin_host.generated_types import PluginData
+                if self.use_protobuf:
+                    deserialized = deserialize_response_protobuf(raw_data)
+                else:
+                    deserialized = deserialize_response(raw_data)
                 
-                deserialized = deserialize_response(raw_data)
-                
-                if isinstance(deserialized, PluginData):
+                if isinstance(deserialized, protocol_pb2.PluginData):
                     # Format PluginData fields prettily
                     src_addr = ':'.join([f'{b:02X}' for b in deserialized.src_addr])
                     send_type = str(deserialized.send_type).split('.')[-1]
