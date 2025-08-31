@@ -19,7 +19,7 @@ This library provides the complete communication protocol between host devices (
 ## Key Features
 
 - **Type-Safe Messages**: Rust type system ensures protocol correctness
-- **Efficient Serialization**: Binary serialization using bincode
+- **Efficient Serialization**: Binary serialization
 - **Message Validation**: Magic number and header integrity checking
 - **Version Compatibility**: Structured message IDs for protocol evolution
 - **Cross-Platform**: Supports both embedded (no_std) and standard environments
@@ -39,7 +39,7 @@ All messages use a standardized 5-byte header followed by serialized payload:
 - **Magic Number**: 0xDEAD (little-endian) for message integrity validation
 - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
 - **Length**: Payload size in bytes (little-endian)
-- **Payload**: Bincode-serialized message data
+- **Payload**: Binary serialized message data
 
 **Size Constraints**: The total message size (header + payload) cannot exceed `DEFAULT_PACKET_SIZE`. With a `MESSAGE_HEADER_SIZE` header, the maximum payload size is `DEFAULT_PACKET_SIZE` - `MESSAGE_HEADER_SIZE` bytes.
 
