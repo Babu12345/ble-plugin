@@ -31,7 +31,7 @@ https://docs.google.com/document/d/1Dux7SiKq3yMgd7yeh_1pGXjGcVbrisn82CYdyfDYuJs/
 
 ## Code Generation
 
-This project includes an automatic code generation system to maintain consistency between Rust and Python protocol implementations.
+This project includes an automatic code generation system using protobuf to maintain consistency between Rust and Python protocol implementations.
 
 ### Protocol Definitions
 
@@ -46,7 +46,7 @@ Key protocol features:
 - Uses Protocol Buffers for reliable, cross-platform serialization
 - Ensures MessageTypeId ranges are consistent (host: 0x01-0x7F, plugin: 0x80-0xFF)
 - Type-safe message definitions with automatic code generation
-- Comprehensive test validation with 90+ tests
+- Comprehensive test validation
 
 For detailed protocol documentation, see:
 - **Protocol Library**: [`protocol/README.md`](protocol/README.md)
@@ -88,19 +88,10 @@ The test script will:
 - `lib_utils` - Utility functions
 - `protocol_io` - Protocol I/O operations  
 - `protocol` - Core protocol definitions (17 tests)
-- `codegen` - Code generation tools (41 tests total)
 
 **Python Packages:**
 - `pc/python` - Host-side Python implementation (90 tests, protobuf-only)
 
-### Testing the Code Generator
-
-```bash
-cd codegen
-cargo test                    # Run all 41 tests
-cargo test --lib              # Unit tests
-cargo test --test validation_tests  # Validation tests
-```
 
 ## Useful commands
 
