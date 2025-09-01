@@ -68,15 +68,13 @@ Responses and data sent from plugin devices back to hosts:
 
 ```rust
 use protocol::io_types::HostCommandConfigurePeripheral;
-use heapless::{String, Vec};
 
 // Create a peripheral configuration command
-let mut addr = Vec::new();
-addr.extend_from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap();
+let mut addr = Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
 
 let command = HostCommandConfigurePeripheral {
     name: String::try_from("MyDevice").unwrap(),
-    addr: addr,  // 6-byte BLE address using heapless::Vec<u8, 6>
+    addr: addr,  // 6-byte BLE address
 };
 ```
 
@@ -114,7 +112,7 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Supported Commands
 
 ### Peripheral Management
-- `HostCommandConfigurePeripheral`: Set up device name and BLE address (heapless::Vec<u8, 6>)
+- `HostCommandConfigurePeripheral`: Set up device name and BLE address
 - `HostCommandStartAdvertisement`: Begin BLE advertising
 - `HostCommandConfigurePeripheralSecurity`: Configure security settings (pairing, passkey)
 

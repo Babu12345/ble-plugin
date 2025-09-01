@@ -98,12 +98,11 @@
 //!
 //! ```rust
 //! use protocol::io_types::HostCommandConfigurePeripheral;
-//! use heapless::{String, Vec};
 //!
 //! // Create a peripheral configuration command
 //! let command = HostCommandConfigurePeripheral {
 //!     name: String::try_from("MyDevice").unwrap(),
-//!     addr: Vec::from_slice(&[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]).unwrap(), // 6-byte BLE address using heapless::Vec<u8, 6>
+//!     addr: Vec::from(&[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]), // 6-byte BLE address
 //! };
 //! ```
 //!
@@ -199,9 +198,8 @@ pub mod utils;
 ///
 /// ```rust
 /// use protocol::MAX_NAME_SIZE;
-/// use heapless::String;
 ///
-/// let device_name: String<MAX_NAME_SIZE> = String::try_from("MyBLEDevice").unwrap();
+/// let device_name: String = String::try_from("MyBLEDevice").unwrap();
 /// ```
 pub const MAX_NAME_SIZE: usize = 30;
 
