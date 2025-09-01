@@ -12,7 +12,7 @@ from plugin_host.comms import (
     USBDevice,
     USBCommunicationError
 )
-from plugin_host.generated_types import HostCommandConfigurePeripheral
+import plugin_host.protocol_pb2 as protocol_pb2
 
 
 class TestCommandDelay:
@@ -90,7 +90,7 @@ class TestCommandDelay:
         # Create mock device and command
         mock_device = Mock(spec=USBDevice)
         mock_device.send_data.return_value = 64
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:
@@ -111,7 +111,7 @@ class TestCommandDelay:
         # Create mock device and command
         mock_device = Mock(spec=USBDevice)
         mock_device.send_data.return_value = 64
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:
@@ -131,7 +131,7 @@ class TestCommandDelay:
         # Create mock device and command
         mock_device = Mock(spec=USBDevice)
         mock_device.send_data.return_value = 64
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:
@@ -152,7 +152,7 @@ class TestCommandDelay:
         """Test that delay happens after send_data, not before"""
         mock_device = Mock(spec=USBDevice)
         mock_device.send_data.return_value = 64
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:
@@ -173,7 +173,7 @@ class TestCommandDelay:
         """Test that errors are still propagated even with delay"""
         mock_device = Mock(spec=USBDevice)
         mock_device.send_data.side_effect = Exception("USB error")
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:
@@ -190,7 +190,7 @@ class TestCommandDelay:
     def test_serialization_error_no_delay(self):
         """Test that serialization errors don't trigger delay"""
         mock_device = Mock(spec=USBDevice)
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:
@@ -234,7 +234,7 @@ class TestCommandDelay:
         """Test delay logic with custom delay values"""
         mock_device = Mock(spec=USBDevice)
         mock_device.send_data.return_value = 64
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:
@@ -254,7 +254,7 @@ class TestCommandDelay:
         """Test that zero delay doesn't call sleep"""
         mock_device = Mock(spec=USBDevice)
         mock_device.send_data.return_value = 64
-        command = HostCommandConfigurePeripheral(name="test", addr=[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
+        command = protocol_pb2.HostCommandConfigurePeripheral(name="test", addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]))
         
         with patch('plugin_host.comms.serialize_command') as mock_serialize, \
              patch('plugin_host.comms.time.sleep') as mock_sleep:

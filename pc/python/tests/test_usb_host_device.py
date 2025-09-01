@@ -2,13 +2,7 @@ import pytest
 import uuid as uuid_module
 from unittest.mock import Mock, patch
 from plugin_host.comms import USBHostDevice, USBCommunicationError, parse_uuid_u16
-from plugin_host.generated_types import (
-    HostCommandConfigurePeripheral,
-    HostCommandGetServiceInfo,
-    PluginServiceInfoResponse,
-    BLEProperties,
-    BluetoothAddressType,
-)
+import plugin_host.protocol_pb2 as protocol_pb2
 
 class TestUSBHostDevice:
     """Test suite for USBHostDevice class"""
@@ -65,15 +59,15 @@ class TestUSBHostDevice:
         mock_send.assert_called_once()
         args, kwargs = mock_send.call_args
         command = args[1]  # Second argument is the command
-        assert isinstance(command, HostCommandConfigurePeripheral)
+        assert isinstance(command, protocol_pb2.HostCommandConfigurePeripheral)
         assert command.name == name
-        assert command.addr == addr
+        assert command.addr == bytes(addr)
     
     @patch('plugin_host.comms.usb_send_and_receive')
     def test_get_service_info(self, mock_send_receive) -> None:
         """Test get_service_info method"""
         uuid = 0x8765
-        expected_response = PluginServiceInfoResponse(
+        expected_response = protocol_pb2.PluginServiceInfoResponse(
             service_uuid=uuid,
             characteristic_uuids=[
                 0x1111,
@@ -90,16 +84,16 @@ class TestUSBHostDevice:
         args, kwargs = mock_send_receive.call_args
         command = args[1]  # Second argument is the command
         response_type = args[2]  # Third argument is response type
-        assert isinstance(command, HostCommandGetServiceInfo)
+        assert isinstance(command, protocol_pb2.HostCommandGetServiceInfo)
         assert command.uuid == uuid
-        assert response_type == PluginServiceInfoResponse
+        assert response_type == protocol_pb2.PluginServiceInfoResponse
     
     @patch('plugin_host.comms.usb_send_command')
     def test_configure_characteristic(self, mock_send) -> None:
         """Test configure_characteristic method"""
         uuid = 0x1234
         service_uuid = 0x8765
-        properties = [BLEProperties.READ, BLEProperties.WRITE]
+        properties = [protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.WRITE]
         
         self.host_device.configure_characteristic(uuid, service_uuid, properties)
         
@@ -129,14 +123,13 @@ class TestUSBHostDevice:
         args, kwargs = mock_send.call_args
         command = args[1]
         # HostCommandStopAdvertisement has no attributes, just verify it's the right type
-        from plugin_host.generated_types import HostCommandStopAdvertisement
-        assert isinstance(command, HostCommandStopAdvertisement)
+        assert isinstance(command, protocol_pb2.HostCommandStopAdvertisement)
     
     @patch('plugin_host.comms.usb_send_command')
     def test_notify_characteristic_value(self, mock_send) -> None:
         """Test notify_characteristic_value method"""
         address = b'\x12\x34\x56\x78\x9a\xbc'
-        address_type = BluetoothAddressType.Public
+        address_type = protocol_pb2.BluetoothAddressType.PUBLIC
         char_uuid = 0x1234
         service_uuid = 0x8765
         value = b"test_value"
@@ -157,26 +150,26 @@ class TestUSBHostDevice:
     @patch('plugin_host.comms.usb_send_command')
     def test_send_command_generic(self, mock_send) -> None:
         """Test generic send_command method"""
-        cmd = HostCommandGetServiceInfo(uuid=0x1234)
+        cmd = protocol_pb2.HostCommandGetServiceInfo(uuid=0x1234)
         
         self.host_device.send_command(cmd)
         
-        mock_send.assert_called_once_with(self.host_device.usb_device, cmd, False)
+        mock_send.assert_called_once_with(self.host_device.usb_device, cmd)
     
     @patch('plugin_host.comms.usb_receive_response')
     def test_receive_response_generic(self, mock_receive) -> None:
         """Test generic receive_response method"""
-        expected_response = PluginServiceInfoResponse(
+        expected_response = protocol_pb2.PluginServiceInfoResponse(
             service_uuid=0x1234,
             characteristic_uuids=[],
             exists=False
         )
         mock_receive.return_value = expected_response
         
-        result = self.host_device.receive_response(PluginServiceInfoResponse)
+        result = self.host_device.receive_response(protocol_pb2.PluginServiceInfoResponse)
         
         assert result == expected_response
-        mock_receive.assert_called_once_with(self.host_device.usb_device, PluginServiceInfoResponse, False)
+        mock_receive.assert_called_once_with(self.host_device.usb_device, protocol_pb2.PluginServiceInfoResponse)
     
     def test_context_manager(self) -> None:
         """Test context manager functionality"""

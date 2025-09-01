@@ -6,10 +6,8 @@ from plugin_host.comms import (
     DEFAULT_PACKET_SIZE,
     parse_uuid_u16
 )
-from plugin_host.generated_types import (
-    HostCommandConfigurePeripheral,
-    HostCommandGetServiceInfo,
-    PluginServiceInfoResponse,
+import plugin_host.protocol_pb2 as protocol_pb2
+from plugin_host.constants import (
     MESSAGE_MAGIC,
     MESSAGE_MAGIC_BYTES,
     MESSAGE_TYPE_ID_BYTES,
@@ -20,9 +18,9 @@ from plugin_host.generated_types import (
 def test_command_serialization_with_message_header() -> None:
     """Test serialization of protocol commands with full message header"""
     # Test HostCommandConfigurePeripheral
-    cmd = HostCommandConfigurePeripheral(
+    cmd = protocol_pb2.HostCommandConfigurePeripheral(
         name="TestDevice",
-        addr=[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]  # MAC address as list of 6 bytes
+        addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc])  # MAC address as bytes
     )
     
     # Serialize command
@@ -48,7 +46,7 @@ def test_command_serialization_with_message_header() -> None:
 
 def test_service_command_serialization() -> None:
     """Test serialization of service info command"""
-    service_cmd = HostCommandGetServiceInfo(
+    service_cmd = protocol_pb2.HostCommandGetServiceInfo(
         uuid=0x8765
     )
     
@@ -74,7 +72,7 @@ def test_service_command_serialization() -> None:
 def test_response_deserialization() -> None:
     """Test deserializing a mock response"""
     # Create a mock response
-    mock_response = PluginServiceInfoResponse(
+    mock_response = protocol_pb2.PluginServiceInfoResponse(
         service_uuid=0x8765,
         characteristic_uuids=[
             0x1111
@@ -86,7 +84,7 @@ def test_response_deserialization() -> None:
     serialized = serialize_command(mock_response)
     
     # Deserialize it back
-    deserialized = deserialize_response(serialized, PluginServiceInfoResponse)
+    deserialized = deserialize_response(serialized, protocol_pb2.PluginServiceInfoResponse)
     
     assert deserialized.service_uuid == mock_response.service_uuid, "Service UUID mismatch"
     assert len(deserialized.characteristic_uuids) == len(mock_response.characteristic_uuids), "Characteristic count mismatch"
@@ -96,7 +94,7 @@ def test_response_deserialization() -> None:
 def test_message_header_protocol_roundtrip() -> None:
     """Test the message header protocol with round-trip serialization"""
     # Create a simple command
-    cmd = HostCommandGetServiceInfo(uuid=0x1234)
+    cmd = protocol_pb2.HostCommandGetServiceInfo(uuid=0x1234)
     
     # Serialize
     serialized = serialize_command(cmd)
@@ -125,7 +123,7 @@ def test_message_header_protocol_roundtrip() -> None:
     assert len(payload_data) == data_length, f"Payload size {len(payload_data)} should match length field {data_length}"
     
     # Test deserialization using the same data
-    deserialized = deserialize_response(serialized, HostCommandGetServiceInfo)
+    deserialized = deserialize_response(serialized, protocol_pb2.HostCommandGetServiceInfo)
     
     assert deserialized.uuid == cmd.uuid, f"Round-trip failed: {deserialized.uuid} != {cmd.uuid}"
     assert deserialized == cmd, "Complete command objects should match after round-trip"
