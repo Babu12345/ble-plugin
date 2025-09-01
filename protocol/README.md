@@ -159,21 +159,33 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Feature Flags
 
 - `std`: Standard library support (enabled by default)
-- `protobuf`: Protocol Buffers support (enabled by default)
+- `protocol_buffers`: Protocol Buffers serialization support
+- `bincode_serialization`: Bincode serialization support (enabled by default)
 - `defmt`: Defmt logging support for embedded systems
 
 ## Serialization
 
-The protocol uses Protocol Buffers (protobuf) by default for cross-platform compatibility:
+The protocol supports two serialization formats, and **exactly one must be enabled** at compile time:
 
-- **Efficient Binary Format**: Compact binary encoding with minimal overhead
+### Protocol Buffers (Default)
+
+Enable with the `protocol_buffers` feature flag for cross-platform compatibility:
+
+```toml
+# In Cargo.toml
+[dependencies]
+protocol = { path = "../protocol", features = ["protocol_buffers"] }
+```
+
+**Protocol Buffers advantages:**
 - **Cross-Platform**: Same message format across Rust, Python, and other languages
 - **Schema Evolution**: Forward and backward compatible message evolution
+- **Language Agnostic**: Works with any language that supports protobuf
 - **Type Safety**: Strong typing with automatic validation
 
-### Alternative Serialization
+### Bincode Serialization
 
-For Rust-to-Rust communication, bincode is also available via feature flag:
+For Rust-to-Rust communication, bincode offers better performance:
 
 ```toml
 # In Cargo.toml
@@ -181,14 +193,22 @@ For Rust-to-Rust communication, bincode is also available via feature flag:
 protocol = { path = "../protocol", features = ["bincode_serialization"] }
 ```
 
-**Bincode advantages for Rust-to-Rust:**
+**Bincode advantages:**
 - **Higher Performance**: Faster serialization/deserialization than protobuf
 - **Smaller Binary Size**: More compact encoding for simple data structures
 - **Zero-Copy**: Can deserialize directly into Rust structs without allocation
 - **Native Rust Types**: Direct support for Rust enums, Options, and collections
 
+### Important: Mutual Exclusivity
+
+⚠️ **Exactly one serialization method must be enabled.** The crate will fail to compile if:
+- Both `protocol_buffers` and `bincode_serialization` are enabled simultaneously
+- Neither feature is enabled
+
+This mutual exclusivity is enforced by compile-time checks to ensure consistent serialization behavior across your application.
+
 **When to use each:**
-- **Protobuf**: Cross-language communication, schema evolution, long-term compatibility
+- **Protocol Buffers**: Cross-language communication, schema evolution, long-term compatibility
 - **Bincode**: High-performance Rust-to-Rust communication, embedded systems with tight constraints
 
 ## Compatibility

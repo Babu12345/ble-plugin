@@ -3,7 +3,7 @@
 //! This module provides the fundamental building blocks for protocol communication:
 //! message type definitions, serialization traits, and header format handling.
 //! It implements the core protocol specification including magic number validation,
-//! type-safe message identification, and efficient binary serialization.
+//! type-safe message identification, and configurable serialization formats.
 //!
 //! ## Message Protocol
 //!
@@ -20,10 +20,30 @@
 //! [`DEFAULT_PACKET_SIZE`]. With a [`MESSAGE_HEADER_SIZE`] header, the maximum payload
 //! size is [`DEFAULT_PACKET_SIZE`] - [`MESSAGE_HEADER_SIZE`] bytes.
 //!
+//! ## Serialization Configuration
+//!
+//! The serialization format is controlled at compile-time through feature flags.
+//! **Exactly one** serialization method must be enabled:
+//!
+//! - **`bincode_serialization`** (default): Uses bincode for efficient binary serialization
+//!   - Compact binary format with minimal overhead
+//!   - Best for performance-critical embedded systems
+//!   - Requires serde `Serialize`/`Deserialize` traits
+//!
+//! - **`protocol_buffers`**: Uses Protocol Buffers for serialization
+//!   - Language-agnostic format with schema evolution support
+//!   - Better for cross-platform/cross-language communication
+//!   - Requires `prost::Message` trait implementation
+//!   - Must implement `Default` trait for protobuf deserialization
+//!
+//! **Important**: Exactly one serialization method must be enabled. The crate will
+//! fail to compile if both features are enabled simultaneously or if neither is
+//! enabled. This is enforced by compile-time checks in `lib.rs`.
+//!
 //! ## Key Features
 //!
 //! - **Type Safety**: Compile-time message type verification
-//! - **Efficient Serialization**: Binary encoding using bincode
+//! - **Configurable Serialization**: Choose between bincode or protobuf
 //! - **Header Validation**: Magic number and length checking
 //! - **Cross-Platform**: Works in both std and no_std environments
 //! - **Zero-Copy**: Minimizes allocations in embedded contexts
@@ -196,9 +216,15 @@ pub trait IO<'a>: IOBase<'a> {
     /// This method serializes the message content (without header) to a
     /// dynamically allocated Vec. Available only when the `std` feature is enabled.
     ///
-    /// The serialization method is determined by cfg flags:
-    /// - `bincode_serialization`: Uses bincode for efficient binary serialization (default)
-    /// - Future serialization methods can be added with additional cfg flags
+    /// ## Serialization Method Selection
+    ///
+    /// The serialization format is determined at compile-time via feature flags.
+    /// Exactly one of the following must be enabled:
+    /// - **`bincode_serialization`**: Uses bincode binary format
+    /// - **`protocol_buffers`**: Uses Protocol Buffers format
+    ///
+    /// The crate enforces that exactly one serialization method is enabled
+    /// through compile-time checks in `lib.rs`.
     ///
     /// # Returns
     ///
@@ -220,10 +246,8 @@ pub trait IO<'a>: IOBase<'a> {
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_to_vec(self, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(all(feature = "protocol_buffers", not(feature = "bincode_serialization")))]
+        #[cfg(feature = "protocol_buffers")]
         return Ok(prost::Message::encode_to_vec(self));
-        #[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
-        compile_error!("Serialization requires the 'bincode_serialization' feature");
     }
 
     /// Serialize the message to a provided slice (no allocation)
@@ -232,9 +256,15 @@ pub trait IO<'a>: IOBase<'a> {
     /// provided buffer slice. This is the primary serialization method for
     /// no_std environments and memory-constrained applications.
     ///
-    /// The serialization method is determined by cfg flags:
-    /// - `bincode_serialization`: Uses bincode for efficient binary serialization (default)
-    /// - Future serialization methods can be added with additional cfg flags
+    /// ## Serialization Method Selection
+    ///
+    /// The serialization format is determined at compile-time via feature flags.
+    /// Exactly one of the following must be enabled:
+    /// - **`bincode_serialization`**: Uses bincode binary format
+    /// - **`protocol_buffers`**: Uses Protocol Buffers format with `prost::Message::encode`
+    ///
+    /// The crate enforces that exactly one serialization method is enabled
+    /// through compile-time checks in `lib.rs`.
     ///
     /// # Arguments
     ///
@@ -261,23 +291,29 @@ pub trait IO<'a>: IOBase<'a> {
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_into_slice(self, out, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(all(feature = "protocol_buffers", not(feature = "bincode_serialization")))]
+        #[cfg(feature = "protocol_buffers")]
         {
             prost::Message::encode(self, &mut out)
                 .map_err(|_| Error::UnableToSerializeToProtobuf)?;
             return Ok(self.encoded_len());
         }
-        #[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
-        compile_error!("Serialization requires the 'bincode_serialization' feature");
     }
 
     /// Deserialize the message from a byte slice (no allocation)
     ///
     /// This method deserializes message content from a byte slice without
-    /// allocating additional memory. The deserialization method is determined
-    /// by cfg flags:
-    /// - `bincode_serialization`: Uses bincode for binary deserialization (default)
-    /// - Future deserialization methods can be added with additional cfg flags
+    /// allocating additional memory.
+    ///
+    /// ## Deserialization Method Selection
+    ///
+    /// The deserialization format is determined at compile-time via feature flags.
+    /// Exactly one of the following must be enabled:
+    /// - **`bincode_serialization`**: Uses bincode with `borrow_decode_from_slice`
+    ///   for zero-copy deserialization where possible
+    /// - **`protocol_buffers`**: Uses Protocol Buffers with `prost::Message::decode`
+    ///
+    /// The crate enforces that exactly one serialization method is enabled
+    /// through compile-time checks in `lib.rs`.
     ///
     /// # Arguments
     ///
@@ -298,14 +334,12 @@ pub trait IO<'a>: IOBase<'a> {
                     .0;
             return Ok(res);
         }
-        #[cfg(all(feature = "protocol_buffers", not(feature = "bincode_serialization")))]
+        #[cfg(feature = "protocol_buffers")]
         {
-            let res =
-                prost::Message::decode(payload).map_err(|_| Error::UnableToSerializeToProtobuf)?;
+            let res = prost::Message::decode(payload)
+                .map_err(|_| Error::UnableToDeserializeFromProtobuf)?;
             return Ok(res);
         }
-        #[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
-        compile_error!("Deserialization requires the 'bincode_serialization' feature");
     }
 
     /// Convert from bytes
@@ -383,6 +417,22 @@ pub trait IO<'a>: IOBase<'a> {
 }
 
 /// Base trait for all protocol I/O types
+///
+/// This trait defines the requirements for types that can be serialized and
+/// deserialized through the protocol. The exact requirements depend on the
+/// enabled serialization features:
+///
+/// ## With `protocol_buffers` feature:
+/// - `Serialize` + `Deserialize<'a>`: Required for compatibility
+/// - `MessageType`: For protocol message type identification
+/// - `prost::Message`: For Protocol Buffers serialization
+/// - `Default`: Required by prost for protobuf deserialization
+/// - `Sized`: Required for type safety
+///
+/// ## Without `protocol_buffers` feature (bincode only):
+/// - `Serialize` + `Deserialize<'a>`: For bincode serialization
+/// - `MessageType`: For protocol message type identification
+/// - `Sized`: Required for type safety
 #[cfg(feature = "protocol_buffers")]
 pub trait IOBase<'a>:
     Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
@@ -390,6 +440,14 @@ pub trait IOBase<'a>:
 }
 
 /// Base trait for all protocol I/O types
+///
+/// This trait defines the requirements for types that can be serialized and
+/// deserialized through the protocol using bincode serialization.
+///
+/// Required traits:
+/// - `Serialize` + `Deserialize<'a>`: For bincode serialization
+/// - `MessageType`: For protocol message type identification
+/// - `Sized`: Required for type safety
 #[cfg(not(feature = "protocol_buffers"))]
 pub trait IOBase<'a>: Serialize + Deserialize<'a> + Sized + MessageType {}
 

@@ -27,12 +27,24 @@
 //! ## Protocol Features
 //!
 //! - **Type-Safe Messages**: Rust type system ensures protocol correctness
-//! - **Protocol Buffers**: Uses protobuf for cross-platform serialization by default
-//! - **Configurable Serialization**: Optional bincode support for high-performance Rust-to-Rust communication
+//! - **Configurable Serialization**: Choose between Protocol Buffers or bincode (mutually exclusive)
 //! - **Message Validation**: Magic number and header integrity checking  
 //! - **Version Compatibility**: Structured message IDs for protocol evolution
 //! - **Cross-Platform**: Supports both embedded (no_std) and standard environments
 //! - **Extensible Design**: Easy addition of new command and response types
+//!
+//! ## Serialization Configuration
+//!
+//! This crate requires **exactly one** serialization method to be enabled via feature flags:
+//!
+//! - `protocol_buffers`: Protocol Buffers for cross-platform/cross-language communication
+//! - `bincode_serialization`: Bincode for high-performance Rust-to-Rust communication (default)
+//!
+//! The mutual exclusivity is enforced at compile-time. The crate will fail to build if:
+//! - Both features are enabled simultaneously
+//! - Neither feature is enabled
+//!
+//! This ensures consistent serialization behavior throughout your application
 //!
 //! ## Message Protocol Format
 //!
@@ -167,6 +179,8 @@
 #![deny(missing_docs)]
 #[cfg(all(feature = "bincode_serialization", feature = "protocol_buffers"))]
 compile_error!("Features 'bincode_serialization' and 'protocol_buffers' cannot be enabled at the same time. Please choose one serialization method.");
+#[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
+compile_error!("Exactly one serialization feature must be enabled: 'bincode_serialization' or 'protocol_buffers'.");
 
 pub mod errors;
 pub mod host;
