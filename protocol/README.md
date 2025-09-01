@@ -19,7 +19,7 @@ This library provides the complete communication protocol between host devices (
 ## Key Features
 
 - **Type-Safe Messages**: Rust type system ensures protocol correctness
-- **Efficient Serialization**: Binary serialization
+- **Protocol Buffers**: Uses protobuf for efficient, cross-platform serialization
 - **Message Validation**: Magic number and header integrity checking
 - **Version Compatibility**: Structured message IDs for protocol evolution
 - **Cross-Platform**: Supports both embedded (no_std) and standard environments
@@ -85,7 +85,7 @@ let command = HostCommandConfigurePeripheral {
 ```rust
 use protocol::{IO, DEFAULT_PACKET_SIZE};
 
-// Serialize to fixed-size buffer with header
+// Serialize using protobuf with header
 let serialized: [u8; DEFAULT_PACKET_SIZE] = command.to_bytes()?;
 
 // Or serialize to provided buffer (no allocation)
@@ -151,8 +151,7 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 
 ## Dependencies
 
-- `serde`: Serialization framework
-- `bincode`: Efficient binary serialization
+- `prost`: Protocol Buffers implementation for Rust
 - `heapless`: No-allocation collections for embedded systems
 - `uuid`: UUID handling for BLE identifiers
 - `lib_utils`: Utility functions for array operations
@@ -160,19 +159,37 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Feature Flags
 
 - `std`: Standard library support (enabled by default)
-- `serde`: Serde serialization support
+- `protobuf`: Protocol Buffers support (enabled by default)
 - `defmt`: Defmt logging support for embedded systems
 
-## Serialization Configuration
+## Serialization
 
-The protocol supports configurable serialization methods through cfg settings:
+The protocol uses Protocol Buffers (protobuf) by default for cross-platform compatibility:
 
-- `bincode_serialization`: Use bincode for binary serialization (default)
-  - Efficient binary format with minimal overhead
-  - Suitable for embedded systems and high-performance applications
-  - Configure with: `cfg(bincode_serialization)`
+- **Efficient Binary Format**: Compact binary encoding with minimal overhead
+- **Cross-Platform**: Same message format across Rust, Python, and other languages
+- **Schema Evolution**: Forward and backward compatible message evolution
+- **Type Safety**: Strong typing with automatic validation
 
-Future serialization methods can be added by implementing the appropriate cfg flags. This allows switching between different serialization formats without changing the protocol API.
+### Alternative Serialization
+
+For Rust-to-Rust communication, bincode is also available via feature flag:
+
+```toml
+# In Cargo.toml
+[dependencies]
+protocol = { path = "../protocol", features = ["bincode_serialization"] }
+```
+
+**Bincode advantages for Rust-to-Rust:**
+- **Higher Performance**: Faster serialization/deserialization than protobuf
+- **Smaller Binary Size**: More compact encoding for simple data structures
+- **Zero-Copy**: Can deserialize directly into Rust structs without allocation
+- **Native Rust Types**: Direct support for Rust enums, Options, and collections
+
+**When to use each:**
+- **Protobuf**: Cross-language communication, schema evolution, long-term compatibility
+- **Bincode**: High-performance Rust-to-Rust communication, embedded systems with tight constraints
 
 ## Compatibility
 
@@ -209,13 +226,15 @@ When adding new message types:
 5. Update documentation
 
 
-## IDE Configuration
+## Protocol Buffer Setup
 
-### VS Code / rust-analyzer
-To ensure rust-analyzer properly handles the serialization cfg flags:
-- Add `"rust-analyzer.cargo.features": [ "bincode_serialization" ],` to your `.vscode/settings.json`
-- This prevents rust-analyzer from showing compiler errors for cfg-gated code branches when the appropriate cfg flag is set
+To work with Protocol Buffers:
 
+```bash
+# Install protobuf compiler
+brew install protobuf  # macOS
+# or
+sudo apt-get install protobuf-compiler  # Ubuntu/Debian
+```
 
-## Protocol buffer
-- brew install protobuf
+The `.proto` files are automatically compiled into Rust code during the build process.

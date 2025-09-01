@@ -105,7 +105,7 @@ The state machine uses a 5-byte message header format:
 - **Magic Number**: 0xDEAD for message integrity validation
 - **Type ID**: Efficient command routing (0x01-0x7F for host commands, 0x80-0xFF for plugin responses)
 - **Length**: Payload size for proper deserialization
-- **Payload**: Serialized command/response data using bincode
+- **Payload**: Serialized command/response data using Protocol Buffers
 
 **Size Constraints**: The total message size (header + payload) cannot exceed `DEFAULT_PACKET_SIZE`. With a 5-byte header, the maximum payload size is `DEFAULT_PACKET_SIZE` - 5 bytes.
 
@@ -165,7 +165,8 @@ The crate integrates deeply with the ESP32-Nimble BLE stack:
 
 - `esp32-nimble`: BLE stack integration
 - `esp-idf-svc`: ESP32 system services
-- `protocol`: Shared protocol definitions
+- `protocol`: Shared protocol definitions (Protocol Buffers)
+- `prost`: Protocol Buffers implementation for Rust
 - `heapless`: No-allocation collections
 - `uuid`: UUID handling
 - `log`: Logging support

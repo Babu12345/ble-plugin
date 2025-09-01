@@ -33,22 +33,24 @@ https://docs.google.com/document/d/1Dux7SiKq3yMgd7yeh_1pGXjGcVbrisn82CYdyfDYuJs/
 
 This project includes an automatic code generation system to maintain consistency between Rust and Python protocol implementations.
 
-### Generate Python Types from Rust Protocol
+### Protocol Definitions
+
+This project uses **Protocol Buffers (protobuf)** exclusively for all communication between host and plugin components. The protocol definitions are centralized and automatically generate consistent type definitions across platforms.
 
 ```bash
-# Generate Python types from Rust protocol definitions
-./scripts/generate-python-types.sh
+# Protocol definitions are in protobuf format
+# See protocol/src/ for .proto files and generated code
 ```
 
-This script:
-- Parses the Rust protocol library (`protocol/src/`)
-- Generates equivalent Python code in `pc/python/plugin_host/generated_types.py`
+Key protocol features:
+- Uses Protocol Buffers for reliable, cross-platform serialization
 - Ensures MessageTypeId ranges are consistent (host: 0x01-0x7F, plugin: 0x80-0xFF)
-- Provides comprehensive test validation with 41 tests
+- Type-safe message definitions with automatic code generation
+- Comprehensive test validation with 90+ tests
 
-For detailed documentation, see:
-- **Script Usage**: [`scripts/README.md`](scripts/README.md)
-- **Code Generator**: [`codegen/README.md`](codegen/README.md)
+For detailed protocol documentation, see:
+- **Protocol Library**: [`protocol/README.md`](protocol/README.md)
+- **Python Implementation**: [`pc/python/README.md`](pc/python/README.md)
 
 ## Testing
 
@@ -89,7 +91,7 @@ The test script will:
 - `codegen` - Code generation tools (41 tests total)
 
 **Python Packages:**
-- `pc/python` - Host-side Python implementation (40 tests)
+- `pc/python` - Host-side Python implementation (90 tests, protobuf-only)
 
 ### Testing the Code Generator
 
@@ -136,7 +138,9 @@ source ~/.zprofile
 cargo test -- --nocapture
 
 
-## python (also in the pc/python readme)
+### Python (also in the pc/python readme)
+## Generate the protobuf files for serialization/deserialization in python
+protoc --python_out=../pc/python/plugin_host/ protocol.proto 
 
 ### Create a virtual environment
 python3 -m venv /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python
@@ -145,7 +149,7 @@ python3 -m venv /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python
 source /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python/bin/activate
 
 ### Installations - for the pc/python host libraries
-pip install git+https://github.com/Babu12345/attrs2bin
+pip install protobuf
 pip install pyusb
 pip install pytest
 then add these lines to pytest.ini

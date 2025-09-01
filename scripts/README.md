@@ -1,354 +1,76 @@
-# Generate Python Types Script
+# Scripts Directory
 
-This directory contains utility scripts for the BLE plugin protocol project, with the main script being `generate-python-types.sh` for automatic Python code generation from Rust protocol definitions.
+This directory contains utility scripts for the BLE plugin protocol project.
 
-## generate-python-types.sh
+## Protocol Buffers Migration
 
-A comprehensive shell script that generates Python type definitions from the Rust protocol library, ensuring consistency between the two language implementations.
+**Important**: This project has migrated from custom code generation to **Protocol Buffers (protobuf)** for cross-platform compatibility.
 
-### Overview
+### Benefits of Protocol Buffers
 
-The `generate-python-types.sh` script automates the entire process of:
-1. Building the Rust code generator
-2. Parsing the Rust protocol library 
-3. Generating equivalent Python code
-4. Providing validation and testing guidance
+- **🔄 Automatic**: No manual code generation needed - protobuf handles everything
+- **🐍 Multi-Language**: Same `.proto` files generate code for Rust, Python, and more
+- **📊 Efficient**: Optimized binary serialization
+- **💡 Maintained**: Industry-standard protocol maintained by Google
 
-### Usage
-
-```bash
-# Run from the project root directory
-./scripts/generate-python-types.sh
-
-# Force regeneration even if types are up to date
-./scripts/generate-python-types.sh --force
-
-# Or run from anywhere
-/path/to/ble-plugin/scripts/generate-python-types.sh
-```
-
-### What It Does
-
-The script performs the following steps automatically:
-
-1. **🔄 Building**: Compiles the code generator in release mode for optimal performance
-2. **🐍 Generation**: Runs the generator to create Python types from Rust definitions
-3. **📊 Summary**: Reports statistics about what was generated
-4. **💡 Guidance**: Provides next steps and testing commands
-
-### Hash-Based Change Detection
-
-The script includes intelligent change detection to avoid unnecessary regeneration:
-
-1. **🔐 Hash Calculation**: Calculates a SHA-256 hash of all Rust protocol source files
-2. **📋 Comparison**: Compares with the hash stored in the existing generated file
-3. **⚡ Skip Logic**: Skips regeneration if protocol hasn't changed
-4. **🔄 Force Option**: Use `--force` flag to bypass hash checking
-
-#### Hash Check Output
-
-```
-🔐 Checking if regeneration is needed...
-🔐 Checking protocol hash...
-Current protocol hash:  a1b2c3d4e5f6...
-Existing generated hash: a1b2c3d4e5f6...
-✅ Generated types are up to date
-✅ Generated types are up to date, skipping regeneration
-💡 Use --force flag to regenerate anyway
-```
-
-#### Force Regeneration
-
-Use the `--force` flag when you need to regenerate regardless of hash status:
+### New Protocol Buffer Workflow
 
 ```bash
-# Force regeneration (bypasses hash check)
-./scripts/generate-python-types.sh --force
+# Protocol definitions are now in .proto files
+# Python and Rust code is automatically generated during build
+
+# For Python development:
+cd pc/python
+pip install protobuf
+
+# Import generated protobuf types:
+import plugin_host.protocol_pb2 as protocol_pb2
 ```
 
-Common scenarios for using `--force`:
-- Testing the generation pipeline
-- Debugging code generation issues  
-- After modifying the code generator itself
-- When the generator logic has changed but source files haven't
+### Generated Protocol Buffer Files
 
-### Output
+#### `protocol_pb2.py`
 
-When successful, the script generates:
-
-- **`generated_types.py`**: Complete Python type definitions in `pc/python/plugin_host/`
-- **`generation_report.md`**: Detailed report of what was generated
-- **Console Output**: Summary statistics and next steps
-
-#### Example Output
-
-```
-🔄 Generating Python types from Rust protocol library...
-🔨 Building code generator...
-🐍 Generating Python types...
-🔍 Parsing Rust protocol library...
-🐍 Generating Python code...
-📝 Generated: /path/to/pc/python/plugin_host/generated_types.py
-✅ Python code generated successfully!
-
-📊 Generation Summary:
-   - Constants: 6
-   - Enums: 1
-   - Structs: 0
-   - Lines: 73
-
-💡 Next steps:
-   1. Review the generated file: generated_types.py
-   2. Replace or merge with existing types.py
-   3. Test your Python code with the new types
-   4. Commit the changes if everything looks good
-
-🎉 Python type generation completed successfully!
-
-🧪 To run tests:
-   cargo test                          # Run all 41 tests
-   cargo test --lib                    # Unit tests (14)
-   cargo test --test integration_tests # Integration tests (8)
-   cargo test --test validation_tests  # Validation tests (6)
-   cargo test --test error_handling_tests # Error handling tests (7)
-   cargo test --test regression_tests  # Regression tests (6)
-
-🔧 To run a quick test validation:
-   cargo test --test validation_tests test_message_type_id_ranges
-```
-
-### Requirements
-
-- **Rust**: Must have Rust and Cargo installed
-- **Project Structure**: Must be run from a directory that can access the `codegen/` directory
-- **Protocol Library**: The Rust protocol library must exist at `protocol/src/`
-
-### Error Handling
-
-The script includes robust error handling:
-
-- **Build Failures**: Reports if the Rust code generator fails to compile
-- **Generation Failures**: Detects if Python code generation fails
-- **Missing Files**: Validates that required directories and files exist
-- **Permission Issues**: Handles file permission problems gracefully
-
-### Generated Files
-
-#### `generated_types.py`
-
-The main output file containing:
+The Protocol Buffer compiler automatically generates Python code containing:
 
 ```python
-# GENERATED CODE - DO NOT EDIT MANUALLY
-# This file is automatically generated from the Rust protocol library
+# -*- coding: utf-8 -*-
+# Generated by the protocol buffer compiler.  DO NOT EDIT!
+# source: protocol.proto
 
-import attrs2bin
-import attr
-from enum import Enum
-from typing import List, Optional
-
-# ==================== CONSTANTS ====================
-MESSAGE_MAGIC = 0xDEAD
-DEFAULT_PACKET_SIZE = 256
-# ... more constants
+from google.protobuf import message as _message
 
 # ==================== ENUMS ====================
-class MessageTypeId(Enum):
-    HostCommandConfigurePeripheral = 0x01
-    PluginData = 0x80
+class MessageTypeId(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    TypeHostCommandConfigurePeripheral = 1
+    TypePluginData = 128
     # ... more variants
 
 # ==================== MESSAGE STRUCTURES ====================
-@attr.s(auto_attribs=True)
-class HostCommandConfigurePeripheral:
+class HostCommandConfigurePeripheral(_message.Message):
     name: str
-    addr: List[attrs2bin.U8]  # 6-byte BLE address
+    addr: bytes  # 6-byte BLE address
     # ... more fields
 ```
 
-#### `generation_report.md`
-
-A detailed report including:
-- List of all constants generated with their values
-- Enum definitions with variant counts
-- Struct definitions with field counts
-- Generation timestamp
-- Usage instructions
-
-### Integration with Development Workflow
+### Development Workflow
 
 #### Daily Development
 
 ```bash
-# After modifying Rust protocol definitions
-./scripts/generate-python-types.sh
+# After modifying .proto files
+# Code is automatically regenerated during build
 
-# Review the changes
-git diff pc/python/plugin_host/generated_types.py
+# Review the protocol changes
+git diff protocol/src/*.proto
 
 # Test the changes
-cargo test --test validation_tests
+cargo test                    # Rust tests
+cd pc/python && pytest       # Python tests (90 tests)
 
-# Commit if everything looks good
-git add pc/python/plugin_host/generated_types.py
-git commit -m "Update Python types from Rust protocol changes"
+# Commit protocol changes
+git add protocol/src/*.proto
+git commit -m "Update protocol definitions"
 ```
 
-#### Continuous Integration
-
-The script is designed for CI/CD integration:
-
-```yaml
-# Example GitHub Actions step
-- name: Generate Python Types
-  run: ./scripts/generate-python-types.sh
-
-- name: Validate Generated Code
-  run: |
-    cd codegen
-    cargo test --test validation_tests
-```
-
-### Troubleshooting
-
-#### Common Issues
-
-**"Failed to generate Python types"**
-- Check that the `codegen/` directory exists
-- Ensure Rust and Cargo are installed
-- Verify the protocol library compiles: `cd protocol && cargo check`
-
-**Permission Denied**
-```bash
-chmod +x scripts/generate-python-types.sh
-```
-
-**"Protocol source not found"**
-- Ensure you're running from the project root
-- Check that `protocol/src/` directory exists
-- Verify `protocol/src/io.rs` and `protocol/src/lib.rs` exist
-
-**Build Errors**
-- Update Rust: `rustup update`
-- Clean build: `cd codegen && cargo clean && cargo build`
-- Check dependencies: `cd codegen && cargo update`
-
-## check-python-types-hash.sh
-
-A companion utility script that performs hash-based change detection for the protocol source files.
-
-### Overview
-
-The `check-python-types-hash.sh` script determines whether Python types need regeneration by comparing the current protocol hash with the hash stored in the existing generated file.
-
-### Usage
-
-```bash
-# Check if regeneration is needed (exit code 0 = needed, 1 = current)
-./scripts/check-python-types-hash.sh
-
-# Use in conditional logic
-if ./scripts/check-python-types-hash.sh; then
-    echo "Regeneration needed"
-    ./scripts/generate-python-types.sh
-else
-    echo "Types are current"
-fi
-```
-
-### What It Does
-
-1. **📁 Source Scan**: Finds all `.rs` files in `protocol/src/`
-2. **🔐 Hash Calculation**: Computes SHA-256 hash of all source content
-3. **📋 Comparison**: Extracts existing hash from `generated_types.py`
-4. **🚦 Exit Code**: Returns 0 if regeneration needed, 1 if current
-
-### Output Example
-
-```
-🔐 Checking protocol hash...
-Current protocol hash:  a1b2c34d5e6f789...
-Existing generated hash: b2c3d4e5f6789a1...
-🔄 Generated types need to be regenerated
-```
-
-### Integration
-
-This script is automatically called by `generate-python-types.sh` but can also be used independently in CI/CD pipelines or development workflows.
-
-#### Debug Mode
-
-For troubleshooting, you can run the generator directly:
-
-```bash
-cd codegen
-cargo run --bin generate-python -- --help
-
-# With custom paths
-cargo run --bin generate-python -- \
-  --protocol-path /custom/protocol/src \
-  --output-dir /custom/output
-```
-
-### Advanced Usage
-
-#### Custom Paths
-
-Modify the script variables for custom setups:
-
-```bash
-# Edit the script to change these paths
-PROTOCOL_PATH="$PROJECT_ROOT/custom-protocol/src"
-PYTHON_DIR="$PROJECT_ROOT/custom-python/types"
-```
-
-#### Validation Mode
-
-The underlying generator supports validation:
-
-```bash
-cd codegen
-cargo run --bin generate-python -- --validate
-```
-
-### Script Maintenance
-
-#### Updating the Script
-
-When modifying `generate-python-types.sh`:
-
-1. Test with various project configurations
-2. Ensure error messages are helpful
-3. Update this README if behavior changes
-4. Test in CI environment
-
-#### Version Compatibility
-
-The script is compatible with:
-- **Rust**: 1.70+ (uses modern Cargo features)
-- **Shell**: Bash 3.2+ (macOS/Linux compatible)
-- **OS**: macOS, Linux, WSL on Windows
-
-### Related Files
-
-- **`check-python-types-hash.sh`**: Hash-based change detection utility
-- **`codegen/`**: The Rust code generator implementation
-- **`codegen/README.md`**: Detailed technical documentation
-- **`protocol/src/`**: Source Rust protocol definitions
-- **`pc/python/plugin_host/`**: Target Python module
-
-### Security Considerations
-
-- The script only reads from the protocol source
-- Generated files overwrite existing `generated_types.py`
-- No network access or external dependencies
-- All operations are within the project directory
-
-### Performance
-
-- **Build Time**: ~2-5 seconds (depending on system)
-- **Generation Time**: <1 second for typical protocols
-- **Output Size**: Typically 50-200 lines of Python code
-- **Memory Usage**: Minimal (~10MB peak during build)
-
-For questions or issues with this script, see the main project documentation or create an issue in the project repository.
+For questions about the protocol, see [`protocol/README.md`](../protocol/README.md).
