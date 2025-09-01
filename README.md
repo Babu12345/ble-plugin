@@ -163,7 +163,7 @@ pythonpath = .
 ```
 
 ## Importing private repos
-### Create a new key - https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
+### [Create a new key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 1. Generate a ssh key using ED25519 cryptography `ssh-keygen -t ed25519 -C "bwanyeki12@gmail.com"`
 2. Refresh the ssh agent with the new key `eval "$(ssh-agent -s)"`
 3. `open ~/.ssh/config` or `touch ~/.ssh/config`(if it doesn't exist) and paste
@@ -175,5 +175,5 @@ Host github.com
 ```
 4. Add to apple keychain
 
-### Copy to github account - https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account#adding-a-new-ssh-key-to-your-account
+### [Copy to github account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account#adding-a-new-ssh-key-to-your-account)
 1. pbcopy < ~/.ssh/id_ed25519.pub
