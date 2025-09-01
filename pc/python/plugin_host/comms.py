@@ -52,7 +52,7 @@ from plugin_host.constants import (
     MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MESSAGE_TYPE_ID_BYTES, 
     DATA_BYTES_LENGTH_IN_BYTES, MESSAGE_HEADER_SIZE, 
     DEFAULT_PACKET_SIZE,USB_ENDPOINT_OUT,USB_ENDPOINT_IN,  USB_VENDOR_ID, USB_PRODUCT_ID, USB_TIMEOUT_MS,
-    DEFAULT_COMMAND_DELAY
+    DEFAULT_COMMAND_DELAY, PROTOBUF_TO_TYPE_ID, TYPE_ID_TO_PROTOBUF
 )
 
 # Command delay configuration
@@ -237,34 +237,12 @@ def serialize_command(command: Any) -> bytes:
     """
     
     try:
-        # Map protobuf classes to their message type IDs
-        protobuf_to_type_id = {
-            # Commands (sent TO the device)
-            protocol_pb2.HostCommandConfigurePeripheral: protocol_pb2.MessageTypeId.TypeHostCommandConfigurePeripheral,
-            protocol_pb2.HostCommandConfigurePeripheralSecurity: protocol_pb2.MessageTypeId.TypeHostCommandConfigurePeripheralSecurity,
-            protocol_pb2.HostCommandConfigureService: protocol_pb2.MessageTypeId.TypeHostCommandConfigureService,
-            protocol_pb2.HostCommandConfigureCharacteristic: protocol_pb2.MessageTypeId.TypeHostCommandConfigureCharacteristic,
-            protocol_pb2.HostCommandConfigureCharacteristicRead: protocol_pb2.MessageTypeId.TypeHostCommandConfigureCharacteristicRead,
-            protocol_pb2.HostCommandGetServiceInfo: protocol_pb2.MessageTypeId.TypeHostCommandGetServiceInfo,
-            protocol_pb2.HostCommandGetCharacteristicInfo: protocol_pb2.MessageTypeId.TypeHostCommandGetCharacteristicInfo,
-            protocol_pb2.HostCommandStartAdvertisement: protocol_pb2.MessageTypeId.TypeHostCommandStartAdvertisement,
-            protocol_pb2.HostCommandStopAdvertisement: protocol_pb2.MessageTypeId.TypeHostCommandStopAdvertisement,
-            protocol_pb2.HostCommandNotifyCharacteristicValue: protocol_pb2.MessageTypeId.TypeHostCommandNotifyCharacteristicValue,
-            protocol_pb2.HostCommandConfigureProfile: protocol_pb2.MessageTypeId.TypeHostCommandConfigureProfile,
-            # Responses (sent FROM the device, included for testing purposes)
-            protocol_pb2.PluginData: protocol_pb2.MessageTypeId.TypePluginData,
-            protocol_pb2.PluginConfigurationError: protocol_pb2.MessageTypeId.TypePluginConfigurationError,
-            protocol_pb2.PluginServiceInfoResponse: protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse,
-            protocol_pb2.PluginCharacteristicInfoResponse: protocol_pb2.MessageTypeId.TypePluginCharacteristicInfoResponse,
-            protocol_pb2.PluginAuthenticationCompletedResponse: protocol_pb2.MessageTypeId.TypePluginAuthenticationCompletedResponse,
-        }
-        
         # Get message type ID for this command
         command_type = type(command)
-        if command_type not in protobuf_to_type_id:
+        if command_type not in PROTOBUF_TO_TYPE_ID:
             raise USBCommunicationError(f"Unknown protobuf message type: {command_type}")
         
-        message_type_id = protobuf_to_type_id[command_type]
+        message_type_id = PROTOBUF_TO_TYPE_ID[command_type]
         
         # Use protobuf to serialize the command
         serialized_data = command.SerializeToString()
@@ -336,19 +314,10 @@ def deserialize_response(data: bytes, response_type: type = None) -> Any:
         if data_length > DEFAULT_PACKET_SIZE:
             raise USBCommunicationError(f"Data length ({data_length}) exceeds packet size ({DEFAULT_PACKET_SIZE})")
         
-        # Map message type ID bytes to protobuf classes (using actual integer values)
-        type_id_to_protobuf = {
-            protocol_pb2.MessageTypeId.TypePluginData: protocol_pb2.PluginData,
-            protocol_pb2.MessageTypeId.TypePluginConfigurationError: protocol_pb2.PluginConfigurationError,
-            protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse: protocol_pb2.PluginServiceInfoResponse,
-            protocol_pb2.MessageTypeId.TypePluginCharacteristicInfoResponse: protocol_pb2.PluginCharacteristicInfoResponse,
-            protocol_pb2.MessageTypeId.TypePluginAuthenticationCompletedResponse: protocol_pb2.PluginAuthenticationCompletedResponse,
-        }
-        
         # Determine response type from message ID if not provided
         if response_type is None:
             matching_protobuf_type = None
-            for protobuf_type_id, protobuf_class in type_id_to_protobuf.items():
+            for protobuf_type_id, protobuf_class in TYPE_ID_TO_PROTOBUF.items():
                 if type_id_byte == protobuf_type_id:
                     matching_protobuf_type = protobuf_class
                     break

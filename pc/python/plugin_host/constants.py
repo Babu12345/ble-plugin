@@ -49,3 +49,33 @@ MAX_CHARACTERISTICS_PER_SERVICE = 16
 
 # Default command delay in seconds
 DEFAULT_COMMAND_DELAY = 0.0
+
+# ==================== MESSAGE TYPE MAPPINGS ====================
+
+# Import protocol definitions for message type mappings
+import plugin_host.protocol_pb2 as protocol_pb2
+
+# Master mapping from protobuf classes to their message type IDs
+PROTOBUF_TO_TYPE_ID = {
+    # Commands (sent TO the device)
+    protocol_pb2.HostCommandConfigurePeripheral: protocol_pb2.MessageTypeId.TypeHostCommandConfigurePeripheral,
+    protocol_pb2.HostCommandConfigurePeripheralSecurity: protocol_pb2.MessageTypeId.TypeHostCommandConfigurePeripheralSecurity,
+    protocol_pb2.HostCommandConfigureService: protocol_pb2.MessageTypeId.TypeHostCommandConfigureService,
+    protocol_pb2.HostCommandConfigureCharacteristic: protocol_pb2.MessageTypeId.TypeHostCommandConfigureCharacteristic,
+    protocol_pb2.HostCommandConfigureCharacteristicRead: protocol_pb2.MessageTypeId.TypeHostCommandConfigureCharacteristicRead,
+    protocol_pb2.HostCommandGetServiceInfo: protocol_pb2.MessageTypeId.TypeHostCommandGetServiceInfo,
+    protocol_pb2.HostCommandGetCharacteristicInfo: protocol_pb2.MessageTypeId.TypeHostCommandGetCharacteristicInfo,
+    protocol_pb2.HostCommandStartAdvertisement: protocol_pb2.MessageTypeId.TypeHostCommandStartAdvertisement,
+    protocol_pb2.HostCommandStopAdvertisement: protocol_pb2.MessageTypeId.TypeHostCommandStopAdvertisement,
+    protocol_pb2.HostCommandNotifyCharacteristicValue: protocol_pb2.MessageTypeId.TypeHostCommandNotifyCharacteristicValue,
+    protocol_pb2.HostCommandConfigureProfile: protocol_pb2.MessageTypeId.TypeHostCommandConfigureProfile,
+    # Responses (sent FROM the device, included for testing purposes)
+    protocol_pb2.PluginData: protocol_pb2.MessageTypeId.TypePluginData,
+    protocol_pb2.PluginConfigurationError: protocol_pb2.MessageTypeId.TypePluginConfigurationError,
+    protocol_pb2.PluginServiceInfoResponse: protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse,
+    protocol_pb2.PluginCharacteristicInfoResponse: protocol_pb2.MessageTypeId.TypePluginCharacteristicInfoResponse,
+    protocol_pb2.PluginAuthenticationCompletedResponse: protocol_pb2.MessageTypeId.TypePluginAuthenticationCompletedResponse,
+}
+
+# Generate reverse mapping using dictionary comprehension
+TYPE_ID_TO_PROTOBUF = {type_id: protobuf_class for protobuf_class, type_id in PROTOBUF_TO_TYPE_ID.items()}
