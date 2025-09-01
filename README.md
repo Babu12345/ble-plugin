@@ -138,8 +138,8 @@ source ~/.zprofile
 cargo test -- --nocapture
 
 
-### Python (also in the pc/python readme)
-## Generate the protobuf files for serialization/deserialization in python
+## Python (also in the pc/python readme)
+### Generate the protobuf files for serialization/deserialization in python
 protoc --python_out=../pc/python/plugin_host/ protocol.proto 
 
 ### Create a virtual environment
