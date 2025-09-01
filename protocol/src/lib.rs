@@ -177,10 +177,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
-#[cfg(all(feature = "bincode_serialization", feature = "protocol_buffers"))]
-compile_error!("Features 'bincode_serialization' and 'protocol_buffers' cannot be enabled at the same time. Please choose one serialization method.");
-#[cfg(not(any(feature = "bincode_serialization", feature = "protocol_buffers")))]
-compile_error!("Exactly one serialization feature must be enabled: 'bincode_serialization' or 'protocol_buffers'.");
+exactly_one_feature!("bincode_serialization", "protocol_buffers");
 
 pub mod errors;
 pub mod host;
@@ -189,6 +186,7 @@ pub mod plugin;
 /// Types to interface with the plugin io
 pub mod protocol;
 pub use io::*;
+use lib_utils::exactly_one_feature;
 pub mod utils;
 
 /// Maximum size for BLE peripheral device names

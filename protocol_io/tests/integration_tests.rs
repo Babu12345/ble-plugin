@@ -23,8 +23,7 @@ pub trait MessageType {
     fn message_type_id() -> MessageTypeId;
 }
 
-pub trait IOBase<'a> {}
-pub trait IO<'a>: IOBase<'a> {}
+pub trait IO<'a> {}
 pub trait HostIO<'a>: IO<'a> {}
 pub trait PluginIO<'a>: IO<'a> {}
 

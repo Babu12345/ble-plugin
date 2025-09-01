@@ -34,6 +34,20 @@ macro_rules! mk_static {
     }};
 }
 
+#[macro_export]
+/// Macro to ensure exactly one feature from a group is enabled
+macro_rules! exactly_one_feature {
+    ($($feature:literal),+) => {
+        const _: () = {
+            let mut count = 0;
+            $(
+                if cfg!(feature = $feature) { count += 1; }
+            )+
+            assert!(count == 1, "Exactly one feature must be enabled from the list");
+        };
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use crate::MatchSliceLengths;
