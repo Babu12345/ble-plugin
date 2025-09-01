@@ -173,7 +173,7 @@ Host github.com
   UseKeychain yes
   IdentityFile ~/.ssh/id_ed25519
 ```
-4. Add to apple keychain
+4. Add to apple keychain `ssh-add --apple-use-keychain ~/.ssh/id_ed25519`
 
 ### [Copy to github account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account#adding-a-new-ssh-key-to-your-account)
 1. pbcopy < ~/.ssh/id_ed25519.pub
