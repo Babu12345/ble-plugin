@@ -153,9 +153,9 @@ The library handles various error conditions:
 ### Rust Crates
 
 - `esp-idf-sys`: ESP-IDF system bindings
-- `heapless`: Static memory allocation
+- `heapless`: Fixed-size collections (internal use)
 - `log`: Logging framework
-- `protocol`: Communication protocol definitions
+- `protocol`: Communication protocol definitions (uses `alloc` for Protocol Buffer types)
 
 ### C Components
 

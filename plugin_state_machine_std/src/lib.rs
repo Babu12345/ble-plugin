@@ -15,7 +15,7 @@
 //! - **BLE Integration**: Deep integration with ESP32-Nimble BLE stack
 //! - **Thread-Safe Communication**: Arc-wrapped senders for callback integration
 //! - **Comprehensive Error Handling**: Detailed error types for robust operation
-//! - **Memory Efficient**: Designed for embedded systems with limited resources
+//! - **Memory Efficient**: Uses `heapless` collections for predictable memory usage
 //! - **Non-Volatile Storage**: Persistent configuration storage using ESP32 NVS partitions
 //!
 //! ## Architecture Overview

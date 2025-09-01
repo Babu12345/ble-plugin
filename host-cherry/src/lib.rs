@@ -1,4 +1,7 @@
 //! USB host implementation library of cherry usb
+//! 
+//! Uses `heapless` for internal buffers. Protocol types use `alloc::Vec` and 
+//! `alloc::String` for Protocol Buffer compatibility.
 #[deny(missing_docs)]
 mod constants;
 mod processors;
