@@ -1,104 +1,114 @@
 fn main() {
-    #[cfg(feature = "protocol_buffers")]
-    {
-        use std::collections::HashMap;
-        use std::fs;
-        use std::io::Write;
-        use std::path::PathBuf;
-        // Parse the proto file to find @derive and @rust_macro annotations
-        let proto_content =
-            fs::read_to_string("protocol.proto").expect("Failed to read protocol.proto");
+    use std::collections::HashMap;
+    use std::fs;
+    use std::io::Write;
+    use std::path::PathBuf;
+    // Parse the proto file to find @derive and @rust_macro annotations
+    let proto_content =
+        fs::read_to_string("protocol.proto").expect("Failed to read protocol.proto");
 
-        let mut type_attributes: HashMap<String, Vec<String>> = HashMap::new();
-        let mut pending_attributes: Vec<String> = Vec::new();
+    let mut type_attributes: HashMap<String, Vec<String>> = HashMap::new();
+    let mut pending_attributes: Vec<String> = Vec::new();
 
-        for line in proto_content.lines() {
-            // Check for @derive annotation
-            if line.contains("@derive(") {
-                if let Some(start) = line.find("@derive(") {
-                    let derive_start = start + "@derive(".len();
-                    if let Some(end) = line[derive_start..].find(')') {
-                        let derives = &line[derive_start..derive_start + end];
-                        pending_attributes.push(format!("#[derive({})]", derives));
-                    }
+    for line in proto_content.lines() {
+        // Check for @derive annotation
+        if line.contains("@derive(") {
+            if let Some(start) = line.find("@derive(") {
+                let derive_start = start + "@derive(".len();
+                if let Some(end) = line[derive_start..].find(')') {
+                    let derives = &line[derive_start..derive_start + end];
+                    pending_attributes.push(format!("#[derive({})]", derives));
                 }
             }
+        }
 
-            // Check for @rust_macro annotation - handle nested parentheses
-            if line.contains("@rust_macro(") {
-                if let Some(start) = line.find("@rust_macro(") {
-                    let macro_start = start + "@rust_macro(".len();
-                    // Find matching closing parenthesis, accounting for nested ones
-                    let rest = &line[macro_start..];
-                    let mut paren_count = 1;
-                    let mut end_pos = 0;
+        // Check for @rust_macro annotation - handle nested parentheses
+        if line.contains("@rust_macro(") {
+            if let Some(start) = line.find("@rust_macro(") {
+                let macro_start = start + "@rust_macro(".len();
+                // Find matching closing parenthesis, accounting for nested ones
+                let rest = &line[macro_start..];
+                let mut paren_count = 1;
+                let mut end_pos = 0;
 
-                    for (i, ch) in rest.chars().enumerate() {
-                        if ch == '(' {
-                            paren_count += 1;
-                        } else if ch == ')' {
-                            paren_count -= 1;
-                            if paren_count == 0 {
-                                end_pos = i;
-                                break;
-                            }
+                for (i, ch) in rest.chars().enumerate() {
+                    if ch == '(' {
+                        paren_count += 1;
+                    } else if ch == ')' {
+                        paren_count -= 1;
+                        if paren_count == 0 {
+                            end_pos = i;
+                            break;
                         }
                     }
-
-                    if paren_count == 0 {
-                        let macro_content = &rest[..end_pos];
-                        // For HostIO and PluginIO, we need to add the proper imports
-                        // The macros expect just the variant name, not the full path
-                        let processed = macro_content
-                            .replace("MessageTypeId::", "crate::protocol::MessageTypeId::");
-                        pending_attributes.push(format!("#[{}]", processed));
-                    }
                 }
-            }
 
-            // Check for enum or message declarations
-            if line.trim().starts_with("enum ") || line.trim().starts_with("message ") {
-                let parts: Vec<&str> = line.trim().split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let type_name = parts[1].trim_end_matches('{');
-                    if !pending_attributes.is_empty() {
-                        type_attributes.insert(
-                            format!("protocol.{}", type_name),
-                            pending_attributes.clone(),
-                        );
-                        pending_attributes.clear();
-                    }
+                if paren_count == 0 {
+                    let macro_content = &rest[..end_pos];
+                    // For HostIO and PluginIO, we need to add the proper imports
+                    // The macros expect just the variant name, not the full path
+                    let processed = macro_content
+                        .replace("MessageTypeId::", "crate::protocol::MessageTypeId::");
+                    pending_attributes.push(format!("#[{}]", processed));
                 }
             }
         }
 
-        let out_dir = PathBuf::from("src");
-        let mut config = prost_build::Config::new();
-        config.out_dir(&out_dir);
-
-        // Add all attributes (derives and macros) for each type
-        for (type_path, attributes) in type_attributes {
-            for attribute in attributes {
-                config.type_attribute(&type_path, &attribute);
+        // Check for enum or message declarations
+        if line.trim().starts_with("enum ") || line.trim().starts_with("message ") {
+            let parts: Vec<&str> = line.trim().split_whitespace().collect();
+            if parts.len() >= 2 {
+                let type_name = parts[1].trim_end_matches('{');
+                if !pending_attributes.is_empty() {
+                    type_attributes.insert(
+                        format!("protocol.{}", type_name),
+                        pending_attributes.clone(),
+                    );
+                    pending_attributes.clear();
+                }
             }
         }
-
-        config
-            .compile_protos(&["protocol.proto"], &["."])
-            .expect("Failed to compile protos");
-
-        // Post-process the generated file to add necessary imports
-        let protocol_file = out_dir.join("protocol.rs");
-        let content =
-            fs::read_to_string(&protocol_file).expect("Failed to read generated protocol.rs");
-
-        // Add imports at the beginning of the file
-        let imports = "use crate::{IO, HostIO, PluginIO, MessageType};\n\n";
-        let new_content = format!("{}{}", imports, content);
-
-        let mut file =
-            fs::File::create(&protocol_file).expect("Failed to open protocol.rs for writing");
-        file.write_all(new_content.as_bytes())
-            .expect("Failed to write modified protocol.rs");
     }
+
+    let out_dir = PathBuf::from("src");
+    let mut config = prost_build::Config::new();
+    config.out_dir(&out_dir);
+
+    // Add all attributes (derives and macros) for each type
+    for (type_path, attributes) in type_attributes {
+        for attribute in attributes {
+            config.type_attribute(&type_path, &attribute);
+        }
+    }
+
+    config
+        .compile_protos(&["protocol.proto"], &["."])
+        .expect("Failed to compile protos");
+
+    // Post-process the generated file to add necessary imports
+    let protocol_file = out_dir.join("protocol.rs");
+    let content = fs::read_to_string(&protocol_file).expect("Failed to read generated protocol.rs");
+
+    // Add imports after the @generated comment
+    let imports = "use crate::{IO, HostIO, PluginIO, MessageType};";
+    let generated_comment = "// This file is @generated by prost-build.";
+
+    let new_content = if let Some(pos) = content.find(generated_comment) {
+        // Find the end of the comment line
+        let comment_end = pos + generated_comment.len();
+        let mut result = String::new();
+        result.push_str(&content[..comment_end]);
+        result.push_str("\n");
+        result.push_str(imports);
+        result.push_str(&content[comment_end..]);
+        result
+    } else {
+        // Fallback: add at the beginning if comment not found
+        format!("{}\n{}", imports, content)
+    };
+
+    let mut file =
+        fs::File::create(&protocol_file).expect("Failed to open protocol.rs for writing");
+    file.write_all(new_content.as_bytes())
+        .expect("Failed to write modified protocol.rs");
 }

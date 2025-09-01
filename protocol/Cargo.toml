@@ -24,7 +24,7 @@ prost = { version = "0.14.1", default-features = false, features = ["derive"] }
 heapless = { version = "0.8.0" }
 
 [build-dependencies]
-prost-build = { version = "0.13", optional = true }
+prost-build = { version = "0.13" }
 
 [lib]
 doctest = false
@@ -33,4 +33,4 @@ doctest = false
 default = ["std", "protocol_buffers"]
 std = ["serde/std", "bincode/alloc", "prost/std"]
 bincode_serialization = ["bincode"]
-protocol_buffers = ["prost-build"]
+protocol_buffers = []
