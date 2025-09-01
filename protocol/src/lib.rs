@@ -166,6 +166,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
+#[cfg(all(feature = "bincode_serialization", feature = "protocol_buffers"))]
+compile_error!("Features 'bincode_serialization' and 'protocol_buffers' cannot be enabled at the same time. Please choose one serialization method.");
 
 pub mod errors;
 pub mod host;

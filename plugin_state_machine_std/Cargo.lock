@@ -1222,6 +1222,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "embassy-sync",
+ "heapless",
  "lib_utils",
  "log",
  "prost 0.14.1",
