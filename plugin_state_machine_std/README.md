@@ -156,7 +156,7 @@ The crate integrates deeply with the ESP32-Nimble BLE stack:
 ## Performance Considerations
 
 - **Message Type Dispatch**: O(1) command routing using type IDs
-- **Memory Efficient**: Uses heapless collections for embedded compatibility
+- **Memory Efficient**: Uses heapless collections where possible for static allocation
 - **Minimal Allocations**: Stack-based processing where possible
 - **Async-Ready**: Compatible with ESP-IDF async runtime
 - **Data Throttling**: Input rate limiting to prevent buffer overflow and ensure stable processing
@@ -167,6 +167,6 @@ The crate integrates deeply with the ESP32-Nimble BLE stack:
 - `esp-idf-svc`: ESP32 system services
 - `protocol`: Shared protocol definitions (Protocol Buffers)
 - `prost`: Protocol Buffers implementation for Rust
-- `heapless`: No-allocation collections
+- `heapless`: No-allocation structures where possible
 - `uuid`: UUID handling
 - `log`: Logging support

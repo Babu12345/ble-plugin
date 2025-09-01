@@ -170,7 +170,7 @@
 //! ## Compatibility
 //!
 //! - **Rust Version**: 1.70+
-//! - **Embedded**: Full no_std support with heapless collections
+//! - **Embedded**: Full no_std support
 //! - **Platforms**: Cross-platform (desktop, mobile, embedded)
 //! - **Endianness**: Little-endian byte order for consistency
 

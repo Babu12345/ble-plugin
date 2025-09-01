@@ -150,7 +150,6 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Dependencies
 
 - `prost`: Protocol Buffers implementation for Rust
-- `heapless`: No-allocation collections for embedded systems
 - `uuid`: UUID handling for BLE identifiers
 - `lib_utils`: Utility functions for array operations
 
@@ -212,7 +211,7 @@ This mutual exclusivity is enforced by compile-time checks to ensure consistent 
 ## Compatibility
 
 - **Rust Version**: 1.70+
-- **Embedded**: Full no_std support with heapless collections
+- **Embedded**: Full no_std support
 - **Platforms**: Cross-platform (desktop, mobile, embedded)
 - **Endianness**: Little-endian byte order for consistency
 
