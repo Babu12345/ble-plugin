@@ -76,7 +76,6 @@
 //! ## Core Modules
 //!
 //! - [`io`]: Core serialization traits and message header handling
-//! - [`io_types`]: All message type definitions and structures
 //! - [`host`]: Host-specific communication utilities
 //! - [`plugin`]: Plugin-specific communication channels
 //! - [`errors`]: Comprehensive error handling
