@@ -93,7 +93,7 @@ fn main() {
             fs::read_to_string(&protocol_file).expect("Failed to read generated protocol.rs");
 
         // Add imports at the beginning of the file
-        let imports = "use crate::{IO, HostIO, PluginIO, IOBase, MessageType};\n\n";
+        let imports = "use crate::{IO, HostIO, PluginIO, MessageType};\n\n";
         let new_content = format!("{}{}", imports, content);
 
         let mut file =

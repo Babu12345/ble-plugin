@@ -210,7 +210,9 @@ pub trait MessageType {
 /// let deserialized = HostCommandConfigurePeripheral::from_bytes(&serialized)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-pub trait IO<'a>: IOBase<'a> {
+pub trait IO<'a>:
+    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
+{
     /// Serialize the message to a Vec (std only)
     ///
     /// This method serializes the message content (without header) to a
@@ -335,11 +337,9 @@ pub trait IO<'a>: IOBase<'a> {
             return Ok(res);
         }
         #[cfg(feature = "protocol_buffers")]
-        {
-            let res = prost::Message::decode(payload)
-                .map_err(|_| Error::UnableToDeserializeFromProtobuf)?;
-            return Ok(res);
-        }
+        return Ok(
+            prost::Message::decode(payload).map_err(|_| Error::UnableToDeserializeFromProtobuf)?
+        );
     }
 
     /// Convert from bytes
@@ -415,41 +415,6 @@ pub trait IO<'a>: IOBase<'a> {
         Ok(())
     }
 }
-
-/// Base trait for all protocol I/O types
-///
-/// This trait defines the requirements for types that can be serialized and
-/// deserialized through the protocol. The exact requirements depend on the
-/// enabled serialization features:
-///
-/// ## With `protocol_buffers` feature:
-/// - `Serialize` + `Deserialize<'a>`: Required for compatibility
-/// - `MessageType`: For protocol message type identification
-/// - `prost::Message`: For Protocol Buffers serialization
-/// - `Default`: Required by prost for protobuf deserialization
-/// - `Sized`: Required for type safety
-///
-/// ## Without `protocol_buffers` feature (bincode only):
-/// - `Serialize` + `Deserialize<'a>`: For bincode serialization
-/// - `MessageType`: For protocol message type identification
-/// - `Sized`: Required for type safety
-#[cfg(feature = "protocol_buffers")]
-pub trait IOBase<'a>:
-    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
-{
-}
-
-/// Base trait for all protocol I/O types
-///
-/// This trait defines the requirements for types that can be serialized and
-/// deserialized through the protocol using bincode serialization.
-///
-/// Required traits:
-/// - `Serialize` + `Deserialize<'a>`: For bincode serialization
-/// - `MessageType`: For protocol message type identification
-/// - `Sized`: Required for type safety
-#[cfg(not(feature = "protocol_buffers"))]
-pub trait IOBase<'a>: Serialize + Deserialize<'a> + Sized + MessageType {}
 
 /// Plugin specific input and output types
 pub trait PluginIO<'a>: IO<'a> {}
