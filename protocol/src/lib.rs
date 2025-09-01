@@ -27,7 +27,8 @@
 //! ## Protocol Features
 //!
 //! - **Type-Safe Messages**: Rust type system ensures protocol correctness
-//! - **Efficient Serialization**: Configurable binary serialization
+//! - **Protocol Buffers**: Uses protobuf for cross-platform serialization by default
+//! - **Configurable Serialization**: Optional bincode support for high-performance Rust-to-Rust communication
 //! - **Message Validation**: Magic number and header integrity checking  
 //! - **Version Compatibility**: Structured message IDs for protocol evolution
 //! - **Cross-Platform**: Supports both embedded (no_std) and standard environments
@@ -47,7 +48,7 @@
 //! - **Magic Number**: 0xDEAD (little-endian) for message integrity validation
 //! - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
 //! - **Length**: Payload size in bytes (little-endian)
-//! - **Payload**: Binary-serialized message data
+//! - **Payload**: Protocol Buffer serialized message data (or bincode with feature flag)
 //!
 //! **Size Constraints**: The total message size (header + payload) cannot exceed
 //! [`DEFAULT_PACKET_SIZE`]. With a [`MESSAGE_HEADER_SIZE`] header, the maximum payload
@@ -124,18 +125,22 @@
 //!
 //! ### Serialization Configuration
 //!
-//! The protocol supports configurable serialization methods via cfg flags.
-//! By default, `bincode_serialization` is enabled for efficient binary serialization.
+//! The protocol uses **Protocol Buffers** by default for cross-platform compatibility.
+//! For high-performance Rust-to-Rust communication, bincode is available via feature flag:
 //!
 //! ```toml
-//! # In your Cargo.toml
+//! # Default: Protocol Buffers (cross-platform)
+//! [dependencies]
+//! protocol = { version = "..." }
+//!
+//! # Alternative: Bincode for Rust-to-Rust performance
 //! [dependencies]
 //! protocol = { version = "...", features = ["bincode_serialization"] }
 //! ```
 //!
-//! When `cfg(feature = "bincode_serialization")` is enabled (default), the protocol uses
-//! bincode for all message serialization and deserialization operations. Future versions
-//! may support additional serialization backends.
+//! **When to use each:**
+//! - **Protobuf** (default): Cross-language compatibility, schema evolution, future-proof
+//! - **Bincode** (feature flag): High-performance Rust-only communication, embedded constraints
 //!
 //! ## Protocol Constants
 //!
@@ -147,9 +152,10 @@
 //! ## Feature Flags
 //!
 //! - `std`: Standard library support (enabled by default)
+//! - `protobuf`: Protocol Buffers support (enabled by default)
 //! - `serde`: Serde serialization support
 //! - `defmt`: Defmt logging support for embedded systems
-//! - `bincode_serialization`: Enable bincode for binary message serialization (default)
+//! - `bincode_serialization`: Enable bincode for high-performance Rust-to-Rust communication
 //!
 //! ## Compatibility
 //!
