@@ -144,15 +144,16 @@ cargo test -- --nocapture
 2. Run `protoc --python_out=../pc/python/plugin_host/ protocol.proto`
 
 ### Create a virtual environment
-python3 -m venv /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python
+`python3 -m venv /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python`
 
 ### Activate the virtual environment
-source /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python/bin/activate
+`source /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python/bin/activate`
 
 ### Installations - for the pc/python host libraries
-pip install protobuf
-pip install pyusb
-pip install pytest
+`pip install protobuf`
+`pip install pyusb`
+`pip install pytest`
+
 then add these lines to pytest.ini
 
 brew install libusb # Make sure that this is run
