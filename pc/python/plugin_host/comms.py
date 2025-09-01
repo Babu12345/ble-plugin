@@ -46,18 +46,12 @@ def parse_uuid_u16(uuid_value) -> int:
 
 # Communicate between the host (PC) and the usb plugin
 
-# USB Configuration
-USB_VENDOR_ID = 0xffff
-USB_PRODUCT_ID = 0xffff
-USB_ENDPOINT_OUT = 0x02
-USB_ENDPOINT_IN = 0x81
-USB_TIMEOUT_MS = 1000
 
-# Protocol Configuration
+# Protocol/USB configuration constants
 from plugin_host.constants import (
     MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES, MESSAGE_TYPE_ID_BYTES, 
     DATA_BYTES_LENGTH_IN_BYTES, MESSAGE_HEADER_SIZE, 
-    DEFAULT_PACKET_SIZE, USB_VENDOR_ID, USB_PRODUCT_ID, USB_TIMEOUT_MS,
+    DEFAULT_PACKET_SIZE,USB_ENDPOINT_OUT,USB_ENDPOINT_IN,  USB_VENDOR_ID, USB_PRODUCT_ID, USB_TIMEOUT_MS,
     DEFAULT_COMMAND_DELAY
 )
 

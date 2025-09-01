@@ -6,7 +6,6 @@ python3 -m venv /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python
 source /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python/bin/activate
 
 # Installations
-pip install git+https://github.com/Babu12345/attrs2bin
 pip install pyusb
 pip install libusb
 pip install pytest
@@ -27,7 +26,38 @@ pytest <DIRECTORY_OF_TESTS>
 
 # BLE Plugin Python Library
 
-This Python library provides a high-level interface for communicating with BLE plugin devices over USB.
+This Python library provides a high-level interface for communicating with BLE plugin devices over USB using Protocol Buffers (protobuf) for serialization.
+
+## Architecture
+
+The library uses **Protocol Buffers (protobuf)** exclusively for message serialization between the host PC and the USB plugin device. All communication follows this protocol:
+
+- **Message Format**: `[2-byte magic][1-byte type_id][2-byte length][protobuf data][padding]`
+- **Magic Number**: `0xDEAD` for message integrity validation
+- **Packet Size**: Fixed 64-byte USB packets
+- **Constants**: Centralized in `plugin_host.constants` module
+
+### Key Modules
+
+- `plugin_host.comms` - Core USB communication and device management
+- `plugin_host.protocol_pb2` - Generated protobuf message types
+- `plugin_host.constants` - Protocol constants and USB configuration
+
+### Type System
+
+All message types are defined in protobuf and available via:
+```python
+import plugin_host.protocol_pb2 as protocol_pb2
+
+# Enums
+protocol_pb2.BLEProperties.READ
+protocol_pb2.PluginDataSendType.NOTIFY_TYPE
+protocol_pb2.BluetoothAddressType.PUBLIC
+
+# Messages
+protocol_pb2.HostCommandConfigurePeripheral(...)
+protocol_pb2.PluginData(...)
+```
 
 ## Available Commands
 
@@ -49,15 +79,18 @@ Configures the BLE device using a predefined profile, which restarts the server 
 
 ```python
 from plugin_host.comms import USBHostDevice
-from plugin_host.generated_types import BLEProfile
+import plugin_host.protocol_pb2 as protocol_pb2
 
 with USBHostDevice() as device:
-    device.configure_profile(BLEProfile.Custom)
+    device.configure_profile(protocol_pb2.BLEProfile.CUSTOM)
     print("Custom profile configured")
 ```
 
 **Supported Profiles:**
-- `BLEProfile.Custom` - Uses existing service/characteristic definitions
+- `protocol_pb2.BLEProfile.CUSTOM` - Uses existing service/characteristic definitions
+- `protocol_pb2.BLEProfile.HEART_RATE_MONITOR` - Heart rate monitoring profile
+- `protocol_pb2.BLEProfile.BATTERY_SERVICE` - Battery service profile
+- `protocol_pb2.BLEProfile.DEVICE_INFORMATION` - Device information profile
 
 ## USBHostDevice Configuration
 
@@ -89,17 +122,17 @@ device = USBHostDevice(
 ### Basic Usage
 ```python
 from plugin_host.comms import USBHostDevice
-from plugin_host.generated_types import BLEProperties
+import plugin_host.protocol_pb2 as protocol_pb2
 
 with USBHostDevice() as device:
     # Configure peripheral
     device.configure_peripheral("MyDevice", [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])
     
     # Add service
-    device.configure_service("0x1800")
+    device.configure_service(0x1800)
     
     # Add characteristic
-    device.configure_characteristic("0x2A00", "0x1800", [BLEProperties.READ])
+    device.configure_characteristic(0x2A00, 0x1800, [protocol_pb2.BLEProperties.READ])
     
     # Start advertising (auto-configures profile on first call)
     device.start_advertisement()
@@ -107,13 +140,16 @@ with USBHostDevice() as device:
 
 ### Using New Commands
 ```python
+from plugin_host.comms import USBHostDevice
+import plugin_host.protocol_pb2 as protocol_pb2
+
 with USBHostDevice() as device:
     # Configure initial setup
     device.configure_peripheral("Demo", [0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
-    device.configure_service("0x180F")  # Battery Service
+    device.configure_service(0x180F)  # Battery Service
     
     # Apply profile configuration
-    device.configure_profile(BLEProfile.Custom)  # Apply configuration
+    device.configure_profile(protocol_pb2.BLEProfile.CUSTOM)  # Apply configuration
 ```
 
 ## Testing
@@ -128,7 +164,7 @@ Run specific test:
 pytest tests/test_plugin_host.py::test_new_commands_serialization -v
 ```
 
-Current test status: **55 tests passing**
+Current test status: **90 tests passing** (protobuf-only implementation)
 
 ## Examples
 

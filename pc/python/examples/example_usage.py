@@ -10,7 +10,7 @@ This example demonstrates how to use the USBHostDevice class to:
 """
 
 from plugin_host.comms import USBHostDevice, USBCommunicationError
-from plugin_host.generated_types import BLEProperties, BluetoothAddressType
+import plugin_host.protocol_pb2 as protocol_pb2
 
 def main():
     """Main example function"""
@@ -44,7 +44,7 @@ def main():
             host.configure_characteristic(
                 uuid=0xabcd,
                 service_uuid=0x8765,
-                properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
+                properties=[protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.WRITE, protocol_pb2.BLEProperties.NOTIFY]
             )
             print("✓ Characteristic configured")
             
@@ -59,8 +59,7 @@ def main():
             
             
             # Configure profile (restart with existing definitions)
-            from plugin_host.generated_types import BLEProfile
-            host_device.configure_profile(BLEProfile.Custom)
+            host.configure_profile(protocol_pb2.BLEProfile.CUSTOM)
             print("✓ Custom profile configured")
             
             # Start advertisement
@@ -89,8 +88,8 @@ def main():
             
             # Configure characteristic read value
             host_device.configure_characteristic_read(
-                uuid="char-read-uuid",
-                service_uuid="service-uuid", 
+                uuid=0x2A00,
+                service_uuid=0x1800, 
                 value=b"default_value"
             )
             print("✓ Characteristic read configured")
@@ -98,9 +97,9 @@ def main():
             # Notify a characteristic value
             host_device.notify_characteristic_value(
                 address=b'\x12\x34\x56\x78\x9a\xbc',  # Example MAC address
-                address_type=BluetoothAddressType.Public,
-                characteristic_uuid="char-notify-uuid",
-                service_uuid="service-uuid",
+                address_type=protocol_pb2.BluetoothAddressType.PUBLIC,
+                characteristic_uuid=0x2A19,
+                service_uuid=0x180F,
                 value=b"notification_data"
             )
             print("✓ Characteristic notification sent")
@@ -115,22 +114,20 @@ def main():
     # Method 3: Generic command sending
     print("3. Generic Command Usage:")
     
-    from plugin_host.generated_types import HostCommandGetServiceInfo
-    
     host = USBHostDevice()
     try:
         if host.connect():
             print("✓ Connected for generic command test")
             
             # Create a command manually
-            custom_command = HostCommandGetServiceInfo(uuid="custom-service-uuid")
+            custom_command = protocol_pb2.HostCommandGetServiceInfo(uuid=0x1234)
             
             # Send using generic method
             host.send_command(custom_command)
             print("✓ Generic command sent")
             
             # You could also receive a response generically:
-            # response = host.receive_response(PluginServiceInfoResponse)
+            # response = host.receive_response(protocol_pb2.PluginServiceInfoResponse)
             
     except USBCommunicationError as e:
         print(f"⚠ USB Communication Error (expected if no device): {e}")

@@ -16,15 +16,7 @@ from plugin_host.comms import (
     USBMessageHandler,
     USBCommunicationError
 )
-from plugin_host.generated_types import (
-    PluginData,
-    PluginServiceInfoResponse,
-    PluginCharacteristicInfoResponse,
-    PluginConfigurationError,
-    PluginDataSendType,
-    BLEProperties,
-    BluetoothAddressType
-)
+import plugin_host.protocol_pb2 as protocol_pb2
 
 def demonstrate_basic_listening():
     """Demonstrate basic USB data listening"""
@@ -112,7 +104,7 @@ def demonstrate_message_handling():
         'unknown_messages': 0
     }
     
-    def handle_plugin_data(data: PluginData, info: dict):
+    def handle_plugin_data(data: protocol_pb2.PluginData, info: dict):
         """Handle incoming plugin data"""
         callback_stats['plugin_data_count'] += 1
         # Format the source address as a hex string
@@ -125,14 +117,14 @@ def demonstrate_message_handling():
         print(f"   Data: {data.data.hex() if len(data.data) <= 16 else data.data[:16].hex() + '...'}")
         
         # Handle different send types
-        if data.send_type == PluginDataSendType.Notify:
+        if data.send_type == protocol_pb2.PluginDataSendType.NOTIFY_TYPE:
             print(f"   📲 Processing notification from {src_addr_str}")
-        elif data.send_type == PluginDataSendType.Read:
+        elif data.send_type == protocol_pb2.PluginDataSendType.READ_TYPE:
             print(f"   📖 Processing read request from {src_addr_str}")
-        elif data.send_type == PluginDataSendType.Write:
+        elif data.send_type == protocol_pb2.PluginDataSendType.WRITE_TYPE:
             print(f"   ✏️  Processing write data from {src_addr_str}")
     
-    def handle_service_response(response: PluginServiceInfoResponse, info: dict):
+    def handle_service_response(response: protocol_pb2.PluginServiceInfoResponse, info: dict):
         """Handle service information responses"""
         callback_stats['service_responses'] += 1
         print(f"🔍 Service Info Response:")
@@ -145,7 +137,7 @@ def demonstrate_message_handling():
             if len(response.characteristic_uuids) > 3:
                 print(f"     ... and {len(response.characteristic_uuids) - 3} more")
     
-    def handle_characteristic_response(response: PluginCharacteristicInfoResponse, info: dict):
+    def handle_characteristic_response(response: protocol_pb2.PluginCharacteristicInfoResponse, info: dict):
         """Handle characteristic information responses"""
         callback_stats['characteristic_responses'] += 1
         print(f"🔧 Characteristic Info Response:")
@@ -156,7 +148,7 @@ def demonstrate_message_handling():
             properties = [prop.name for prop in response.properties]
             print(f"   Properties: {', '.join(properties)}")
     
-    def handle_error(error: PluginConfigurationError, info: dict):
+    def handle_error(error: protocol_pb2.PluginConfigurationError, info: dict):
         """Handle configuration errors"""
         callback_stats['errors'] += 1
         print(f"❌ Configuration Error: {error}")
@@ -171,14 +163,14 @@ def demonstrate_message_handling():
         print(f"   [Global] Message at {time.ctime(info['timestamp'])}")
     
     # Register all callbacks
-    handler.register_callback(PluginData, handle_plugin_data)
-    handler.register_callback(PluginServiceInfoResponse, handle_service_response)
-    handler.register_callback(PluginCharacteristicInfoResponse, handle_characteristic_response)
-    handler.register_callback(PluginConfigurationError, handle_error)
+    handler.register_callback(protocol_pb2.PluginData, handle_plugin_data)
+    handler.register_callback(protocol_pb2.PluginServiceInfoResponse, handle_service_response)
+    handler.register_callback(protocol_pb2.PluginCharacteristicInfoResponse, handle_characteristic_response)
+    handler.register_callback(protocol_pb2.PluginConfigurationError, handle_error)
     handler.set_global_callback(global_message_handler)
     
     # Add a filter example - only process plugin data from specific sources
-    def plugin_data_filter(data: PluginData, info: dict) -> bool:
+    def plugin_data_filter(data: protocol_pb2.PluginData, info: dict) -> bool:
         """Filter to only process data from allowed sources"""
         # Filter out broadcast addresses (all 0xFF)
         if data.src_addr == [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]:
@@ -190,7 +182,7 @@ def demonstrate_message_handling():
         ]
         return data.src_addr in allowed_addresses
     
-    handler.register_filter(PluginData, plugin_data_filter)
+    handler.register_filter(protocol_pb2.PluginData, plugin_data_filter)
     
     print("✓ Message handler configured with callbacks and filters")
     print("✓ Registered handlers for:")
@@ -208,10 +200,10 @@ def demonstrate_message_handling():
         {
             'timestamp': time.time(),
             'message_type': 'PluginData',
-            'message': PluginData(
-                src_addr=[0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34],
-                src_addr_type=BluetoothAddressType.Public,
-                send_type=PluginDataSendType.Notify,
+            'message': protocol_pb2.PluginData(
+                src_addr=bytes([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34]),
+                src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
+                send_type=protocol_pb2.PluginDataSendType.NOTIFY_TYPE,
                 characteristic_uuid=0x2A19,  # Battery Level characteristic
                 service_uuid=0x180F,  # Battery Service
                 data=b"Hello from BLE device!"
@@ -222,7 +214,7 @@ def demonstrate_message_handling():
         {
             'timestamp': time.time() + 1,
             'message_type': 'PluginServiceInfoResponse',
-            'message': PluginServiceInfoResponse(
+            'message': protocol_pb2.PluginServiceInfoResponse(
                 service_uuid=0x180F,  # Battery Service UUID
                 characteristic_uuids=[0x2A19, 0x2A1A, 0x2A1B],  # Battery characteristics
                 exists=True
@@ -233,10 +225,10 @@ def demonstrate_message_handling():
         {
             'timestamp': time.time() + 2,
             'message_type': 'PluginData',
-            'message': PluginData(
-                src_addr=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF],  # This should be filtered out
-                src_addr_type=BluetoothAddressType.Public,
-                send_type=PluginDataSendType.Write,
+            'message': protocol_pb2.PluginData(
+                src_addr=bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),  # This should be filtered out
+                src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
+                send_type=protocol_pb2.PluginDataSendType.WRITE_TYPE,
                 characteristic_uuid=0x2A00,  # Device Name characteristic
                 service_uuid=0x1800,  # Generic Access Service
                 data=b"This should be filtered"

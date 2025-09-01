@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 from plugin_host.comms import USBHostDevice, USBCommunicationError
-# from plugin_host.generated_types import BLEProperties, BLEProfile
 import threading
 import time
 import usb.core
@@ -19,8 +18,6 @@ class BLEConfigurationGUI:
         self.connection_monitor_thread = None
         self.monitor_running = False
         
-        # Serialization method configuration
-        self.use_protobuf = False  # Default to bincode for backwards compatibility
         
         # Message listening variables
         self.message_listener_thread = None
@@ -135,17 +132,6 @@ class BLEConfigurationGUI:
         ttk.Label(frame, text="Connection Sleep Time (seconds):").grid(row=1, column=0, sticky="w", pady=5)
         self.sleep_var = tk.StringVar(value="0.5")
         ttk.Entry(frame, textvariable=self.sleep_var, width=20).grid(row=1, column=1, pady=5)
-        
-        # Serialization method selection
-        ttk.Label(frame, text="Serialization Method:").grid(row=2, column=0, sticky="w", pady=5)
-        serialization_frame = ttk.Frame(frame)
-        serialization_frame.grid(row=2, column=1, pady=5, sticky="w")
-        
-        self.serialization_var = tk.StringVar(value="bincode")
-        ttk.Radiobutton(serialization_frame, text="Bincode", variable=self.serialization_var, 
-                       value="bincode", command=self.update_serialization_method).pack(side="left", padx=5)
-        ttk.Radiobutton(serialization_frame, text="Protobuf", variable=self.serialization_var, 
-                       value="protobuf", command=self.update_serialization_method).pack(side="left", padx=5)
         
         button_frame = ttk.Frame(frame)
         button_frame.grid(row=3, column=0, columnspan=2, pady=20)
@@ -329,23 +315,13 @@ class BLEConfigurationGUI:
         self.log_text.insert(tk.END, f"[{timestamp}] [{level}] {message}\n")
         self.log_text.see(tk.END)
     
-    def update_serialization_method(self):
-        """Update the serialization method based on user selection"""
-        self.use_protobuf = (self.serialization_var.get() == "protobuf")
-        method_name = "Protobuf" if self.use_protobuf else "Bincode"
-        
-        # Update the host device if it exists
-        if self.host:
-            self.host.use_protobuf = self.use_protobuf
-            
-        self.log(f"Serialization method changed to: {method_name}", "INFO")
         
     def connect_device(self):
         try:
             delay = float(self.delay_var.get())
             sleep_time = float(self.sleep_var.get())
             
-            self.host = USBHostDevice(default_command_delay=delay, use_protobuf=self.use_protobuf)
+            self.host = USBHostDevice(default_command_delay=delay)
             self.log("Connecting to USB device...")
             
             if self.host.connect(sleep_time=sleep_time):
@@ -854,12 +830,8 @@ class BLEConfigurationGUI:
         else:
             # Try to deserialize and show formatted data
             try:
-                from plugin_host.comms import deserialize_response,deserialize_response_protobuf
-                # from plugin_host.generated_types import PluginData
-                if self.use_protobuf:
-                    deserialized = deserialize_response_protobuf(raw_data)
-                else:
-                    deserialized = deserialize_response(raw_data)
+                from plugin_host.comms import deserialize_response
+                deserialized = deserialize_response(raw_data)
                 
                 if isinstance(deserialized, protocol_pb2.PluginData):
                     # Format PluginData fields prettily

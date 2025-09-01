@@ -1,5 +1,5 @@
 from plugin_host.comms import USBHostDevice, USBCommunicationError
-from plugin_host.generated_types import BLEProperties, BLEProfile
+import plugin_host.protocol_pb2 as protocol_pb2
 def main():
     """Main example function"""
     print("=== USB Host Device Example ===\n")
@@ -7,7 +7,7 @@ def main():
     # Method 1: Manual connection management
     print("1. Manual Connection Management:")
     host = USBHostDevice(
-        default_command_delay=0.1,  # Default delay for commands
+        default_command_delay=0.05,  # Default delay for commands
     )
     
     try:
@@ -20,7 +20,7 @@ def main():
             print("Configuring peripheral...")
             host.configure_peripheral(
                 name="Example Peripheral",
-                addr=[0xA1, 0xA2, 0xA3, 0xA4, 0xB1, 0xB2]
+                addr=[0x01, 0x01, 0x01, 0x01, 0x01, 0x01]
             )
             print("✓ Peripheral configured")
             
@@ -44,7 +44,7 @@ def main():
             host.configure_characteristic(
                 uuid=0xabcd,
                 service_uuid=0x8765,
-                properties=[BLEProperties.READ, BLEProperties.WRITE, BLEProperties.NOTIFY]
+                properties=[protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.WRITE, protocol_pb2.BLEProperties.NOTIFY]
             )
             print("✓ Characteristic configured")
             
@@ -58,7 +58,7 @@ def main():
                 print(f"⚠ Service query failed (expected if no device): {e}")
             
 
-            host.configure_profile(BLEProfile.Custom, delay=0.05)
+            host.configure_profile(protocol_pb2.BLEProfile.CUSTOM, delay=0.05)
             print("✓ Configured custom profile")
 
             # Start advertisement

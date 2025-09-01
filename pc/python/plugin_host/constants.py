@@ -24,8 +24,12 @@ MESSAGE_HEADER_SIZE = MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES + DATA_BYTES_L
 # ==================== USB DEVICE CONSTANTS ====================
 
 # Default USB device IDs (MCP2221)
-USB_VENDOR_ID = 0x04D8
-USB_PRODUCT_ID = 0x00DD
+USB_VENDOR_ID = 0xffff
+USB_PRODUCT_ID = 0xffff
+
+# USB endpoint addresses
+USB_ENDPOINT_OUT = 0x02
+USB_ENDPOINT_IN = 0x81
 
 # USB communication timeout in milliseconds
 USB_TIMEOUT_MS = 1000
