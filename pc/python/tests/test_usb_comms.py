@@ -4,7 +4,8 @@ from plugin_host.comms import (
     serialize_command,
     deserialize_response,
     DEFAULT_PACKET_SIZE,
-    parse_uuid_u16
+    parse_uuid_u16,
+    validate_mac_address
 )
 import plugin_host.protocol_pb2 as protocol_pb2
 from plugin_host.constants import (
@@ -178,3 +179,76 @@ def test_parse_uuid_u16_invalid_values() -> None:
     
     with pytest.raises(ValueError, match="Invalid UUID value type"):
         parse_uuid_u16({'uuid': 1234})
+
+def test_validate_mac_address_valid() -> None:
+    """Test validate_mac_address with valid MAC addresses"""
+    # Valid public addresses
+    assert validate_mac_address(bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])) is None
+    assert validate_mac_address(bytes([0x00, 0x11, 0x22, 0x33, 0x44, 0x55])) is None
+    
+    # Valid Static Random addresses (MSB bits = 11)
+    assert validate_mac_address(bytes([0xC0, 0x01, 0x02, 0x03, 0x04, 0x05])) is None
+    assert validate_mac_address(bytes([0xFF, 0x11, 0x22, 0x33, 0x44, 0x55])) is None
+    
+    # Valid Non-Resolvable Private addresses (MSB bits = 00)
+    assert validate_mac_address(bytes([0x00, 0x01, 0x02, 0x03, 0x04, 0x05])) is None
+    assert validate_mac_address(bytes([0x3F, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE])) is None
+    
+    # Test with different input types
+    assert validate_mac_address(bytearray([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC])) is None
+    assert validate_mac_address([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]) is None
+
+def test_validate_mac_address_invalid_length() -> None:
+    """Test validate_mac_address with invalid lengths"""
+    # Too short
+    result = validate_mac_address(bytes([0x12, 0x34, 0x56, 0x78, 0x9A]))
+    assert result is not None
+    assert "MAC address must be exactly 6 bytes" in result
+    assert "Got 5 bytes" in result
+    
+    # Too long
+    result = validate_mac_address(bytes([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE]))
+    assert result is not None
+    assert "MAC address must be exactly 6 bytes" in result
+    assert "Got 7 bytes" in result
+    
+    # Empty
+    result = validate_mac_address(bytes([]))
+    assert result is not None
+    assert "Got 0 bytes" in result
+
+def test_validate_mac_address_invalid_patterns() -> None:
+    """Test validate_mac_address with invalid random address patterns"""
+    # Invalid MSB pattern 10
+    result = validate_mac_address(bytes([0x80, 0x11, 0x22, 0x33, 0x44, 0x55]))
+    assert result is not None
+    assert "MSB bits are 10 (binary)" in result
+    
+    # Invalid Resolvable Private (MSB pattern 01)
+    result = validate_mac_address(bytes([0x40, 0x11, 0x22, 0x33, 0x44, 0x55]))
+    assert result is not None
+    assert "Resolvable Private addresses not allowed" in result
+    
+    # Invalid Static Random with all zeros in remaining bits
+    result = validate_mac_address(bytes([0xC0, 0x00, 0x00, 0x00, 0x00, 0x00]))
+    assert result is not None
+    assert "Invalid Static Random address" in result
+    assert "remaining 46 bits must contain at least one 0 and at least one 1" in result
+    
+    # Invalid Static Random with all ones in remaining bits
+    result = validate_mac_address(bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
+    assert result is not None
+    assert "Invalid Static Random address" in result
+    assert "remaining 46 bits must contain at least one 0 and at least one 1" in result
+    
+    # Invalid Non-Resolvable Private with all zeros
+    result = validate_mac_address(bytes([0x00, 0x00, 0x00, 0x00, 0x00, 0x00]))
+    assert result is not None
+    assert "Invalid Non-Resolvable Private address" in result
+    assert "remaining 46 bits must contain at least one 0 and at least one 1" in result
+
+    # Invalid Non-Resolvable Private with all ones in remaining bits
+    result = validate_mac_address(bytes([0x3F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
+    assert result is not None
+    assert "Invalid Non-Resolvable Private address" in result
+    assert "remaining 46 bits must contain at least one 0 and at least one 1" in result

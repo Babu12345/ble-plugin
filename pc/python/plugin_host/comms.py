@@ -44,6 +44,59 @@ def parse_uuid_u16(uuid_value) -> int:
     
     return result
 
+def validate_mac_address(addr: Union[bytes, bytearray, list]) -> Optional[str]:
+    """Validate and convert MAC address to bytes
+    
+    Args:
+        addr: MAC address as bytes, bytearray, or list of integers (0-255)
+        
+    Returns:
+        None: If address is valid 
+    """
+    # Validate MAC address size
+    if len(addr) != 6:
+        return (
+            "Invalid address.\n"
+            f"MAC address must be exactly 6 bytes. Got {len(addr)} bytes.")
+    
+    # Validate random Bluetooth address patterns
+    first_byte = addr[0]
+    msb_bits = (first_byte >> 6) & 0x03  # Extract top 2 bits
+    # Check for valid random address patterns
+    if msb_bits == 0b10 or msb_bits == 0b01:  # Invalid patterns (MSB bits = 10 or 01)
+        if msb_bits == 0b10:
+            error_msg = "Invalid random address: MSB bits are 10 (binary)."
+        else:
+            error_msg = "Resolvable Private addresses not allowed for manual configuration."
+        
+        return (
+            "Invalid MAC address.\n"
+            f"{error_msg}\n\n"
+            "Valid random address patterns for manual configuration:\n"
+            "• Static Random: MSB bits = 11 (0xC0-0xFF)\n"
+            "• Non-Resolvable Private: MSB bits = 00 (0x00-0x3F)"
+        )
+    
+    # For Static Random and Non-Resolvable Private addresses,
+    # check that remaining bits have at least one 0 and one 1
+    if msb_bits == 0b11 or msb_bits == 0b00:  # Static Random or Non-Resolvable Private
+        # Check all 46 bits (6 bytes minus 2 MSB bits)
+        all_bits = 0
+        for i, byte in enumerate(addr):
+            if i == 0:
+                # For first byte, only consider bottom 6 bits (exclude MSB bits)
+                all_bits |= (byte & 0x3F) << (40)
+            else:
+                all_bits |= byte << ((5-i) * 8)
+        
+        # Check if all bits are 0 or all bits are 1 in the 46-bit range
+        if all_bits == 0 or all_bits == 0x3FFFFFFFFFFF:  # All 46 bits same
+            addr_type = "Static Random" if msb_bits == 0b11 else "Non-Resolvable Private"
+            return ("Invalid Address\n" 
+                f"Invalid {addr_type} address: remaining 46 bits must contain "
+                "at least one 0 and at least one 1.")
+    return None  # Address is valid
+
 # Communicate between the host (PC) and the usb plugin
 
 
@@ -471,6 +524,9 @@ class USBHostDevice:
         Raises:
             USBCommunicationError: If sending fails
         """
+        validation = validate_mac_address(addr)
+        if validation is not None:
+            raise ValueError(validation)
         cmd = protocol_pb2.HostCommandConfigurePeripheral(name=name, addr=bytes(addr))
         usb_send_command(self.usb_device, cmd)
     
