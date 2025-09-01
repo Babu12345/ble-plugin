@@ -100,6 +100,7 @@ fn main() {
         result.push_str(&content[..comment_end]);
         result.push_str("\n");
         result.push_str(imports);
+        result.push_str("\n\n");
         result.push_str(&content[comment_end..]);
         result
     } else {

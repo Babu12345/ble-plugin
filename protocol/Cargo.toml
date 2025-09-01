@@ -24,7 +24,7 @@ prost = { version = "0.14.1", default-features = false, features = ["derive"] }
 heapless = { version = "0.8.0" }
 
 [build-dependencies]
-prost-build = { version = "0.13" }
+prost-build = "0.14.1"
 
 [lib]
 doctest = false
