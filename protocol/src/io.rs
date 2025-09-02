@@ -294,11 +294,8 @@ pub trait IO<'a>:
         return bincode::serde::encode_into_slice(self, out, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
         #[cfg(feature = "protocol_buffers")]
-        {
-            prost::Message::encode(self, &mut out)
-                .map_err(|_| Error::UnableToSerializeToProtobuf)?;
-            return Ok(self.encoded_len());
-        }
+        return Ok(prost::Message::encode(self, &mut out)
+            .map_err(|_| Error::UnableToSerializeToProtobuf)?);
     }
 
     /// Deserialize the message from a byte slice (no allocation)
@@ -368,24 +365,24 @@ pub trait IO<'a>:
         let length = serialized_bytes.len() as usize;
 
         // Create full message header: magic + type_id + length
-        let mut header_data: std::vec::Vec<u8> = std::vec::Vec::new();
+        let mut payload_data: std::vec::Vec<u8> = std::vec::Vec::new();
 
         // Add magic bytes (0xDEAD)
-        header_data.extend_from_slice(&MESSAGE_MAGIC.to_le_bytes());
+        payload_data.extend_from_slice(&MESSAGE_MAGIC.to_le_bytes());
 
         // Add message type ID
-        header_data.push(Self::message_type_id() as u8);
+        payload_data.push(Self::message_type_id() as u8);
 
         // Add length bytes
-        header_data
+        payload_data
             .extend((0..DATA_BYTES_LENGTH_IN_BYTES).map(|x| ((length >> (x * 8)) & 0xFF) as u8));
 
-        header_data.append(&mut serialized_bytes);
+        payload_data.append(&mut serialized_bytes);
 
-        if header_data.len() > N {
+        if payload_data.len() > N {
             return Err(Error::SerializationBufferOverflow);
         }
-        Ok(header_data.match_size(0x00))
+        Ok(payload_data.match_size(0x00))
     }
 
     /// Serialize to bytes
