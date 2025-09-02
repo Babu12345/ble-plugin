@@ -13,7 +13,9 @@ opt-level = "z"
 
 [dependencies]
 # Custom
-protocol = { path = "../protocol" }
+protocol = { path = "../protocol", default-features = false, features = [
+    "protocol_buffer",
+] }
 lib_utils = { path = "../lib_utils" }
 
 # Crates

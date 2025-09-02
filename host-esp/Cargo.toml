@@ -6,7 +6,9 @@ edition = "2024"
 [dependencies]
 ## Files in shared directory
 lib_utils = { path = "../lib_utils" }
-protocol = { path = "../protocol" }
+protocol = { path = "../protocol", default-features = false, features = [
+    "protocol_buffer",
+] }
 
 # crates
 log = "0.4"

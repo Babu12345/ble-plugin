@@ -5,7 +5,9 @@ edition = "2024"
 
 [dependencies]
 # Custom
-protocol = { path = "../protocol" }
+protocol = { path = "../protocol", default-features = false, features = [
+    "protocol_buffer",
+] }
 
 # Crates
 log = "0.4"
