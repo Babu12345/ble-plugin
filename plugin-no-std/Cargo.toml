@@ -11,6 +11,7 @@ path = "src/bin/main.rs"
 # Internal crates
 protocol = { path = "../protocol", default-features = false, features = [
   "bincode_serialization",
+  "protocol_buffer",
 ] }
 
 # External crates

@@ -34,7 +34,7 @@ pb-rs = "0.10.0"
 doctest = false
 
 [features]
-default = ["std", "quick_protocol_buffer"]
+default = ["std", "protocol_buffer"]
 std = ["serde/std", "bincode/alloc", "prost/std", "quick-protobuf/std"]
 bincode_serialization = ["bincode"]
 protocol_buffer = []
