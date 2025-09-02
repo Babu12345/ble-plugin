@@ -27,7 +27,7 @@
 //! ## Protocol Features
 //!
 //! - **Type-Safe Messages**: Rust type system ensures protocol correctness
-//! - **Configurable Serialization**: Choose between Protocol Buffers or bincode (mutually exclusive)
+//! - **Flexible Serialization**: Protocol Buffers (prost or quick-protobuf) with optional bincode support
 //! - **Message Validation**: Magic number and header integrity checking  
 //! - **Version Compatibility**: Structured message IDs for protocol evolution
 //! - **Cross-Platform**: Supports both embedded (no_std) and standard environments
@@ -35,14 +35,18 @@
 //!
 //! ## Serialization Configuration
 //!
-//! This crate requires **exactly one** serialization method to be enabled via feature flags:
+//! This crate requires **exactly one** primary protobuf implementation to be enabled via feature flags:
 //!
-//! - `protocol_buffer`: Protocol Buffers for cross-platform/cross-language communication
-//! - `bincode_serialization`: Bincode for high-performance Rust-to-Rust communication (default)
+//! - `protocol_buffer`: Protocol Buffers using prost for maximum compatibility
+//! - `quick_protocol_buffer`: Protocol Buffers using quick-protobuf for high performance and embedded systems
+//! - `bincode_serialization`: Optional bincode support (can be combined with either protobuf implementation)
+//!
+//! **Embedded Note**: `quick_protocol_buffer` is recommended for embedded systems, especially
+//! those without atomic CAS (Compare-And-Swap) operations, as prost requires atomic support.
 //!
 //! The mutual exclusivity is enforced at compile-time. The crate will fail to build if:
-//! - Both features are enabled simultaneously
-//! - Neither feature is enabled
+//! - Both `protocol_buffer` and `quick_protocol_buffer` are enabled simultaneously
+//! - Neither `protocol_buffer` nor `quick_protocol_buffer` is enabled
 //!
 //! This ensures consistent serialization behavior throughout your application
 //!
@@ -63,7 +67,7 @@
 //! - **Magic Number**: 0xDEAD (little-endian) for message integrity validation
 //! - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
 //! - **Length**: Payload size in bytes (little-endian)
-//! - **Payload**: Protocol Buffer serialized message data (or bincode with feature flag)
+//! - **Payload**: Protocol Buffer serialized message data (optionally with bincode support)
 //!
 //! **Size Constraints**: The total message size (header + payload) cannot exceed
 //! [`DEFAULT_PACKET_SIZE`]. With a [`MESSAGE_HEADER_SIZE`] header, the maximum payload

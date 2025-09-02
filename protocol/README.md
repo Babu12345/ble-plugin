@@ -156,17 +156,18 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Feature Flags
 
 - `std`: Standard library support (enabled by default)
-- `protocol_buffer`: Protocol Buffers serialization support
-- `bincode_serialization`: Bincode serialization support (enabled by default)
+- `protocol_buffer`: Protocol Buffers serialization support (using prost)
+- `quick_protocol_buffer`: Fast Protocol Buffers serialization support (using quick-protobuf)
+- `bincode_serialization`: Optional bincode serialization support
 - `defmt`: Defmt logging support for embedded systems
 
 ## Serialization
 
-The protocol supports two serialization formats, and **exactly one must be enabled** at compile time:
+The protocol requires **exactly one** primary serialization format to be enabled at compile time:
 
-### Protocol Buffers (Default)
+### Protocol Buffers (using prost)
 
-Enable with the `protocol_buffer` feature flag for cross-platform compatibility:
+Enable with the `protocol_buffer` feature flag for robust cross-platform compatibility:
 
 ```toml
 # In Cargo.toml
@@ -174,45 +175,76 @@ Enable with the `protocol_buffer` feature flag for cross-platform compatibility:
 protocol = { path = "../protocol", features = ["protocol_buffer"] }
 ```
 
-**Protocol Buffers advantages:**
+**Protocol Buffers (prost) advantages:**
 - **Cross-Platform**: Same message format across Rust, Python, and other languages
 - **Schema Evolution**: Forward and backward compatible message evolution
 - **Language Agnostic**: Works with any language that supports protobuf
 - **Type Safety**: Strong typing with automatic validation
+- **Mature Ecosystem**: Well-established protobuf implementation
 
-### Bincode Serialization
+### Fast Protocol Buffers (using quick-protobuf)
 
-For Rust-to-Rust communication, bincode offers better performance:
+Enable with the `quick_protocol_buffer` feature flag for high-performance protobuf:
 
 ```toml
 # In Cargo.toml
 [dependencies]
-protocol = { path = "../protocol", features = ["bincode_serialization"] }
+protocol = { path = "../protocol", features = ["quick_protocol_buffer"] }
+```
+
+**Quick Protocol Buffers advantages:**
+- **Higher Performance**: Faster serialization/deserialization than prost
+- **Lower Memory Usage**: Reduced allocation overhead
+- **Cross-Platform**: Same protobuf compatibility as prost
+- **Zero-Copy**: Can deserialize without allocation in some cases
+- **Smaller Binary Size**: More compact generated code
+- **Embedded Friendly**: Works on targets without atomic CAS operations (unlike prost)
+
+### Optional: Bincode Serialization
+
+Bincode can be added as an **additional** serialization option alongside either protobuf implementation:
+
+```toml
+# In Cargo.toml - with prost + bincode
+[dependencies]
+protocol = { path = "../protocol", default-features = false, features = [
+    "protocol_buffer",
+    "bincode_serialization"
+] }
+
+# OR with quick-protobuf + bincode
+[dependencies]  
+protocol = { path = "../protocol", default-features = false, features = [
+    "quick_protocol_buffer", 
+    "bincode_serialization"
+] }
 ```
 
 **Bincode advantages:**
-- **Higher Performance**: Faster serialization/deserialization than protobuf
-- **Smaller Binary Size**: More compact encoding for simple data structures
-- **Zero-Copy**: Can deserialize directly into Rust structs without allocation
+- **Highest Performance**: Fastest serialization for Rust-to-Rust communication
+- **Smallest Binary Size**: Most compact encoding for simple data structures
+- **Zero-Copy**: Direct deserialization into Rust structs without allocation
 - **Native Rust Types**: Direct support for Rust enums, Options, and collections
 
-### Important: Mutual Exclusivity
+### Important: Primary Serialization Requirement
 
-⚠️ **Exactly one serialization method must be enabled.** The crate will fail to compile if:
-- Both `protocol_buffer` and `bincode_serialization` are enabled simultaneously
-- Neither feature is enabled
+⚠️ **Exactly one primary protobuf implementation must be enabled.** The crate will fail to compile if:
+- Both `protocol_buffer` and `quick_protocol_buffer` are enabled simultaneously
+- Neither `protocol_buffer` nor `quick_protocol_buffer` is enabled
 
-This mutual exclusivity is enforced by compile-time checks to ensure consistent serialization behavior across your application.
+💡 **Tip**: Use `default-features = false` in your Cargo.toml to explicitly control which features are enabled, avoiding conflicts with the default `protocol_buffer` feature.
 
 **When to use each:**
-- **Protocol Buffers**: Cross-language communication, schema evolution, long-term compatibility
-- **Bincode**: High-performance Rust-to-Rust communication, embedded systems with tight constraints
+- **Protocol Buffers (prost)**: Maximum cross-language compatibility, mature ecosystem, standard library environments
+- **Quick Protocol Buffers**: High-performance protobuf, embedded systems (especially those without atomic CAS support), performance-critical applications
+- **Bincode (optional)**: Additional Rust-to-Rust performance optimization
 
 ## Compatibility
 
 - **Rust Version**: 1.70+
 - **Embedded**: Full no_std support
 - **Platforms**: Cross-platform (desktop, mobile, embedded)
+- **Atomic Operations**: `quick_protocol_buffer` works on targets without atomic CAS operations; `protocol_buffer` requires atomic support
 - **Endianness**: Little-endian byte order for consistency
 
 ## Testing
@@ -228,8 +260,19 @@ The protocol includes comprehensive tests covering:
 Run tests with:
 
 ```bash
-cargo test
-cargo test --no-default-features  # Test no_std compatibility
+# Test with prost implementation
+cargo test --features protocol_buffer
+
+# Test with quick-protobuf implementation  
+cargo test --features quick_protocol_buffer
+
+# Test with bincode support
+cargo test --features "protocol_buffer,bincode_serialization"
+cargo test --features "quick_protocol_buffer,bincode_serialization"
+
+# Test no_std compatibility
+cargo test --no-default-features --features protocol_buffer
+cargo test --no-default-features --features quick_protocol_buffer
 ```
 
 ## Contributing
