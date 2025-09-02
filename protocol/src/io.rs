@@ -72,6 +72,8 @@ use crate::{
     errors::{Error, Result},
     DEFAULT_PACKET_SIZE,
 };
+#[cfg(feature = "quick_protocol_buffer")]
+use quick_protobuf::{MessageRead, MessageWrite};
 use serde::{Deserialize, Serialize};
 /// Size in bytes of the message type identifier field
 ///
@@ -210,9 +212,7 @@ pub trait MessageType {
 /// let deserialized = HostCommandConfigurePeripheral::from_bytes(&serialized)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-pub trait IO<'a>:
-    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
-{
+pub trait IO<'a>: IOBase<'a> {
     /// Serialize the message to a Vec (std only)
     ///
     /// This method serializes the message content (without header) to a
@@ -250,6 +250,9 @@ pub trait IO<'a>:
             .map_err(|_| Error::UnableToSerializeToBincode);
         #[cfg(feature = "protocol_buffer")]
         return Ok(prost::Message::encode_to_vec(self));
+        #[cfg(feature = "quick_protocol_buffer")]
+        return quick_protobuf::serialize_into_vec(self)
+            .map_err(|_| Error::UnableToSerializeToQuickProtobuf);
     }
 
     /// Serialize the message to a provided slice (no allocation)
@@ -296,6 +299,12 @@ pub trait IO<'a>:
         #[cfg(feature = "protocol_buffer")]
         return Ok(prost::Message::encode(self, &mut out)
             .map_err(|_| Error::UnableToSerializeToProtobuf)?);
+        #[cfg(feature = "quick_protocol_buffer")]
+        {
+            quick_protobuf::serialize_into_slice(self, out)
+                .map_err(|_| Error::UnableToSerializeToQuickProtobuf)?;
+            return Ok(self.get_size());
+        }
     }
 
     /// Deserialize the message from a byte slice (no allocation)
@@ -337,6 +346,9 @@ pub trait IO<'a>:
         return Ok(
             prost::Message::decode(payload).map_err(|_| Error::UnableToDeserializeFromProtobuf)?
         );
+        #[cfg(feature = "quick_protocol_buffer")]
+        return Ok(quick_protobuf::deserialize_from_slice(payload)
+            .map_err(|_| Error::UnableToDeserializeFromQuickProtobuf)?);
     }
 
     /// Convert from bytes
@@ -411,6 +423,20 @@ pub trait IO<'a>:
         }
         Ok(())
     }
+}
+
+/// Plugin specific input and output types
+#[cfg(feature = "protocol_buffer")]
+pub trait IOBase<'a>:
+    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
+{
+}
+
+/// Plugin specific input and output types
+#[cfg(feature = "quick_protocol_buffer")]
+pub trait IOBase<'a>:
+    Serialize + Deserialize<'a> + Sized + MessageType + Default + MessageWrite + MessageRead<'a>
+{
 }
 
 /// Plugin specific input and output types

@@ -25,6 +25,11 @@ pub enum Error {
     UnableToSerializeToProtobuf,
     /// Unable to deserialize from protocol buffers
     UnableToDeserializeFromProtobuf,
+    // Quick Protocol Buffers
+    /// Unable to serialize from quick protocol buffers
+    UnableToSerializeToQuickProtobuf,
+    /// Unable to deserialize from quick protocol buffers
+    UnableToDeserializeFromQuickProtobuf,
     // Transfers
     /// Send error
     ReceiveError,

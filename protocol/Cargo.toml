@@ -23,16 +23,19 @@ strum = { version = "0.27.2", default-features = false, features = ["derive"] }
 prost = { git = "https://github.com/Babu12345/prost", default-features = false, features = [
     "derive",
 ] }
+quick-protobuf = { version = "0.8", default-features = false, optional = true }
 heapless = { version = "0.8.0" }
 
 [build-dependencies]
 prost-build = "0.14.1"
+pb-rs = "0.10.0"
 
 [lib]
 doctest = false
 
 [features]
-default = ["std", "protocol_buffer"]
-std = ["serde/std", "bincode/alloc", "prost/std"]
+default = ["std", "quick_protocol_buffer"]
+std = ["serde/std", "bincode/alloc", "prost/std", "quick-protobuf/std"]
 bincode_serialization = ["bincode"]
 protocol_buffer = []
+quick_protocol_buffer = ["quick-protobuf"]
