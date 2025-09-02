@@ -179,7 +179,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
-exactly_one_feature!("bincode_serialization", "protocol_buffer", "quick_protocol_buffer");
+exactly_one_feature!(
+    "bincode_serialization",
+    "protocol_buffer",
+    "quick_protocol_buffer"
+);
 
 pub mod errors;
 pub mod host;

@@ -157,9 +157,9 @@ message HostCommandStopAdvertisement {
 enum BluetoothAddressType {
   BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Public address
-  PUBLIC = 1;
+  Public = 1;
   // Random address
-  RANDOM = 2;
+  Random = 2;
   // Public ID address
   PUBLIC_ID = 3;
   // Random ID address
@@ -184,10 +184,10 @@ message HostCommandNotifyCharacteristicValue {
 
 // Profile type enumeration for preconfigured BLE profiles
 // @derive(serde::Deserialize, serde::Serialize)
-enum BLEProfile {
+enum BleProfile {
   BLE_PROFILE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Custom profile - user-defined services
-  CUSTOM = 1;
+  Custom = 1;
   // Heart Rate Monitor profile
   HEART_RATE_MONITOR = 2;
   // Battery Service profile
@@ -201,7 +201,7 @@ enum BLEProfile {
 // @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureProfile))
 message HostCommandConfigureProfile {
   // Profile type to configure
-  BLEProfile profile = 1;
+  BleProfile profile = 1;
 }
 
 // Plugin messages
@@ -214,11 +214,11 @@ message HostCommandConfigureProfile {
 enum PluginDataSendType {
   PLUGIN_DATA_SEND_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Notified from the central bluetooth device
-  NOTIFY_TYPE = 1;
+  NotifyType = 1;
   // Read attempt from the central bluetooth device
-  READ_TYPE = 2;
+  ReadType = 2;
   // Written from the central bluetooth device
-  WRITE_TYPE = 3;
+  WriteType = 3;
 }
 
 // Plugin data
@@ -240,6 +240,7 @@ message PluginData {
 }
 
 // Error type enumeration for plugin configuration errors
+// @derive(serde::Deserialize, serde::Serialize)
 enum PluginConfigurationErrorType {
   PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // The peripheral name is too long

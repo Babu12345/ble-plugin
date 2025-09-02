@@ -251,8 +251,13 @@ pub trait IO<'a>: IOBase<'a> {
         #[cfg(feature = "protocol_buffer")]
         return Ok(prost::Message::encode_to_vec(self));
         #[cfg(feature = "quick_protocol_buffer")]
-        return quick_protobuf::serialize_into_vec(self)
-            .map_err(|_| Error::UnableToSerializeToQuickProtobuf);
+        {
+            let mut buf = std::vec::Vec::new();
+            let mut writer = quick_protobuf::Writer::new(&mut buf);
+            self.write_message(&mut writer)
+                .map_err(|_| Error::UnableToSerializeToQuickProtobuf)?;
+            return Ok(buf);
+        }
     }
 
     /// Serialize the message to a provided slice (no allocation)
@@ -301,9 +306,16 @@ pub trait IO<'a>: IOBase<'a> {
             .map_err(|_| Error::UnableToSerializeToProtobuf)?);
         #[cfg(feature = "quick_protocol_buffer")]
         {
-            quick_protobuf::serialize_into_slice(self, out)
+            let mut buf = std::vec::Vec::new();
+            let mut writer = quick_protobuf::Writer::new(&mut buf);
+            self.write_message(&mut writer)
                 .map_err(|_| Error::UnableToSerializeToQuickProtobuf)?;
-            return Ok(self.get_size());
+            let bytes_written = buf.len();
+            if bytes_written > out.len() {
+                return Err(Error::SerializationBufferOverflow);
+            }
+            out[..bytes_written].copy_from_slice(&buf);
+            return Ok(bytes_written);
         }
     }
 
@@ -347,8 +359,11 @@ pub trait IO<'a>: IOBase<'a> {
             prost::Message::decode(payload).map_err(|_| Error::UnableToDeserializeFromProtobuf)?
         );
         #[cfg(feature = "quick_protocol_buffer")]
-        return Ok(quick_protobuf::deserialize_from_slice(payload)
-            .map_err(|_| Error::UnableToDeserializeFromQuickProtobuf)?);
+        {
+            let mut reader = quick_protobuf::BytesReader::from_bytes(payload);
+            return Ok(Self::from_reader(&mut reader, payload)
+                .map_err(|_| Error::UnableToDeserializeFromQuickProtobuf)?);
+        }
     }
 
     /// Convert from bytes

@@ -130,8 +130,10 @@ fn main() {
             for (type_path, attributes) in &type_attributes {
                 // Extract just the type name from the full path "protocol.TypeName"
                 if let Some(type_name) = type_path.strip_prefix("protocol.") {
-                    if line.contains(&format!("pub struct {}", type_name))
-                        || line.contains(&format!("pub enum {}", type_name))
+                    if line.contains(&format!("pub struct {} ", type_name))
+                        || line.contains(&format!("pub struct {} {{", type_name))
+                        || line.contains(&format!("pub enum {} ", type_name))
+                        || line.contains(&format!("pub enum {} {{", type_name))
                     {
                         attributes_to_add = attributes.clone();
                         break;
@@ -223,6 +225,7 @@ fn main() {
                 if parts.len() >= 2 {
                     let type_name = parts[1].trim_end_matches('{');
                     if !pending_attributes.is_empty() {
+                        // println!("cargo:warning=Mapping {} to {:?}", type_name, pending_attributes);
                         type_attributes.insert(
                             format!("protocol.{}", type_name),
                             pending_attributes.clone(),

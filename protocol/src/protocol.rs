@@ -142,8 +142,8 @@ impl<'a> From<&'a str> for BLEProperties {
 #[derive(serde::Deserialize, serde::Serialize)]
 pub enum BluetoothAddressType {
     BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED = 0,
-    PUBLIC = 1,
-    RANDOM = 2,
+    Public = 1,
+    Random = 2,
     PUBLIC_ID = 3,
     RANDOM_ID = 4,
 }
@@ -158,8 +158,8 @@ impl From<i32> for BluetoothAddressType {
     fn from(i: i32) -> Self {
         match i {
             0 => BluetoothAddressType::BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED,
-            1 => BluetoothAddressType::PUBLIC,
-            2 => BluetoothAddressType::RANDOM,
+            1 => BluetoothAddressType::Public,
+            2 => BluetoothAddressType::Random,
             3 => BluetoothAddressType::PUBLIC_ID,
             4 => BluetoothAddressType::RANDOM_ID,
             _ => Self::default(),
@@ -171,8 +171,8 @@ impl<'a> From<&'a str> for BluetoothAddressType {
     fn from(s: &'a str) -> Self {
         match s {
             "BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED" => BluetoothAddressType::BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED,
-            "PUBLIC" => BluetoothAddressType::PUBLIC,
-            "RANDOM" => BluetoothAddressType::RANDOM,
+            "Public" => BluetoothAddressType::Public,
+            "Random" => BluetoothAddressType::Random,
             "PUBLIC_ID" => BluetoothAddressType::PUBLIC_ID,
             "RANDOM_ID" => BluetoothAddressType::RANDOM_ID,
             _ => Self::default(),
@@ -182,41 +182,41 @@ impl<'a> From<&'a str> for BluetoothAddressType {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[derive(serde::Deserialize, serde::Serialize)]
-pub enum BLEProfile {
+pub enum BleProfile {
     BLE_PROFILE_UNSPECIFIED = 0,
-    CUSTOM = 1,
+    Custom = 1,
     HEART_RATE_MONITOR = 2,
     BATTERY_SERVICE = 3,
     DEVICE_INFORMATION = 4,
 }
 
-impl Default for BLEProfile {
+impl Default for BleProfile {
     fn default() -> Self {
-        BLEProfile::BLE_PROFILE_UNSPECIFIED
+        BleProfile::BLE_PROFILE_UNSPECIFIED
     }
 }
 
-impl From<i32> for BLEProfile {
+impl From<i32> for BleProfile {
     fn from(i: i32) -> Self {
         match i {
-            0 => BLEProfile::BLE_PROFILE_UNSPECIFIED,
-            1 => BLEProfile::CUSTOM,
-            2 => BLEProfile::HEART_RATE_MONITOR,
-            3 => BLEProfile::BATTERY_SERVICE,
-            4 => BLEProfile::DEVICE_INFORMATION,
+            0 => BleProfile::BLE_PROFILE_UNSPECIFIED,
+            1 => BleProfile::Custom,
+            2 => BleProfile::HEART_RATE_MONITOR,
+            3 => BleProfile::BATTERY_SERVICE,
+            4 => BleProfile::DEVICE_INFORMATION,
             _ => Self::default(),
         }
     }
 }
 
-impl<'a> From<&'a str> for BLEProfile {
+impl<'a> From<&'a str> for BleProfile {
     fn from(s: &'a str) -> Self {
         match s {
-            "BLE_PROFILE_UNSPECIFIED" => BLEProfile::BLE_PROFILE_UNSPECIFIED,
-            "CUSTOM" => BLEProfile::CUSTOM,
-            "HEART_RATE_MONITOR" => BLEProfile::HEART_RATE_MONITOR,
-            "BATTERY_SERVICE" => BLEProfile::BATTERY_SERVICE,
-            "DEVICE_INFORMATION" => BLEProfile::DEVICE_INFORMATION,
+            "BLE_PROFILE_UNSPECIFIED" => BleProfile::BLE_PROFILE_UNSPECIFIED,
+            "Custom" => BleProfile::Custom,
+            "HEART_RATE_MONITOR" => BleProfile::HEART_RATE_MONITOR,
+            "BATTERY_SERVICE" => BleProfile::BATTERY_SERVICE,
+            "DEVICE_INFORMATION" => BleProfile::DEVICE_INFORMATION,
             _ => Self::default(),
         }
     }
@@ -226,9 +226,9 @@ impl<'a> From<&'a str> for BLEProfile {
 #[derive(serde::Deserialize, serde::Serialize)]
 pub enum PluginDataSendType {
     PLUGIN_DATA_SEND_TYPE_UNSPECIFIED = 0,
-    NOTIFY_TYPE = 1,
-    READ_TYPE = 2,
-    WRITE_TYPE = 3,
+    NotifyType = 1,
+    ReadType = 2,
+    WriteType = 3,
 }
 
 impl Default for PluginDataSendType {
@@ -241,9 +241,9 @@ impl From<i32> for PluginDataSendType {
     fn from(i: i32) -> Self {
         match i {
             0 => PluginDataSendType::PLUGIN_DATA_SEND_TYPE_UNSPECIFIED,
-            1 => PluginDataSendType::NOTIFY_TYPE,
-            2 => PluginDataSendType::READ_TYPE,
-            3 => PluginDataSendType::WRITE_TYPE,
+            1 => PluginDataSendType::NotifyType,
+            2 => PluginDataSendType::ReadType,
+            3 => PluginDataSendType::WriteType,
             _ => Self::default(),
         }
     }
@@ -253,9 +253,9 @@ impl<'a> From<&'a str> for PluginDataSendType {
     fn from(s: &'a str) -> Self {
         match s {
             "PLUGIN_DATA_SEND_TYPE_UNSPECIFIED" => PluginDataSendType::PLUGIN_DATA_SEND_TYPE_UNSPECIFIED,
-            "NOTIFY_TYPE" => PluginDataSendType::NOTIFY_TYPE,
-            "READ_TYPE" => PluginDataSendType::READ_TYPE,
-            "WRITE_TYPE" => PluginDataSendType::WRITE_TYPE,
+            "NotifyType" => PluginDataSendType::NotifyType,
+            "ReadType" => PluginDataSendType::ReadType,
+            "WriteType" => PluginDataSendType::WriteType,
             _ => Self::default(),
         }
     }
@@ -353,7 +353,7 @@ impl MessageWrite for HostCommandConfigurePeripheral {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Default, PartialEq, Clone)]
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheral)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheralSecurity)]
 pub struct HostCommandConfigurePeripheralSecurity {
     pub passkey: u32,
 }
@@ -463,7 +463,7 @@ impl MessageWrite for HostCommandConfigureCharacteristic {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Default, PartialEq, Clone)]
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristic)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristicRead)]
 pub struct HostCommandConfigureCharacteristicRead {
     pub uuid: u32,
     pub service_uuid: u32,
@@ -678,7 +678,7 @@ impl MessageWrite for HostCommandNotifyCharacteristicValue {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureProfile)]
 pub struct HostCommandConfigureProfile {
-    pub profile: protocol::BLEProfile,
+    pub profile: protocol::BleProfile,
 }
 
 impl<'a> MessageRead<'a> for HostCommandConfigureProfile {
@@ -698,11 +698,11 @@ impl<'a> MessageRead<'a> for HostCommandConfigureProfile {
 impl MessageWrite for HostCommandConfigureProfile {
     fn get_size(&self) -> usize {
         0
-        + if self.profile == protocol::BLEProfile::BLE_PROFILE_UNSPECIFIED { 0 } else { 1 + sizeof_varint(*(&self.profile) as u64) }
+        + if self.profile == protocol::BleProfile::BLE_PROFILE_UNSPECIFIED { 0 } else { 1 + sizeof_varint(*(&self.profile) as u64) }
     }
 
     fn write_message<W: WriterBackend>(&self, w: &mut Writer<W>) -> Result<()> {
-        if self.profile != protocol::BLEProfile::BLE_PROFILE_UNSPECIFIED { w.write_with_tag(8, |w| w.write_enum(*&self.profile as i32))?; }
+        if self.profile != protocol::BleProfile::BLE_PROFILE_UNSPECIFIED { w.write_with_tag(8, |w| w.write_enum(*&self.profile as i32))?; }
         Ok(())
     }
 }
