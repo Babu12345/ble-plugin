@@ -168,3 +168,11 @@ Host github.com
 
 ### [Copy to github account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account#adding-a-new-ssh-key-to-your-account)
 1. pbcopy < ~/.ssh/id_ed25519.pub
+
+### Automatically make VSCode import the key
+1. Add or create a new ~/.cargo/config.toml file
+2. Add in the file
+```
+[net]
+git-fetch-with-cli = true
+```

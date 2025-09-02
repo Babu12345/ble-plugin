@@ -9,7 +9,7 @@ edition = "2021"
 lib_utils = { path = "../lib_utils" }
 protocol_io = { path = "../protocol_io" }
 # Crates
-serde = { version = "1.0.219", default-features = false, features = [
+serde = { version = "^1.0.217", default-features = false, features = [
     "derive",
     "alloc",
 ] }
