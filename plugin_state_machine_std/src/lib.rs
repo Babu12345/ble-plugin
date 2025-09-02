@@ -213,7 +213,6 @@ use protocol::protocol::{
     PluginData, PluginServiceInfoResponse,
 };
 use protocol::utils::slice_to_array;
-use protocol::MESSAGE_HEADER_SIZE;
 use threadpool::ThreadPool;
 use throttle::Throttle;
 
@@ -229,8 +228,9 @@ use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use heapless::String;
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::protocol::MessageTypeId;
-use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
-use protocol::{MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
+use protocol::{
+    DEFAULT_PACKET_SIZE, MAX_NAME_SIZE, MESSAGE_HEADER_SIZE, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES,
+};
 
 /// Maximum number of characteristics per service
 const MAX_CHARACTERISTICS_PER_SERVICE: usize = 16;
