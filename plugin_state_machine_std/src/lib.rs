@@ -202,26 +202,16 @@ use esp_idf_svc::nvs::EspNvsPartition;
 use esp_idf_svc::nvs::NvsPartitionId;
 use plugin_nvs::namespace;
 use plugin_nvs::namespaces::ConfigNamespace;
-use protocol::protocol::BleProfile;
-use protocol::protocol::BleProperties;
-use protocol::protocol::BluetoothAddressType;
-use protocol::protocol::HostCommandConfigureCharacteristic;
-use protocol::protocol::HostCommandConfigureCharacteristicRead;
-use protocol::protocol::HostCommandConfigurePeripheral;
-use protocol::protocol::HostCommandConfigurePeripheralSecurity;
-use protocol::protocol::HostCommandConfigureProfile;
-use protocol::protocol::HostCommandConfigureService;
-use protocol::protocol::HostCommandGetCharacteristicInfo;
-use protocol::protocol::HostCommandGetServiceInfo;
-use protocol::protocol::HostCommandNotifyCharacteristicValue;
-use protocol::protocol::HostCommandStartAdvertisement;
-use protocol::protocol::HostCommandStopAdvertisement;
-use protocol::protocol::PluginAuthenticationCompletedResponse;
-use protocol::protocol::PluginCharacteristicInfoResponse;
-use protocol::protocol::PluginConfigurationError;
-use protocol::protocol::PluginConfigurationErrorType;
-use protocol::protocol::PluginData;
-use protocol::protocol::PluginServiceInfoResponse;
+use protocol::protocol::{
+    BleProfile, BleProperties, BluetoothAddressType, HostCommandConfigureCharacteristic,
+    HostCommandConfigureCharacteristicRead, HostCommandConfigurePeripheral,
+    HostCommandConfigurePeripheralSecurity, HostCommandConfigureProfile,
+    HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
+    HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
+    HostCommandStopAdvertisement, PluginAuthenticationCompletedResponse,
+    PluginCharacteristicInfoResponse, PluginConfigurationError, PluginConfigurationErrorType,
+    PluginData, PluginServiceInfoResponse,
+};
 use protocol::utils::slice_to_array;
 use protocol::MESSAGE_HEADER_SIZE;
 use threadpool::ThreadPool;
