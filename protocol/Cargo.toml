@@ -15,6 +15,7 @@ serde = { version = "^1.0.217", default-features = false, features = [
 ] }
 bincode = { version = "2.0.1", default-features = false, features = [
     "serde",
+    "alloc",
 ], optional = true }
 log = "0.4"
 embassy-sync = { version = "0.6.1", default-features = false }
@@ -35,7 +36,7 @@ doctest = false
 
 [features]
 default = ["std", "quick_protocol_buffer"]
-std = ["serde/std", "bincode/alloc", "prost/std", "quick-protobuf/std"]
+std = ["serde/std", "prost/std", "quick-protobuf/std"]
 bincode_serialization = ["bincode"]
 protocol_buffer = ["prost", "prost-build"]
 quick_protocol_buffer = ["quick-protobuf", "pb-rs"]

@@ -49,23 +49,79 @@ test_rust_crates() {
             
             cd "$crate"
             
-            # Check if tests exist
-            if [ -d "tests" ] || grep -q "\[\[test\]\]" Cargo.toml 2>/dev/null || find src -name "*.rs" -exec grep -l "#\[test\]" {} \; | head -1 >/dev/null 2>&1; then
-                if cargo test --quiet >/dev/null 2>&1; then
-                    print_success "$crate tests passed"
-                    successful_crates+=("$crate")
+            # Special handling for protocol crate to test all feature combinations
+            if [ "$crate" = "protocol" ]; then
+                print_status "Testing $crate with valid feature combinations..."
+                
+                # Test all feature combinations (excluding conflicting combinations)
+                # Use --each-feature to test each feature individually
+                # Use --feature-powerset to test all valid combinations
+                local testing_success=true
+                
+                
+                # Test specific valid feature combinations manually
+                local valid_combinations=(
+                    "protocol_buffer"
+                    "quick_protocol_buffer" 
+                    "protocol_buffer,bincode_serialization"
+                    "quick_protocol_buffer,bincode_serialization"
+                    "protocol_buffer,std"
+                    "quick_protocol_buffer,std"
+                    "protocol_buffer,std,bincode_serialization"
+                    "quick_protocol_buffer,std,bincode_serialization"
+                )
+                
+                local combo_success=true
+                for combo in "${valid_combinations[@]}"; do
+                    # Run tests with the same feature combination
+                    if cargo test --no-default-features --features "$combo" --quiet >/dev/null 2>&1; then
+                        continue
+                    else
+                        combo_success=false
+                        break
+                    fi
+                done
+                
+                if $combo_success; then
+                    print_success "$crate valid feature combinations passed"
                 else
-                    print_error "$crate tests failed"
-                    failed_crates+=("$crate")
+                    print_error "$crate some feature combinations failed"
+                    testing_success=false
+                fi
+                
+                # Test default features - build first, then test
+                if cargo test --quiet >/dev/null 2>&1; then
+                    print_success "$crate default features passed"
+                else
+                    print_error "$crate default features failed"
+                    testing_success=false
+                fi
+                
+                if $testing_success; then
+                    successful_crates+=("$crate (all features)")
+                else
+                    failed_crates+=("$crate (feature testing failed)")
                 fi
             else
-                # If no tests, just check if it compiles
-                if cargo check --quiet 2>/dev/null; then
-                    print_warning "$crate has no tests, but compiles successfully"
-                    successful_crates+=("$crate (compile only)")
+                # Standard testing for other crates
+                # Check if tests exist
+                if [ -d "tests" ] || grep -q "\[\[test\]\]" Cargo.toml 2>/dev/null || find src -name "*.rs" -exec grep -l "#\[test\]" {} \; | head -1 >/dev/null 2>&1; then
+                    if cargo test --quiet >/dev/null 2>&1; then
+                        print_success "$crate tests passed"
+                        successful_crates+=("$crate")
+                    else
+                        print_error "$crate tests failed"
+                        failed_crates+=("$crate")
+                    fi
                 else
-                    print_error "$crate failed to compile"
-                    failed_crates+=("$crate (compile failed)")
+                    # If no tests, just check if it compiles
+                    if cargo check --quiet 2>/dev/null; then
+                        print_warning "$crate has no tests, but compiles successfully"
+                        successful_crates+=("$crate (compile only)")
+                    else
+                        print_error "$crate failed to compile"
+                        failed_crates+=("$crate (compile failed)")
+                    fi
                 fi
             fi
             
