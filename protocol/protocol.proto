@@ -81,7 +81,7 @@ message HostCommandConfigureService {
 
 // Properties enumeration for BLE characteristics
 // @derive(serde::Deserialize, serde::Serialize)
-enum BLEProperties {
+enum BleProperties {
   BLE_PROPERTIES_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Read property
   READ = 1;
@@ -104,7 +104,7 @@ message HostCommandConfigureCharacteristic {
   // Service UUID (u16) this characteristic belongs to
   uint32 service_uuid = 2; // u16 in Rust
   // Properties of the characteristic (read, write, notify, etc.)
-  repeated BLEProperties properties = 3; // Max 4 properties per characteristic
+  repeated BleProperties properties = 3; // Max 4 properties per characteristic
 }
 
 // Host command. Configure characteristic read
@@ -161,9 +161,9 @@ enum BluetoothAddressType {
   // Random address
   Random = 2;
   // Public ID address
-  PUBLIC_ID = 3;
+  PublicId = 3;
   // Random ID address
-  RANDOM_ID = 4;
+  RandomId = 4;
 }
 
 // Host command. Notify characteristic value
@@ -288,7 +288,7 @@ message PluginCharacteristicInfoResponse {
   // Service UUID (u16) this characteristic belongs to
   uint32 service_uuid = 2; // u16 in Rust
   // Properties of the characteristic (read, write, notify, etc.)
-  repeated BLEProperties properties = 3; // Max 4 properties
+  repeated BleProperties properties = 3; // Max 4 properties
   // Whether the characteristic exists
   bool exists = 4;
 }

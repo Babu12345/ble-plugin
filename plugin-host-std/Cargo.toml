@@ -24,7 +24,10 @@ default = []
 [dependencies]
 ## Custom
 lib_utils = {path = "../lib_utils"}
-protocol = {path = "../protocol", default-features = true}
+protocol = { path = "../protocol", default-features = false, features = [
+    "std",
+    "protocol_buffer",
+] }
 host-cherry = {path = "../host-cherry"}
 plugin_state_machine_std = { path = "../plugin_state_machine_std" }
 ## Crates

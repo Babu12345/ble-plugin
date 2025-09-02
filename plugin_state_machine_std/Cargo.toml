@@ -13,7 +13,10 @@ rust-version = "1.70"
 
 [dependencies]
 # Local protocol definitions
-protocol = { path = "../protocol" }
+protocol = { path = "../protocol", default-features = false, features = [
+    "std",
+    "protocol_buffer",
+] }
 plugin-nvs = { path = "../plugin-nvs" }
 
 esp32-nimble = { git = "ssh://git@github.com/Babu12345/esp32-nimble.git", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [
