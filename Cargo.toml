@@ -1,7 +1,16 @@
 [workspace]
 members = ["protocol", "protocol_io", "lib_utils"]
-
+exclude = [
+    "plugin-nvs",
+    "plugin_state_machine_std",
+    "plugin-std",
+    "host-std",
+    "plugin-echo-example",
+    "plugin-no-std",
+    "plugin-host-std",
+]
 resolver = "2"
+
 
 [workspace.package]
 version = "0.0.1"

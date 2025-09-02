@@ -33,7 +33,7 @@ prost-build = "0.14.1"
 doctest = false
 
 [features]
-default = ["std", "protocol_buffers"]
+default = ["std", "protocol_buffer"]
 std = ["serde/std", "bincode/alloc", "prost/std"]
 bincode_serialization = ["bincode"]
-protocol_buffers = []
+protocol_buffer = []

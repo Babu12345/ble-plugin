@@ -37,7 +37,7 @@
 //!
 //! This crate requires **exactly one** serialization method to be enabled via feature flags:
 //!
-//! - `protocol_buffers`: Protocol Buffers for cross-platform/cross-language communication
+//! - `protocol_buffer`: Protocol Buffers for cross-platform/cross-language communication
 //! - `bincode_serialization`: Bincode for high-performance Rust-to-Rust communication (default)
 //!
 //! The mutual exclusivity is enforced at compile-time. The crate will fail to build if:
@@ -179,7 +179,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
-exactly_one_feature!("bincode_serialization", "protocol_buffers");
+exactly_one_feature!("bincode_serialization", "protocol_buffer");
 
 pub mod errors;
 pub mod host;

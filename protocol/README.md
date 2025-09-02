@@ -156,7 +156,7 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Feature Flags
 
 - `std`: Standard library support (enabled by default)
-- `protocol_buffers`: Protocol Buffers serialization support
+- `protocol_buffer`: Protocol Buffers serialization support
 - `bincode_serialization`: Bincode serialization support (enabled by default)
 - `defmt`: Defmt logging support for embedded systems
 
@@ -166,12 +166,12 @@ The protocol supports two serialization formats, and **exactly one must be enabl
 
 ### Protocol Buffers (Default)
 
-Enable with the `protocol_buffers` feature flag for cross-platform compatibility:
+Enable with the `protocol_buffer` feature flag for cross-platform compatibility:
 
 ```toml
 # In Cargo.toml
 [dependencies]
-protocol = { path = "../protocol", features = ["protocol_buffers"] }
+protocol = { path = "../protocol", features = ["protocol_buffer"] }
 ```
 
 **Protocol Buffers advantages:**
@@ -199,7 +199,7 @@ protocol = { path = "../protocol", features = ["bincode_serialization"] }
 ### Important: Mutual Exclusivity
 
 ⚠️ **Exactly one serialization method must be enabled.** The crate will fail to compile if:
-- Both `protocol_buffers` and `bincode_serialization` are enabled simultaneously
+- Both `protocol_buffer` and `bincode_serialization` are enabled simultaneously
 - Neither feature is enabled
 
 This mutual exclusivity is enforced by compile-time checks to ensure consistent serialization behavior across your application.

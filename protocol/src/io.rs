@@ -30,7 +30,7 @@
 //!   - Best for performance-critical embedded systems
 //!   - Requires serde `Serialize`/`Deserialize` traits
 //!
-//! - **`protocol_buffers`**: Uses Protocol Buffers for serialization
+//! - **`protocol_buffer`**: Uses Protocol Buffers for serialization
 //!   - Language-agnostic format with schema evolution support
 //!   - Better for cross-platform/cross-language communication
 //!   - Requires `prost::Message` trait implementation
@@ -223,7 +223,7 @@ pub trait IO<'a>:
     /// The serialization format is determined at compile-time via feature flags.
     /// Exactly one of the following must be enabled:
     /// - **`bincode_serialization`**: Uses bincode binary format
-    /// - **`protocol_buffers`**: Uses Protocol Buffers format
+    /// - **`protocol_buffer`**: Uses Protocol Buffers format
     ///
     /// The crate enforces that exactly one serialization method is enabled
     /// through compile-time checks in `lib.rs`.
@@ -248,7 +248,7 @@ pub trait IO<'a>:
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_to_vec(self, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(feature = "protocol_buffers")]
+        #[cfg(feature = "protocol_buffer")]
         return Ok(prost::Message::encode_to_vec(self));
     }
 
@@ -263,7 +263,7 @@ pub trait IO<'a>:
     /// The serialization format is determined at compile-time via feature flags.
     /// Exactly one of the following must be enabled:
     /// - **`bincode_serialization`**: Uses bincode binary format
-    /// - **`protocol_buffers`**: Uses Protocol Buffers format with `prost::Message::encode`
+    /// - **`protocol_buffer`**: Uses Protocol Buffers format with `prost::Message::encode`
     ///
     /// The crate enforces that exactly one serialization method is enabled
     /// through compile-time checks in `lib.rs`.
@@ -293,7 +293,7 @@ pub trait IO<'a>:
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_into_slice(self, out, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(feature = "protocol_buffers")]
+        #[cfg(feature = "protocol_buffer")]
         return Ok(prost::Message::encode(self, &mut out)
             .map_err(|_| Error::UnableToSerializeToProtobuf)?);
     }
@@ -309,7 +309,7 @@ pub trait IO<'a>:
     /// Exactly one of the following must be enabled:
     /// - **`bincode_serialization`**: Uses bincode with `borrow_decode_from_slice`
     ///   for zero-copy deserialization where possible
-    /// - **`protocol_buffers`**: Uses Protocol Buffers with `prost::Message::decode`
+    /// - **`protocol_buffer`**: Uses Protocol Buffers with `prost::Message::decode`
     ///
     /// The crate enforces that exactly one serialization method is enabled
     /// through compile-time checks in `lib.rs`.
@@ -333,7 +333,7 @@ pub trait IO<'a>:
                     .0;
             return Ok(res);
         }
-        #[cfg(feature = "protocol_buffers")]
+        #[cfg(feature = "protocol_buffer")]
         return Ok(
             prost::Message::decode(payload).map_err(|_| Error::UnableToDeserializeFromProtobuf)?
         );
