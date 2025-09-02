@@ -5,11 +5,9 @@ edition = "2024"
 
 [dependencies]
 ## Files in shared directory
-lib_utils = { path = "../lib_utils" }
-protocol = { path = "../protocol", default-features = false, features = [
-    "protocol_buffer",
-] }
+protocol = { path = "../protocol", default-features = false }
 
+lib_utils = { path = "../lib_utils" }
 # crates
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }

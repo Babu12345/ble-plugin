@@ -12,10 +12,8 @@ debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [dependencies]
+protocol = { path = "../protocol", default-features = false }
 # Custom
-protocol = { path = "../protocol", default-features = false, features = [
-    "protocol_buffer",
-] }
 lib_utils = { path = "../lib_utils" }
 
 # Crates
