@@ -31,6 +31,7 @@ print_warning() {
 
 # Function to test Rust crates
 test_rust_crates() {
+    local skip_combinations="${1:-false}"
     print_status "Testing Rust crates..."
     
     # Find all Cargo.toml files and test each crate
@@ -51,42 +52,42 @@ test_rust_crates() {
             
             # Special handling for protocol crate to test all feature combinations
             if [ "$crate" = "protocol" ]; then
-                print_status "Testing $crate with valid feature combinations..."
-                
-                # Test all feature combinations (excluding conflicting combinations)
-                # Use --each-feature to test each feature individually
-                # Use --feature-powerset to test all valid combinations
                 local testing_success=true
                 
-                
-                # Test specific valid feature combinations manually
-                local valid_combinations=(
-                    "protocol_buffer"
-                    "quick_protocol_buffer" 
-                    "protocol_buffer,bincode_serialization"
-                    "quick_protocol_buffer,bincode_serialization"
-                    "protocol_buffer,std"
-                    "quick_protocol_buffer,std"
-                    "protocol_buffer,std,bincode_serialization"
-                    "quick_protocol_buffer,std,bincode_serialization"
-                )
-                
-                local combo_success=true
-                for combo in "${valid_combinations[@]}"; do
-                    # Run tests with the same feature combination
-                    if cargo test --no-default-features --features "$combo" --quiet >/dev/null 2>&1; then
-                        continue
+                if [ "$skip_combinations" = "false" ]; then
+                    print_status "Testing $crate with valid feature combinations..."
+                    
+                    # Test specific valid feature combinations manually
+                    local valid_combinations=(
+                        "protocol_buffer"
+                        "quick_protocol_buffer" 
+                        "protocol_buffer,bincode_serialization"
+                        "quick_protocol_buffer,bincode_serialization"
+                        "protocol_buffer,std"
+                        "quick_protocol_buffer,std"
+                        "protocol_buffer,std,bincode_serialization"
+                        "quick_protocol_buffer,std,bincode_serialization"
+                    )
+                    
+                    local combo_success=true
+                    for combo in "${valid_combinations[@]}"; do
+                        # Run tests with the same feature combination
+                        if cargo test --no-default-features --features "$combo" --quiet >/dev/null 2>&1; then
+                            continue
+                        else
+                            combo_success=false
+                            break
+                        fi
+                    done
+                    
+                    if $combo_success; then
+                        print_success "$crate valid feature combinations passed"
                     else
-                        combo_success=false
-                        break
+                        print_error "$crate some feature combinations failed"
+                        testing_success=false
                     fi
-                done
-                
-                if $combo_success; then
-                    print_success "$crate valid feature combinations passed"
                 else
-                    print_error "$crate some feature combinations failed"
-                    testing_success=false
+                    print_status "Skipping feature combinations for $crate (--skip-combinations flag set)"
                 fi
                 
                 # Test default features - build first, then test
@@ -98,7 +99,7 @@ test_rust_crates() {
                 fi
                 
                 if $testing_success; then
-                    successful_crates+=("$crate (all features)")
+                    successful_crates+=("$crate")
                 else
                     failed_crates+=("$crate (feature testing failed)")
                 fi
@@ -301,6 +302,15 @@ test_python_packages() {
 # Main execution
 main() {
     local test_type="${1:-all}"
+    local skip_combinations=false
+    
+    # Check for --skip-combinations or -s flag
+    for arg in "$@"; do
+        if [ "$arg" = "--skip-combinations" ] || [ "$arg" = "-s" ]; then
+            skip_combinations=true
+        fi
+    done
+    
     local rust_success=0
     local python_success=0
     local compile_success=0
@@ -311,7 +321,7 @@ main() {
     
     case "$test_type" in
         "rust")
-            test_rust_crates
+            test_rust_crates "$skip_combinations"
             rust_success=$?
             ;;
         "python")
@@ -323,7 +333,7 @@ main() {
             compile_success=$?
             ;;
         "all"|*)
-            test_rust_crates
+            test_rust_crates "$skip_combinations"
             rust_success=$?
             echo
             compile_selected_crates
@@ -371,7 +381,7 @@ main() {
 
 # Show usage if help requested
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-    echo "Usage: $0 [rust|python|compile|all]"
+    echo "Usage: $0 [rust|python|compile|all] [-s|--skip-combinations]"
     echo
     echo "Test all Rust and Python libraries in the BLE plugin project"
     echo
@@ -380,7 +390,10 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  python  - Test only Python packages"
     echo "  compile - Check compilation for selected crates"
     echo "  all     - Test Rust crates, check compilation, and test Python packages (default)"
-    echo "  -h, --help - Show this help message"
+    echo
+    echo "Flags:"
+    echo "  -s, --skip-combinations - Skip testing all feature combinations for protocol crate"
+    echo "  -h, --help              - Show this help message"
     exit 0
 fi
 
