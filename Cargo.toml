@@ -1,0 +1,13 @@
+[workspace]
+members = ["protocol", "protocol_io", "lib_utils"]
+
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
+authors = ["Babuabel Wanyeki <bwanyeki12@gmail.com>"]
+repository = "https://github.com/Babu12345/ble-plugin"
+edition = "2021"
+
+[profile.bench]
+debug = true
