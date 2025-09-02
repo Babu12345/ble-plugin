@@ -45,11 +45,7 @@ fn main() {
 
                 if paren_count == 0 {
                     let macro_content = &rest[..end_pos];
-                    // For HostIO and PluginIO, we need to add the proper imports
-                    // The macros expect just the variant name, not the full path
-                    let processed = macro_content
-                        .replace("MessageTypeId::", "crate::protocol::MessageTypeId::");
-                    pending_attributes.push(format!("#[{}]", processed));
+                    pending_attributes.push(format!("#[{}]", macro_content));
                 }
             }
         }

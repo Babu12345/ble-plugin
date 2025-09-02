@@ -46,7 +46,7 @@
 //!
 //! This ensures consistent serialization behavior throughout your application
 //!
-//! **Memory Note**: Protocol types use `alloc::Vec` and `alloc::String` for Protocol Buffer 
+//! **Memory Note**: Protocol types use `alloc::Vec` and `alloc::String` for Protocol Buffer
 //! compatibility. Internal message headers use `heapless::Vec` for predictable allocation.
 //!
 //! ## Message Protocol Format

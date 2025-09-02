@@ -10,9 +10,7 @@ use crate::{IO, HostIO, PluginIO, MessageType};
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheral))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(
-    crate::protocol::MessageTypeId::TypeHostCommandConfigurePeripheral
-)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheral)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandConfigurePeripheral {
     /// Peripheral name
@@ -28,9 +26,7 @@ pub struct HostCommandConfigurePeripheral {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheralSecurity))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(
-    crate::protocol::MessageTypeId::TypeHostCommandConfigurePeripheralSecurity
-)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheralSecurity)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandConfigurePeripheralSecurity {
     /// Passkey for pairing (6 digit numeric)
@@ -41,7 +37,7 @@ pub struct HostCommandConfigurePeripheralSecurity {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureService))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(crate::protocol::MessageTypeId::TypeHostCommandConfigureService)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureService)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandConfigureService {
     /// Service UUID (u16)
@@ -54,9 +50,7 @@ pub struct HostCommandConfigureService {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristic))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(
-    crate::protocol::MessageTypeId::TypeHostCommandConfigureCharacteristic
-)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristic)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandConfigureCharacteristic {
     /// Characteristic UUID (u16)
@@ -79,9 +73,7 @@ pub struct HostCommandConfigureCharacteristic {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristicRead))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(
-    crate::protocol::MessageTypeId::TypeHostCommandConfigureCharacteristicRead
-)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureCharacteristicRead)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandConfigureCharacteristicRead {
     /// Characteristic UUID (u16)
@@ -104,7 +96,7 @@ pub struct HostCommandConfigureCharacteristicRead {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandGetServiceInfo))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(crate::protocol::MessageTypeId::TypeHostCommandGetServiceInfo)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandGetServiceInfo)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandGetServiceInfo {
     /// Service UUID (u16)
@@ -117,9 +109,7 @@ pub struct HostCommandGetServiceInfo {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandGetCharacteristicInfo))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(
-    crate::protocol::MessageTypeId::TypeHostCommandGetCharacteristicInfo
-)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandGetCharacteristicInfo)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandGetCharacteristicInfo {
     /// Characteristic UUID (u16)
@@ -137,7 +127,7 @@ pub struct HostCommandGetCharacteristicInfo {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandStartAdvertisement))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(crate::protocol::MessageTypeId::TypeHostCommandStartAdvertisement)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandStartAdvertisement)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandStartAdvertisement {
     /// Allow multiple central connections
@@ -150,16 +140,14 @@ pub struct HostCommandStartAdvertisement {
 ///
 /// Empty message
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(crate::protocol::MessageTypeId::TypeHostCommandStopAdvertisement)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandStopAdvertisement)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandStopAdvertisement {}
 /// Host command. Notify characteristic value
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandNotifyCharacteristicValue))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(
-    crate::protocol::MessageTypeId::TypeHostCommandNotifyCharacteristicValue
-)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandNotifyCharacteristicValue)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandNotifyCharacteristicValue {
     /// Device Address
@@ -190,7 +178,7 @@ pub struct HostCommandNotifyCharacteristicValue {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureProfile))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(crate::protocol::MessageTypeId::TypeHostCommandConfigureProfile)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureProfile)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HostCommandConfigureProfile {
     /// Profile type to configure
@@ -201,7 +189,7 @@ pub struct HostCommandConfigureProfile {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginData))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::PluginIO(crate::protocol::MessageTypeId::TypePluginData)]
+#[protocol_io::PluginIO(MessageTypeId::TypePluginData)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PluginData {
     /// Source peripheral addr that this data is originating from
@@ -233,7 +221,7 @@ pub struct PluginData {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginConfigurationError))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::PluginIO(crate::protocol::MessageTypeId::TypePluginConfigurationError)]
+#[protocol_io::PluginIO(MessageTypeId::TypePluginConfigurationError)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PluginConfigurationError {
     /// The type of configuration error
@@ -244,7 +232,7 @@ pub struct PluginConfigurationError {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginServiceInfoResponse))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::PluginIO(crate::protocol::MessageTypeId::TypePluginServiceInfoResponse)]
+#[protocol_io::PluginIO(MessageTypeId::TypePluginServiceInfoResponse)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PluginServiceInfoResponse {
     /// Service UUID (u16)
@@ -265,9 +253,7 @@ pub struct PluginServiceInfoResponse {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginCharacteristicInfoResponse))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::PluginIO(
-    crate::protocol::MessageTypeId::TypePluginCharacteristicInfoResponse
-)]
+#[protocol_io::PluginIO(MessageTypeId::TypePluginCharacteristicInfoResponse)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PluginCharacteristicInfoResponse {
     /// Characteristic UUID (u16)
@@ -293,9 +279,7 @@ pub struct PluginCharacteristicInfoResponse {
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginAuthenticationCompletedResponse))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::PluginIO(
-    crate::protocol::MessageTypeId::TypePluginAuthenticationCompletedResponse
-)]
+#[protocol_io::PluginIO(MessageTypeId::TypePluginAuthenticationCompletedResponse)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PluginAuthenticationCompletedResponse {
     /// Address of the device that was authenticated
