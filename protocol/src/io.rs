@@ -306,16 +306,10 @@ pub trait IO<'a>: IOBase<'a> {
             .map_err(|_| Error::UnableToSerializeToProtobuf)?);
         #[cfg(feature = "quick_protocol_buffer")]
         {
-            let mut buf = std::vec::Vec::new();
-            let mut writer = quick_protobuf::Writer::new(&mut buf);
+            let mut writer = quick_protobuf::Writer::new(&mut out);
             self.write_message(&mut writer)
                 .map_err(|_| Error::UnableToSerializeToQuickProtobuf)?;
-            let bytes_written = buf.len();
-            if bytes_written > out.len() {
-                return Err(Error::SerializationBufferOverflow);
-            }
-            out[..bytes_written].copy_from_slice(&buf);
-            return Ok(bytes_written);
+            return Ok(self.get_size());
         }
     }
 
