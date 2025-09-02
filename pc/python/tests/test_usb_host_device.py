@@ -93,7 +93,7 @@ class TestUSBHostDevice:
         """Test configure_characteristic method"""
         uuid = 0x1234
         service_uuid = 0x8765
-        properties = [protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.WRITE]
+        properties = [protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.Write]
         
         self.host_device.configure_characteristic(uuid, service_uuid, properties)
         
@@ -129,7 +129,7 @@ class TestUSBHostDevice:
     def test_notify_characteristic_value(self, mock_send) -> None:
         """Test notify_characteristic_value method"""
         address = b'\x12\x34\x56\x78\x9a\xbc'
-        address_type = protocol_pb2.BluetoothAddressType.PUBLIC
+        address_type = protocol_pb2.BluetoothAddressType.Public
         char_uuid = 0x1234
         service_uuid = 0x8765
         value = b"test_value"

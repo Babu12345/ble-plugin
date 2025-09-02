@@ -499,7 +499,7 @@ class BLEConfigurationGUI:
             
         try:
             profile_name = self.profile_var.get()
-            profile = getattr(protocol_pb2.BLEProfile, profile_name)
+            profile = getattr(protocol_pb2.BleProfile, profile_name)
             delay = float(self.profile_delay_var.get())
             
             self.log(f"Configuring profile: {profile_name} with delay {delay}s")

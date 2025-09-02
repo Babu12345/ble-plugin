@@ -16,9 +16,9 @@ def test_type_serialization() -> None:
 
     # Test that plugin data objects can be created (these come FROM the device, not serialized by us)
     data = protocol_pb2.PluginData(
-        send_type=protocol_pb2.PluginDataSendType.NOTIFY_TYPE, 
+        send_type=protocol_pb2.PluginDataSendType.NotifyType, 
         src_addr=bytes([0x12, 0x30, 0x00, 0x00, 0x00, 0x00]), 
-        src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC, 
+        src_addr_type=protocol_pb2.BluetoothAddressType.Public, 
         characteristic_uuid=0x2A19, 
         service_uuid=0x180F, 
         data=bytes([0,1,2])
@@ -37,12 +37,12 @@ def test_new_commands_serialization() -> None:
     """Test serialization of the new command: ConfigureProfile"""
     
     # Test HostCommandConfigureProfile with Custom profile
-    cmd = protocol_pb2.HostCommandConfigureProfile(profile=protocol_pb2.BLEProfile.CUSTOM)
+    cmd = protocol_pb2.HostCommandConfigureProfile(profile=protocol_pb2.BleProfile.Custom)
     serialized = serialize_command(cmd)
     assert len(serialized) > 0, "Configure profile command serialization failed"
     
     # Test with different profile
-    cmd = protocol_pb2.HostCommandConfigureProfile(profile=protocol_pb2.BLEProfile.HEART_RATE_MONITOR)
+    cmd = protocol_pb2.HostCommandConfigureProfile(profile=protocol_pb2.BleProfile.HeartRateMonitor)
     serialized = serialize_command(cmd)
     assert len(serialized) > 0, "Configure profile command serialization failed"
 
@@ -51,7 +51,7 @@ def test_new_commands_integration():
     from plugin_host.comms import serialize_command, USBHostDevice
     
     # Test ConfigureProfile command  
-    cmd = protocol_pb2.HostCommandConfigureProfile(profile=protocol_pb2.BLEProfile.CUSTOM)
+    cmd = protocol_pb2.HostCommandConfigureProfile(profile=protocol_pb2.BleProfile.Custom)
     serialized = serialize_command(cmd)
     assert len(serialized) > 5, "Should include message header"
     

@@ -193,7 +193,7 @@ class TestProtobufDeserialization:
     def test_deserialize_configuration_error(self):
         """Test deserializing PluginConfigurationError with protobuf"""
         response = protocol_pb2.PluginConfigurationError()
-        response.error_type = 5  # ADVERTISEMENT_WITHOUT_PERIPHERAL_CONFIGURATION
+        response.error_type = protocol_pb2.PluginConfigurationErrorType.AdvertisementWithoutPeripheralConfiguration
         
         protobuf_data = response.SerializeToString()
         

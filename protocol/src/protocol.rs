@@ -459,22 +459,22 @@ impl BleProperties {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Unspecified => "BLE_PROPERTIES_UNSPECIFIED",
-            Self::Read => "READ",
-            Self::Write => "WRITE",
-            Self::WriteNoRsp => "WRITE_NO_RSP",
-            Self::Notify => "NOTIFY",
-            Self::Indicate => "INDICATE",
+            Self::Read => "Read",
+            Self::Write => "Write",
+            Self::WriteNoRsp => "WriteNoRsp",
+            Self::Notify => "Notify",
+            Self::Indicate => "Indicate",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "BLE_PROPERTIES_UNSPECIFIED" => Some(Self::Unspecified),
-            "READ" => Some(Self::Read),
-            "WRITE" => Some(Self::Write),
-            "WRITE_NO_RSP" => Some(Self::WriteNoRsp),
-            "NOTIFY" => Some(Self::Notify),
-            "INDICATE" => Some(Self::Indicate),
+            "Read" => Some(Self::Read),
+            "Write" => Some(Self::Write),
+            "WriteNoRsp" => Some(Self::WriteNoRsp),
+            "Notify" => Some(Self::Notify),
+            "Indicate" => Some(Self::Indicate),
             _ => None,
         }
     }
@@ -548,9 +548,9 @@ impl BleProfile {
         match self {
             Self::Unspecified => "BLE_PROFILE_UNSPECIFIED",
             Self::Custom => "Custom",
-            Self::HeartRateMonitor => "HEART_RATE_MONITOR",
-            Self::BatteryService => "BATTERY_SERVICE",
-            Self::DeviceInformation => "DEVICE_INFORMATION",
+            Self::HeartRateMonitor => "HeartRateMonitor",
+            Self::BatteryService => "BatteryService",
+            Self::DeviceInformation => "DeviceInformation",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -558,9 +558,9 @@ impl BleProfile {
         match value {
             "BLE_PROFILE_UNSPECIFIED" => Some(Self::Unspecified),
             "Custom" => Some(Self::Custom),
-            "HEART_RATE_MONITOR" => Some(Self::HeartRateMonitor),
-            "BATTERY_SERVICE" => Some(Self::BatteryService),
-            "DEVICE_INFORMATION" => Some(Self::DeviceInformation),
+            "HeartRateMonitor" => Some(Self::HeartRateMonitor),
+            "BatteryService" => Some(Self::BatteryService),
+            "DeviceInformation" => Some(Self::DeviceInformation),
             _ => None,
         }
     }
@@ -638,18 +638,18 @@ impl PluginConfigurationErrorType {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Unspecified => "PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED",
-            Self::PeripheralNameTooLong => "PERIPHERAL_NAME_TOO_LONG",
-            Self::InvalidPeripheralUuid => "INVALID_PERIPHERAL_UUID",
-            Self::InvalidServiceUuid => "INVALID_SERVICE_UUID",
-            Self::InvalidCharacteristicUuid => "INVALID_CHARACTERISTIC_UUID",
+            Self::PeripheralNameTooLong => "PeripheralNameTooLong",
+            Self::InvalidPeripheralUuid => "InvalidPeripheralUuid",
+            Self::InvalidServiceUuid => "InvalidServiceUuid",
+            Self::InvalidCharacteristicUuid => "InvalidCharacteristicUuid",
             Self::AdvertisementWithoutPeripheralConfiguration => {
-                "ADVERTISEMENT_WITHOUT_PERIPHERAL_CONFIGURATION"
+                "AdvertisementWithoutPeripheralConfiguration"
             }
             Self::ServiceWithoutPeripheralConfiguration => {
-                "SERVICE_WITHOUT_PERIPHERAL_CONFIGURATION"
+                "ServiceWithoutPeripheralConfiguration"
             }
             Self::CharacteristicWithoutServiceConfiguration => {
-                "CHARACTERISTIC_WITHOUT_SERVICE_CONFIGURATION"
+                "CharacteristicWithoutServiceConfiguration"
             }
         }
     }
@@ -657,17 +657,17 @@ impl PluginConfigurationErrorType {
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
-            "PERIPHERAL_NAME_TOO_LONG" => Some(Self::PeripheralNameTooLong),
-            "INVALID_PERIPHERAL_UUID" => Some(Self::InvalidPeripheralUuid),
-            "INVALID_SERVICE_UUID" => Some(Self::InvalidServiceUuid),
-            "INVALID_CHARACTERISTIC_UUID" => Some(Self::InvalidCharacteristicUuid),
-            "ADVERTISEMENT_WITHOUT_PERIPHERAL_CONFIGURATION" => {
+            "PeripheralNameTooLong" => Some(Self::PeripheralNameTooLong),
+            "InvalidPeripheralUuid" => Some(Self::InvalidPeripheralUuid),
+            "InvalidServiceUuid" => Some(Self::InvalidServiceUuid),
+            "InvalidCharacteristicUuid" => Some(Self::InvalidCharacteristicUuid),
+            "AdvertisementWithoutPeripheralConfiguration" => {
                 Some(Self::AdvertisementWithoutPeripheralConfiguration)
             }
-            "SERVICE_WITHOUT_PERIPHERAL_CONFIGURATION" => {
+            "ServiceWithoutPeripheralConfiguration" => {
                 Some(Self::ServiceWithoutPeripheralConfiguration)
             }
-            "CHARACTERISTIC_WITHOUT_SERVICE_CONFIGURATION" => {
+            "CharacteristicWithoutServiceConfiguration" => {
                 Some(Self::CharacteristicWithoutServiceConfiguration)
             }
             _ => None,

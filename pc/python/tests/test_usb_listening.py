@@ -20,8 +20,8 @@ class TestMessageDecoder:
         """Test decoding PluginData messages"""
         # Create a test PluginData message
         original_message = protocol_pb2.PluginData(
-            src_addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]), src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-            send_type=protocol_pb2.PluginDataSendType.NOTIFY_TYPE,
+            src_addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]), src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+            send_type=protocol_pb2.PluginDataSendType.NotifyType,
             characteristic_uuid=0x2A19,  # Battery Level characteristic
             service_uuid=0x180F,  # Battery Service
             data=b"test_data"
@@ -71,8 +71,8 @@ class TestMessageDecoder:
     def test_get_message_type_name(self) -> None:
         """Test getting message type names"""
         message = protocol_pb2.PluginData(
-            src_addr=bytes([0x00, 0x01, 0x02, 0x03, 0x04, 0x05]), src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-            send_type=protocol_pb2.PluginDataSendType.READ_TYPE,
+            src_addr=bytes([0x00, 0x01, 0x02, 0x03, 0x04, 0x05]), src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+            send_type=protocol_pb2.PluginDataSendType.ReadType,
             characteristic_uuid=0x2A00,  # Device Name characteristic
             service_uuid=0x1800,  # Generic Access Service
             data=b"data"
@@ -205,8 +205,8 @@ class TestUSBDataListener:
         """Test the listening loop with valid messages"""
         # Create a valid message
         test_message = protocol_pb2.PluginData(
-            src_addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]), src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-            send_type=protocol_pb2.PluginDataSendType.NOTIFY_TYPE,
+            src_addr=bytes([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]), src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+            send_type=protocol_pb2.PluginDataSendType.NotifyType,
             characteristic_uuid=0x2A05,  # Service Changed characteristic
             service_uuid=0x1801,  # Generic Attribute Service
             data=b"test"
@@ -298,8 +298,8 @@ class TestUSBMessageHandler:
         self.handler.register_callback(protocol_pb2.PluginData, test_callback)
         
         test_message = protocol_pb2.PluginData(
-            src_addr=bytes([0x00, 0x01, 0x02, 0x03, 0x04, 0x05]), src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-            send_type=protocol_pb2.PluginDataSendType.WRITE_TYPE,
+            src_addr=bytes([0x00, 0x01, 0x02, 0x03, 0x04, 0x05]), src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+            send_type=protocol_pb2.PluginDataSendType.WriteType,
             characteristic_uuid=0x2A37,  # Heart Rate Measurement characteristic
             service_uuid=0x180D,  # Heart Rate Service
             data=b"test_data"
@@ -341,8 +341,8 @@ class TestUSBMessageHandler:
         
         # Test message that should be filtered out
         filtered_message = protocol_pb2.PluginData(
-            src_addr=bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-            send_type=protocol_pb2.PluginDataSendType.READ_TYPE,
+            src_addr=bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+            send_type=protocol_pb2.PluginDataSendType.ReadType,
             characteristic_uuid=0x2A01,  # Appearance characteristic
             service_uuid=0x1800,  # Generic Access Service
             data=b"data"
@@ -363,8 +363,8 @@ class TestUSBMessageHandler:
         callback_called = False
         passed_message = protocol_pb2.PluginData(
             src_addr=bytes([0x00, 0x01, 0x02, 0x03, 0x04, 0x05]),
-            src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-            send_type=protocol_pb2.PluginDataSendType.READ_TYPE,
+            src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+            send_type=protocol_pb2.PluginDataSendType.ReadType,
             characteristic_uuid=0x2A01,  # Appearance characteristic
             service_uuid=0x1800,  # Generic Access Service
             data=b"data"
@@ -412,7 +412,7 @@ class TestUSBMessageHandler:
         for i in range(3):
             message_info = {
                 'message_type': 'PluginData',
-                'message': protocol_pb2.PluginData(src_addr=bytes([0x00, 0x01, 0x02, 0x03, 0x04, i % 256]), src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC, send_type=protocol_pb2.PluginDataSendType.READ_TYPE, characteristic_uuid=0x2A00, service_uuid=0x1800, data=b"data"),
+                'message': protocol_pb2.PluginData(src_addr=bytes([0x00, 0x01, 0x02, 0x03, 0x04, i % 256]), src_addr_type=protocol_pb2.BluetoothAddressType.Public, send_type=protocol_pb2.PluginDataSendType.ReadType, characteristic_uuid=0x2A00, service_uuid=0x1800, data=b"data"),
                 'decoded': True
             }
             self.handler.handle_message(message_info)

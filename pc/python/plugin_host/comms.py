@@ -686,7 +686,7 @@ class USBHostDevice:
         )
         usb_send_command(self.usb_device, cmd)
     
-    def configure_profile(self, profile: protocol_pb2.BLEProfile, delay = 0.05) -> None:
+    def configure_profile(self, profile: protocol_pb2.BleProfile, delay = 0.05) -> None:
         """
         Configure BLE profile using predefined settings
         

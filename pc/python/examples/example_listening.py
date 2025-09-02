@@ -117,11 +117,11 @@ def demonstrate_message_handling():
         print(f"   Data: {data.data.hex() if len(data.data) <= 16 else data.data[:16].hex() + '...'}")
         
         # Handle different send types
-        if data.send_type == protocol_pb2.PluginDataSendType.NOTIFY_TYPE:
+        if data.send_type == protocol_pb2.PluginDataSendType.NotifyType:
             print(f"   📲 Processing notification from {src_addr_str}")
-        elif data.send_type == protocol_pb2.PluginDataSendType.READ_TYPE:
+        elif data.send_type == protocol_pb2.PluginDataSendType.ReadType:
             print(f"   📖 Processing read request from {src_addr_str}")
-        elif data.send_type == protocol_pb2.PluginDataSendType.WRITE_TYPE:
+        elif data.send_type == protocol_pb2.PluginDataSendType.WriteType:
             print(f"   ✏️  Processing write data from {src_addr_str}")
     
     def handle_service_response(response: protocol_pb2.PluginServiceInfoResponse, info: dict):
@@ -202,8 +202,8 @@ def demonstrate_message_handling():
             'message_type': 'PluginData',
             'message': protocol_pb2.PluginData(
                 src_addr=bytes([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34]),
-                src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-                send_type=protocol_pb2.PluginDataSendType.NOTIFY_TYPE,
+                src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+                send_type=protocol_pb2.PluginDataSendType.NotifyType,
                 characteristic_uuid=0x2A19,  # Battery Level characteristic
                 service_uuid=0x180F,  # Battery Service
                 data=b"Hello from BLE device!"
@@ -227,8 +227,8 @@ def demonstrate_message_handling():
             'message_type': 'PluginData',
             'message': protocol_pb2.PluginData(
                 src_addr=bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),  # This should be filtered out
-                src_addr_type=protocol_pb2.BluetoothAddressType.PUBLIC,
-                send_type=protocol_pb2.PluginDataSendType.WRITE_TYPE,
+                src_addr_type=protocol_pb2.BluetoothAddressType.Public,
+                send_type=protocol_pb2.PluginDataSendType.WriteType,
                 characteristic_uuid=0x2A00,  # Device Name characteristic
                 service_uuid=0x1800,  # Generic Access Service
                 data=b"This should be filtered"

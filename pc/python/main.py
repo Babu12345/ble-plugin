@@ -44,7 +44,7 @@ def main():
             host.configure_characteristic(
                 uuid=0xabcd,
                 service_uuid=0x8765,
-                properties=[protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.WRITE, protocol_pb2.BLEProperties.NOTIFY]
+                properties=[protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.Write, protocol_pb2.BleProperties.Notify]
             )
             print("✓ Characteristic configured")
             
@@ -58,7 +58,7 @@ def main():
                 print(f"⚠ Service query failed (expected if no device): {e}")
             
 
-            host.configure_profile(protocol_pb2.BLEProfile.CUSTOM, delay=0.05)
+            host.configure_profile(protocol_pb2.BleProfile.Custom, delay=0.05)
             print("✓ Configured custom profile")
 
             # Start advertisement

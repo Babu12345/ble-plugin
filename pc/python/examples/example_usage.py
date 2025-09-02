@@ -44,7 +44,7 @@ def main():
             host.configure_characteristic(
                 uuid=0xabcd,
                 service_uuid=0x8765,
-                properties=[protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.WRITE, protocol_pb2.BLEProperties.NOTIFY]
+                properties=[protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.Write, protocol_pb2.BleProperties.Notify]
             )
             print("✓ Characteristic configured")
             
@@ -59,7 +59,7 @@ def main():
             
             
             # Configure profile (restart with existing definitions)
-            host.configure_profile(protocol_pb2.BLEProfile.CUSTOM)
+            host.configure_profile(protocol_pb2.BleProfile.Custom)
             print("✓ Custom profile configured")
             
             # Start advertisement
@@ -97,7 +97,7 @@ def main():
             # Notify a characteristic value
             host_device.notify_characteristic_value(
                 address=b'\x12\x34\x56\x78\x9a\xbc',  # Example MAC address
-                address_type=protocol_pb2.BluetoothAddressType.PUBLIC,
+                address_type=protocol_pb2.BluetoothAddressType.Public,
                 characteristic_uuid=0x2A19,
                 service_uuid=0x180F,
                 value=b"notification_data"

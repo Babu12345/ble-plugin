@@ -30,7 +30,7 @@ Example Usage:
         device.configure_characteristic(
             0x1111,  # Characteristic UUID as u16
             0x8765,  # Service UUID as u16
-            [protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.NOTIFY]
+            [protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.Notify]
         )
         device.start_advertisement()
     
@@ -48,7 +48,7 @@ Example Usage:
         device.configure_characteristic(
             0x8765,  # Characteristic UUID as u16
             0x1234,  # Service UUID as u16
-            [protocol_pb2.BLEProperties.READ, protocol_pb2.BLEProperties.NOTIFY]
+            [protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.Notify]
         )
         
         # Set up message handling
@@ -75,7 +75,7 @@ Example Usage:
                         # Echo the data back as a notification
                         device.notify_characteristic_value(
                             address=bytes([0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
-                            address_type=protocol_pb2.BluetoothAddressType.PUBLIC,
+                            address_type=protocol_pb2.BluetoothAddressType.Public,
                             characteristic_uuid=0x8765,  # Use u16 UUID
                             service_uuid=0x1234,  # Use u16 UUID
                             value=message_info['message'].data

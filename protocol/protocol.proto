@@ -84,15 +84,15 @@ message HostCommandConfigureService {
 enum BleProperties {
   BLE_PROPERTIES_UNSPECIFIED = 0; // Proto3 requires a zero value
   // Read property
-  READ = 1;
+  Read = 1;
   // Write property
-  WRITE = 2;
+  Write = 2;
   // Write without response property
-  WRITE_NO_RSP = 3;
+  WriteNoRsp = 3;
   // Notify property
-  NOTIFY = 4;
+  Notify = 4;
   // Indicate property
-  INDICATE = 5;
+  Indicate = 5;
 }
 
 // Host command. Configure characteristic
@@ -189,11 +189,11 @@ enum BleProfile {
   // Custom profile - user-defined services
   Custom = 1;
   // Heart Rate Monitor profile
-  HEART_RATE_MONITOR = 2;
+  HeartRateMonitor = 2;
   // Battery Service profile
-  BATTERY_SERVICE = 3;
+  BatteryService = 3;
   // Device Information Service profile
-  DEVICE_INFORMATION = 4;
+  DeviceInformation = 4;
 }
 
 // Host command. Configure BLE profile
@@ -244,19 +244,19 @@ message PluginData {
 enum PluginConfigurationErrorType {
   PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
   // The peripheral name is too long
-  PERIPHERAL_NAME_TOO_LONG = 1;
+  PeripheralNameTooLong = 1;
   // The peripheral address is invalid
-  INVALID_PERIPHERAL_UUID = 2;
+  InvalidPeripheralUuid = 2;
   // The service UUID (u16) is invalid
-  INVALID_SERVICE_UUID = 3;
+  InvalidServiceUuid = 3;
   // The characteristic UUID (u16) is invalid
-  INVALID_CHARACTERISTIC_UUID = 4;
+  InvalidCharacteristicUuid = 4;
   // Advertisement without proper peripheral configuration
-  ADVERTISEMENT_WITHOUT_PERIPHERAL_CONFIGURATION = 5;
+  AdvertisementWithoutPeripheralConfiguration = 5;
   // Service without proper peripheral configuration
-  SERVICE_WITHOUT_PERIPHERAL_CONFIGURATION = 6;
+  ServiceWithoutPeripheralConfiguration = 6;
   // Characteristic without proper service configuration
-  CHARACTERISTIC_WITHOUT_SERVICE_CONFIGURATION = 7;
+  CharacteristicWithoutServiceConfiguration = 7;
 }
 
 // Plugin configuration error message
