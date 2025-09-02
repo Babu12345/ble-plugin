@@ -248,9 +248,12 @@ pub trait IO<'a>: IOBase<'a> {
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_to_vec(self, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(feature = "protocol_buffer")]
+        #[cfg(all(feature = "protocol_buffer", not(feature = "bincode_serialization")))]
         return Ok(prost::Message::encode_to_vec(self));
-        #[cfg(feature = "quick_protocol_buffer")]
+        #[cfg(all(
+            feature = "quick_protocol_buffer",
+            not(feature = "bincode_serialization")
+        ))]
         {
             let mut buf = std::vec::Vec::new();
             let mut writer = quick_protobuf::Writer::new(&mut buf);
@@ -301,10 +304,13 @@ pub trait IO<'a>: IOBase<'a> {
         #[cfg(feature = "bincode_serialization")]
         return bincode::serde::encode_into_slice(self, out, bincode::config::standard())
             .map_err(|_| Error::UnableToSerializeToBincode);
-        #[cfg(feature = "protocol_buffer")]
+        #[cfg(all(feature = "protocol_buffer", not(feature = "bincode_serialization")))]
         return Ok(prost::Message::encode(self, &mut out)
             .map_err(|_| Error::UnableToSerializeToProtobuf)?);
-        #[cfg(feature = "quick_protocol_buffer")]
+        #[cfg(all(
+            feature = "quick_protocol_buffer",
+            not(feature = "bincode_serialization")
+        ))]
         {
             let mut writer = quick_protobuf::Writer::new(&mut out);
             self.write_message(&mut writer)
@@ -348,11 +354,14 @@ pub trait IO<'a>: IOBase<'a> {
                     .0;
             return Ok(res);
         }
-        #[cfg(feature = "protocol_buffer")]
+        #[cfg(all(feature = "protocol_buffer", not(feature = "bincode_serialization")))]
         return Ok(
             prost::Message::decode(payload).map_err(|_| Error::UnableToDeserializeFromProtobuf)?
         );
-        #[cfg(feature = "quick_protocol_buffer")]
+        #[cfg(all(
+            feature = "quick_protocol_buffer",
+            not(feature = "bincode_serialization")
+        ))]
         {
             let mut reader = quick_protobuf::BytesReader::from_bytes(payload);
             return Ok(Self::from_reader(&mut reader, payload)
