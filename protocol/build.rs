@@ -116,9 +116,9 @@ fn main() {
 
         // Add our imports
         new_content.push_str("#![allow(missing_docs)]\n");
-        #[cfg(not(feature = "std"))]
         new_content.push_str("\nextern crate alloc;\n");
         new_content.push_str("use crate::{IO, IOBase, HostIO, PluginIO, MessageType};\n");
+        new_content.push_str("use alloc::string::String;\n");
 
         // Process the rest of the file
         for i in inner_attr_end..lines.len() {

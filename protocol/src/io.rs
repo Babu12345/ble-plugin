@@ -312,9 +312,12 @@ pub trait IO<'a>: IOBase<'a> {
             not(feature = "bincode_serialization")
         ))]
         {
-            let mut writer = quick_protobuf::Writer::new(&mut out);
+            use quick_protobuf::{BytesWriter, Writer};
+            let mut bytes_writer = BytesWriter::new(out);
+            let mut writer = Writer::new(bytes_writer);
             self.write_message(&mut writer)
                 .map_err(|_| Error::UnableToSerializeToQuickProtobuf)?;
+            // Return the message size, not the buffer size
             return Ok(self.get_size());
         }
     }

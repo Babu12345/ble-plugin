@@ -69,7 +69,10 @@ mod host_std {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
     use core::str::FromStr;
+    use std::string::String;
+    use std::vec::Vec;
 
     use crate::plugin::PluginReceivedData;
     use crate::protocol::*;
@@ -77,6 +80,7 @@ mod tests {
     use crate::IO;
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_std_encoding_and_decoding() {
         let cmd = HostCommandConfigurePeripheral {
             name: String::from_str("Hello").unwrap(),

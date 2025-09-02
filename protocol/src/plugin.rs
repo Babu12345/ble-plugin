@@ -166,13 +166,15 @@ pub mod plugin {
 
 #[cfg(test)]
 mod tests {
-
+    extern crate std;
     use crate::host::HostReceivedData;
     use crate::protocol::*;
     use crate::DEFAULT_PACKET_SIZE;
     use crate::IO;
+    use std::vec::Vec;
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_std_encoding_and_decoding() {
         let cmd = PluginData {
             src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),

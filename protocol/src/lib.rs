@@ -231,6 +231,7 @@ pub const DEFAULT_PACKET_SIZE: usize = 64;
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
     use crate::protocol::*;
     use crate::{
         io::{
@@ -239,6 +240,7 @@ mod tests {
         },
         MessageType, DEFAULT_PACKET_SIZE, IO,
     };
+    use std::vec::Vec;
     use strum::IntoEnumIterator;
 
     #[test]
@@ -537,6 +539,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_configure_profile_serialization() {
         let cmd = HostCommandConfigureProfile {
             profile: BleProfile::Custom as _,
