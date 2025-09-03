@@ -82,7 +82,7 @@ message HostCommandConfigureService {
 // Properties enumeration for BLE characteristics
 // @derive(serde::Deserialize, serde::Serialize)
 enum BleProperties {
-  BLE_PROPERTIES_UNSPECIFIED = 0; // Proto3 requires a zero value
+  BlePropertiesUnspecified = 0; // Proto3 requires a zero value
   // Read property
   Read = 1;
   // Write property

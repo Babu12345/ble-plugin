@@ -458,7 +458,7 @@ impl BleProperties {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Unspecified => "BLE_PROPERTIES_UNSPECIFIED",
+            Self::Unspecified => "BlePropertiesUnspecified",
             Self::Read => "Read",
             Self::Write => "Write",
             Self::WriteNoRsp => "WriteNoRsp",
@@ -469,7 +469,7 @@ impl BleProperties {
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "BLE_PROPERTIES_UNSPECIFIED" => Some(Self::Unspecified),
+            "BlePropertiesUnspecified" => Some(Self::Unspecified),
             "Read" => Some(Self::Read),
             "Write" => Some(Self::Write),
             "WriteNoRsp" => Some(Self::WriteNoRsp),
