@@ -347,7 +347,7 @@ impl MessageTypeId {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Unspecified => "MESSAGE_TYPE_ID_UNSPECIFIED",
+            Self::Unspecified => "MessageTypeIdUnspecified",
             Self::TypeHostCommandConfigurePeripheral => {
                 "TypeHostCommandConfigurePeripheral"
             }
@@ -387,7 +387,7 @@ impl MessageTypeId {
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "MESSAGE_TYPE_ID_UNSPECIFIED" => Some(Self::Unspecified),
+            "MessageTypeIdUnspecified" => Some(Self::Unspecified),
             "TypeHostCommandConfigurePeripheral" => {
                 Some(Self::TypeHostCommandConfigurePeripheral)
             }
@@ -503,7 +503,7 @@ impl BluetoothAddressType {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Unspecified => "BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED",
+            Self::Unspecified => "BluetoothAddressTypeUnspecified",
             Self::Public => "Public",
             Self::Random => "Random",
             Self::PublicId => "PublicId",
@@ -513,7 +513,7 @@ impl BluetoothAddressType {
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "BluetoothAddressTypeUnspecified" => Some(Self::Unspecified),
             "Public" => Some(Self::Public),
             "Random" => Some(Self::Random),
             "PublicId" => Some(Self::PublicId),
@@ -546,7 +546,7 @@ impl BleProfile {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Unspecified => "BLE_PROFILE_UNSPECIFIED",
+            Self::Unspecified => "BleProfileUnspecified",
             Self::Custom => "Custom",
             Self::HeartRateMonitor => "HeartRateMonitor",
             Self::BatteryService => "BatteryService",
@@ -556,7 +556,7 @@ impl BleProfile {
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "BLE_PROFILE_UNSPECIFIED" => Some(Self::Unspecified),
+            "BleProfileUnspecified" => Some(Self::Unspecified),
             "Custom" => Some(Self::Custom),
             "HeartRateMonitor" => Some(Self::HeartRateMonitor),
             "BatteryService" => Some(Self::BatteryService),
@@ -590,7 +590,7 @@ impl PluginDataSendType {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Unspecified => "PLUGIN_DATA_SEND_TYPE_UNSPECIFIED",
+            Self::Unspecified => "PluginDataSendTypeUnspecified",
             Self::NotifyType => "NotifyType",
             Self::ReadType => "ReadType",
             Self::WriteType => "WriteType",
@@ -599,7 +599,7 @@ impl PluginDataSendType {
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "PLUGIN_DATA_SEND_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "PluginDataSendTypeUnspecified" => Some(Self::Unspecified),
             "NotifyType" => Some(Self::NotifyType),
             "ReadType" => Some(Self::ReadType),
             "WriteType" => Some(Self::WriteType),
@@ -637,7 +637,7 @@ impl PluginConfigurationErrorType {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Unspecified => "PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED",
+            Self::Unspecified => "PluginConfigurationErrorTypeUnspecified",
             Self::PeripheralNameTooLong => "PeripheralNameTooLong",
             Self::InvalidPeripheralUuid => "InvalidPeripheralUuid",
             Self::InvalidServiceUuid => "InvalidServiceUuid",
@@ -656,7 +656,7 @@ impl PluginConfigurationErrorType {
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "PluginConfigurationErrorTypeUnspecified" => Some(Self::Unspecified),
             "PeripheralNameTooLong" => Some(Self::PeripheralNameTooLong),
             "InvalidPeripheralUuid" => Some(Self::InvalidPeripheralUuid),
             "InvalidServiceUuid" => Some(Self::InvalidServiceUuid),

@@ -8,7 +8,7 @@ package protocol;
 // determine which specific message type to deserialize.
 // @derive(strum::EnumIter)
 enum MessageTypeId {
-  MESSAGE_TYPE_ID_UNSPECIFIED = 0; // Proto3 requires a zero value
+  MessageTypeIdUnspecified = 0; // Proto3 requires a zero value
   
   // Host Commands (0x01-0x0F)
   // Configure BLE peripheral device with name and 6-byte address
@@ -155,7 +155,7 @@ message HostCommandStopAdvertisement {
 // Bluetooth Device address type
 // @derive(serde::Deserialize, serde::Serialize)
 enum BluetoothAddressType {
-  BLUETOOTH_ADDRESS_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
+  BluetoothAddressTypeUnspecified = 0; // Proto3 requires a zero value
   // Public address
   Public = 1;
   // Random address
@@ -185,7 +185,7 @@ message HostCommandNotifyCharacteristicValue {
 // Profile type enumeration for preconfigured BLE profiles
 // @derive(serde::Deserialize, serde::Serialize)
 enum BleProfile {
-  BLE_PROFILE_UNSPECIFIED = 0; // Proto3 requires a zero value
+  BleProfileUnspecified = 0; // Proto3 requires a zero value
   // Custom profile - user-defined services
   Custom = 1;
   // Heart Rate Monitor profile
@@ -212,7 +212,7 @@ message HostCommandConfigureProfile {
 // might be expected or sent
 // @derive(serde::Deserialize, serde::Serialize)
 enum PluginDataSendType {
-  PLUGIN_DATA_SEND_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
+  PluginDataSendTypeUnspecified = 0; // Proto3 requires a zero value
   // Notified from the central bluetooth device
   NotifyType = 1;
   // Read attempt from the central bluetooth device
@@ -242,7 +242,7 @@ message PluginData {
 // Error type enumeration for plugin configuration errors
 // @derive(serde::Deserialize, serde::Serialize)
 enum PluginConfigurationErrorType {
-  PLUGIN_CONFIGURATION_ERROR_TYPE_UNSPECIFIED = 0; // Proto3 requires a zero value
+  PluginConfigurationErrorTypeUnspecified = 0; // Proto3 requires a zero value
   // The peripheral name is too long
   PeripheralNameTooLong = 1;
   // The peripheral address is invalid
