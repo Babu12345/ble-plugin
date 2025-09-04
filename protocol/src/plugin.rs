@@ -215,4 +215,96 @@ mod tests {
             "Testing a single command being encoded and decoded"
         );
     }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_plugin_sender_and_host_receiver_communication() {
+        use std::sync::mpsc;
+        use super::plugin::*;
+        use crate::host::HostReceivedData;
+
+        // Create a channel for plugin-to-host communication
+        let (tx, rx) = mpsc::sync_channel::<[u8; DEFAULT_PACKET_SIZE]>(10);
+        
+        // Create plugin sender
+        let plugin_sender = PluginSender::new(tx);
+
+        // Create test plugin data (plugin sends to host)
+        let data = PluginData {
+            src_addr: Vec::from(&[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]),
+            src_addr_type: BluetoothAddressType::Random as _,
+            send_type: PluginDataSendType::WriteType as _,
+            characteristic_uuid: 0x2A19,
+            service_uuid: 0x180F,
+            data: Vec::from(b"Battery Level: 85%"),
+        };
+
+        // Send data through plugin sender
+        plugin_sender.send(data.clone()).expect("Should send successfully");
+
+        // Receive raw data from channel
+        let raw_data = rx.recv().expect("Should receive raw data");
+        let host_received_data = HostReceivedData::new(raw_data);
+        let decoded_data: PluginData = host_received_data.decode().expect("Should decode successfully");
+
+        assert_eq!(data, decoded_data, "Sent and received data should match");
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_plugin_receiver_with_host_commands() {
+        use std::sync::mpsc;
+        use super::plugin::*;
+
+        // Create channel for host-to-plugin communication
+        let (tx, rx) = mpsc::sync_channel::<[u8; DEFAULT_PACKET_SIZE]>(10);
+        let plugin_receiver = PluginReceiver::new(rx);
+
+        // Create test host command (host sends commands to plugin)
+        let cmd = HostCommandConfigurePeripheral {
+            name: String::from("TestDevice"),
+            addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
+        };
+
+        // Serialize and send command as if from host
+        let serialized_cmd: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
+        tx.send(serialized_cmd).expect("Should send host command");
+
+        // Receive and verify through plugin receiver
+        let received_data = plugin_receiver.receive().expect("Should receive command");
+        let decoded_cmd: HostCommandConfigurePeripheral = received_data.decode().expect("Should decode command");
+        assert_eq!(cmd, decoded_cmd);
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_plugin_receiver_empty_channel() {
+        use std::sync::mpsc;
+        use super::plugin::*;
+
+        let (tx, rx) = mpsc::sync_channel::<[u8; DEFAULT_PACKET_SIZE]>(10);
+        let plugin_receiver = PluginReceiver::new(rx);
+
+        // Drop sender to close channel
+        drop(tx);
+
+        // Should get receive error
+        let result = plugin_receiver.receive();
+        assert!(result.is_err(), "Should return error when channel is closed");
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_plugin_received_data_raw_access() {
+        use super::*;
+        
+        let cmd = HostCommandGetServiceInfo { uuid: 0x1234 };
+        let bytes: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
+        let received_data = PluginReceivedData::new(bytes);
+
+        // Test raw access methods
+        assert_eq!(received_data.size(), DEFAULT_PACKET_SIZE);
+        assert_eq!(received_data.raw_bytes().len(), DEFAULT_PACKET_SIZE);
+        assert_eq!(received_data.raw_bytes(), &bytes);
+    }
 }
