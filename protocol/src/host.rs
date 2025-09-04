@@ -2,6 +2,7 @@
 
 #[cfg(feature = "std")]
 pub use self::host_std::*;
+pub use async_host::*;
 pub use common::*;
 
 /// Common types and traits
@@ -63,6 +64,84 @@ mod host_std {
         pub fn receive(&self) -> Result<HostReceivedData<N>> {
             let input = self.0.recv().map_err(|_| errors::Error::ReceiveError)?;
             Ok(HostReceivedData::new(input))
+        }
+    }
+}
+
+/// Async implementation  
+pub mod async_host {
+    use crate::plugin::PluginReceivedData;
+    use embassy_sync::{
+        blocking_mutex::raw::RawMutex,
+        channel::{Receiver, Sender},
+    };
+
+    /// Async sender
+    pub struct AsyncHostSender<'ch, R: RawMutex, const N: usize, const CH_SIZE: usize>(
+        Sender<'ch, R, [u8; N], CH_SIZE>,
+    );
+
+    /// Async receiver
+    pub struct AsyncHostReceiver<'ch, R: RawMutex, const N: usize, const CH_SIZE: usize>(
+        Receiver<'ch, R, [u8; N], CH_SIZE>,
+    );
+
+    impl<'a, const N: usize, const CH_SIZE: usize, R: RawMutex> AsyncHostSender<'a, R, N, CH_SIZE> {
+        /// Create a new instance
+        pub fn new(sender: Sender<'a, R, [u8; N], CH_SIZE>) -> Self {
+            Self(sender)
+        }
+
+        /// Send the data
+        #[cfg(feature = "std")]
+        pub async fn send_async<T: crate::IO<'a>>(&self, input: T) -> crate::errors::Result<()> {
+            self.send_bytes_async(input.to_bytes()?).await
+        }
+
+        #[cfg(feature = "std")]
+        /// Try sending data
+        pub fn try_send<T: crate::IO<'a>>(&self, input: T) -> crate::errors::Result<()> {
+            self.try_send_bytes(input.to_bytes()?)
+        }
+
+        /// Send the data
+        pub async fn borrow_send_async<T: for<'b> crate::IO<'b>>(&self, input: &T) -> crate::errors::Result<()> {
+            let mut buffer = [0; N];
+            input.to_bytes_in_slice(&mut buffer)?;
+            self.send_bytes_async(buffer).await
+        }
+
+        /// Try sending data
+        pub fn borrow_try_send<T: for<'b> crate::IO<'b>>(&self, input: T) -> crate::errors::Result<()> {
+            let mut buffer = [0; N];
+            input.to_bytes_in_slice(&mut buffer)?;
+            self.try_send_bytes(buffer)
+        }
+
+        /// Send bytes directly
+        async fn send_bytes_async(&self, buffer: [u8; N]) -> crate::errors::Result<()> {
+            self.0.send(buffer).await;
+            Ok(())
+        }
+
+        /// Try sending bytes directly
+        fn try_send_bytes(&self, buffer: [u8; N]) -> crate::errors::Result<()> {
+            self.0
+                .try_send(buffer)
+                .map_err(|_| crate::errors::Error::SendError)
+        }
+    }
+
+    impl<'a, const N: usize, const CH_SIZE: usize, R: RawMutex> AsyncHostReceiver<'a, R, N, CH_SIZE> {
+        /// Create a new instance
+        pub fn new(receiver: Receiver<'a, R, [u8; N], CH_SIZE>) -> Self {
+            Self(receiver)
+        }
+
+        /// Receive the data
+        pub async fn receive(&self) -> crate::errors::Result<PluginReceivedData<N>> {
+            let input = self.0.receive().await;
+            Ok(PluginReceivedData::new(input))
         }
     }
 }
