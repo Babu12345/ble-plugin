@@ -8,6 +8,8 @@ exclude = [
     "plugin-echo-example",
     "plugin-no-std",
     "plugin-host-std",
+    "device-cherry",
+    "host-cherry",
 ]
 resolver = "2"
 

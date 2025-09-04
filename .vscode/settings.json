@@ -1,0 +1,22 @@
+{
+    // "rust-analyzer.check.targets": "riscv32imc-unknown-none-elf",
+    "rust-analyzer.check.allTargets": false,
+    "idf.port": "/dev/tty.usbmodem1101",
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ],
+    "files.associations": {
+        "usbd_cdc_acm.h": "c"
+    },
+    "cmake.sourceDirectory": "/Users/babuwanyeki/Documents/Rusty/ble-plugin/device-cherry/components/cherryusb",
+    "rust-analyzer.checkOnSave": true,
+    "rust-analyzer.cargo.features": [],
+    "idf.pythonInstallPath": "/usr/bin/python3",
+    "rust-analyzer.linkedProjects": [
+          "./Cargo.toml",
+          "./plugin-std/Cargo.toml",
+          "./plugin_state_machine_std/Cargo.toml",
+        //   "./device-cherry/Cargo.toml",
+        //   "./host-cherry/Cargo.toml"
+    ]
+}
