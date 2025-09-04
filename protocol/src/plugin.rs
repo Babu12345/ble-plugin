@@ -47,7 +47,7 @@ mod common {
 
 /// Async implementation
 pub mod async_plugin {
-    use crate::host::HostReceivedData;
+    use crate::plugin::PluginReceivedData;
 
     use super::*;
 
@@ -114,9 +114,9 @@ pub mod async_plugin {
         }
 
         /// Receive the data
-        pub async fn receive(&self) -> Result<HostReceivedData<N>> {
+        pub async fn receive(&self) -> Result<PluginReceivedData<N>> {
             let input = self.0.receive().await;
-            Ok(HostReceivedData::new(input))
+            Ok(PluginReceivedData::new(input))
         }
     }
 }

@@ -70,7 +70,7 @@ mod host_std {
 
 /// Async implementation  
 pub mod async_host {
-    use crate::plugin::PluginReceivedData;
+    use crate::host::HostReceivedData;
     use embassy_sync::{
         blocking_mutex::raw::RawMutex,
         channel::{Receiver, Sender},
@@ -139,9 +139,9 @@ pub mod async_host {
         }
 
         /// Receive the data
-        pub async fn receive(&self) -> crate::errors::Result<PluginReceivedData<N>> {
+        pub async fn receive(&self) -> crate::errors::Result<HostReceivedData<N>> {
             let input = self.0.receive().await;
-            Ok(PluginReceivedData::new(input))
+            Ok(HostReceivedData::new(input))
         }
     }
 }
