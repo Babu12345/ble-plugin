@@ -156,10 +156,9 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 ## Feature Flags
 
 - `std`: Standard library support (enabled by default)
-- `protocol_buffer`: Protocol Buffers serialization support (using prost)
-- `quick_protocol_buffer`: Fast Protocol Buffers serialization support (using quick-protobuf)
+- `protocol_buffer`: Protocol Buffers serialization support using prost (enabled by default)
+- `quick_protocol_buffer`: Fast Protocol Buffers serialization support using quick-protobuf
 - `bincode_serialization`: Optional bincode serialization support
-- `defmt`: Defmt logging support for embedded systems
 
 ## Serialization
 

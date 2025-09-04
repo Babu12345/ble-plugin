@@ -23,27 +23,32 @@
 //! ## Serialization Configuration
 //!
 //! The serialization format is controlled at compile-time through feature flags.
-//! **Exactly one** serialization method must be enabled:
+//! **Exactly one** primary serialization method must be enabled:
 //!
-//! - **`bincode_serialization`** (default): Uses bincode for efficient binary serialization
-//!   - Compact binary format with minimal overhead
-//!   - Best for performance-critical embedded systems
-//!   - Requires serde `Serialize`/`Deserialize` traits
-//!
-//! - **`protocol_buffer`**: Uses Protocol Buffers for serialization
+//! - **`protocol_buffer`** (enabled by default): Uses Protocol Buffers with prost
 //!   - Language-agnostic format with schema evolution support
-//!   - Better for cross-platform/cross-language communication
+//!   - Cross-platform/cross-language communication
 //!   - Requires `prost::Message` trait implementation
 //!   - Must implement `Default` trait for protobuf deserialization
 //!
-//! **Important**: Exactly one serialization method must be enabled. The crate will
-//! fail to compile if both features are enabled simultaneously or if neither is
-//! enabled. This is enforced by compile-time checks in `lib.rs`.
+//! - **`quick_protocol_buffer`**: Uses Protocol Buffers with quick-protobuf
+//!   - High-performance protobuf implementation
+//!   - Better for embedded systems (works without atomic CAS operations)
+//!   - Requires `MessageWrite` and `MessageRead` trait implementations
+//!
+//! - **`bincode_serialization`** (optional): Can be used alongside either protobuf implementation
+//!   - Compact binary format with minimal overhead
+//!   - Best for performance-critical Rust-to-Rust communication
+//!   - Requires serde `Serialize`/`Deserialize` traits
+//!
+//! **Important**: Exactly one protobuf implementation must be enabled. The crate will
+//! fail to compile if both `protocol_buffer` and `quick_protocol_buffer` are enabled
+//! simultaneously or if neither is enabled. This is enforced by compile-time checks in `lib.rs`.
 //!
 //! ## Key Features
 //!
 //! - **Type Safety**: Compile-time message type verification
-//! - **Configurable Serialization**: Choose between bincode or protobuf
+//! - **Configurable Serialization**: Choose between prost or quick-protobuf, with optional bincode support
 //! - **Header Validation**: Magic number and length checking
 //! - **Cross-Platform**: Works in both std and no_std environments
 //! - **Zero-Copy**: Minimizes allocations in embedded contexts
@@ -221,11 +226,12 @@ pub trait IO<'a>: IOBase<'a> {
     /// ## Serialization Method Selection
     ///
     /// The serialization format is determined at compile-time via feature flags.
-    /// Exactly one of the following must be enabled:
-    /// - **`bincode_serialization`**: Uses bincode binary format
-    /// - **`protocol_buffer`**: Uses Protocol Buffers format
+    /// Exactly one of the following protobuf implementations must be enabled:
+    /// - **`protocol_buffer`**: Uses Protocol Buffers with prost (enabled by default)
+    /// - **`quick_protocol_buffer`**: Uses Protocol Buffers with quick-protobuf
+    /// - **`bincode_serialization`**: Optional bincode support (can combine with either protobuf)
     ///
-    /// The crate enforces that exactly one serialization method is enabled
+    /// The crate enforces that exactly one protobuf implementation is enabled
     /// through compile-time checks in `lib.rs`.
     ///
     /// # Returns
@@ -272,11 +278,12 @@ pub trait IO<'a>: IOBase<'a> {
     /// ## Serialization Method Selection
     ///
     /// The serialization format is determined at compile-time via feature flags.
-    /// Exactly one of the following must be enabled:
-    /// - **`bincode_serialization`**: Uses bincode binary format
-    /// - **`protocol_buffer`**: Uses Protocol Buffers format with `prost::Message::encode`
+    /// Exactly one of the following protobuf implementations must be enabled:
+    /// - **`protocol_buffer`**: Uses Protocol Buffers with prost (enabled by default)
+    /// - **`quick_protocol_buffer`**: Uses Protocol Buffers with quick-protobuf
+    /// - **`bincode_serialization`**: Optional bincode support (can combine with either protobuf)
     ///
-    /// The crate enforces that exactly one serialization method is enabled
+    /// The crate enforces that exactly one protobuf implementation is enabled
     /// through compile-time checks in `lib.rs`.
     ///
     /// # Arguments
@@ -330,12 +337,13 @@ pub trait IO<'a>: IOBase<'a> {
     /// ## Deserialization Method Selection
     ///
     /// The deserialization format is determined at compile-time via feature flags.
-    /// Exactly one of the following must be enabled:
-    /// - **`bincode_serialization`**: Uses bincode with `borrow_decode_from_slice`
-    ///   for zero-copy deserialization where possible
-    /// - **`protocol_buffer`**: Uses Protocol Buffers with `prost::Message::decode`
+    /// Exactly one of the following protobuf implementations must be enabled:
+    /// - **`protocol_buffer`**: Uses Protocol Buffers with prost (enabled by default)
+    /// - **`quick_protocol_buffer`**: Uses Protocol Buffers with quick-protobuf
+    /// - **`bincode_serialization`**: Optional bincode support (can combine with either protobuf)
+    ///   Uses bincode with `borrow_decode_from_slice` for zero-copy deserialization where possible
     ///
-    /// The crate enforces that exactly one serialization method is enabled
+    /// The crate enforces that exactly one protobuf implementation is enabled
     /// through compile-time checks in `lib.rs`.
     ///
     /// # Arguments

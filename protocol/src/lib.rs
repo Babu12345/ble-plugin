@@ -169,10 +169,9 @@
 //! ## Feature Flags
 //!
 //! - `std`: Standard library support (enabled by default)
-//! - `protobuf`: Protocol Buffers support (enabled by default)
-//! - `serde`: Serde serialization support
-//! - `defmt`: Defmt logging support for embedded systems
-//! - `bincode_serialization`: Enable bincode for high-performance Rust-to-Rust communication
+//! - `protocol_buffer`: Protocol Buffers serialization support using prost (enabled by default)
+//! - `quick_protocol_buffer`: Fast Protocol Buffers serialization support using quick-protobuf
+//! - `bincode_serialization`: Optional bincode serialization support
 //!
 //! ## Compatibility
 //!
@@ -200,14 +199,7 @@ pub mod utils;
 /// This constant defines the maximum length for device names used in BLE advertising
 /// and peripheral configuration. The limit ensures compatibility with BLE advertising
 /// packet size constraints and embedded system memory limitations.
-///
-/// # Usage
-///
-/// ```rust
-/// use protocol::MAX_NAME_SIZE;
-///
-/// let device_name: String = String::try_from("MyBLEDevice").unwrap();
-/// ```
+
 pub const MAX_NAME_SIZE: usize = 30;
 
 /// Default USB packet size for communication
