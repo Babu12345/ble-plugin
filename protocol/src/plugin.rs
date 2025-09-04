@@ -173,6 +173,7 @@ mod tests {
     use crate::IO;
     use std::vec::Vec;
 
+
     #[test]
     #[cfg(feature = "std")]
     fn test_std_encoding_and_decoding() {
@@ -306,5 +307,164 @@ mod tests {
         assert_eq!(received_data.size(), DEFAULT_PACKET_SIZE);
         assert_eq!(received_data.raw_bytes().len(), DEFAULT_PACKET_SIZE);
         assert_eq!(received_data.raw_bytes(), &bytes);
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_plugin_sender_receiver_with_critical_section_mutex() {
+        use super::async_plugin::*;
+        use crate::host::HostReceivedData;
+        use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+
+        crate::test_utils::init_critical_section();
+
+        // Test with CriticalSectionRawMutex
+        static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        
+        let sender = CHANNEL.sender();
+        let receiver = CHANNEL.receiver();
+
+        let async_plugin_sender = AsyncPluginSender::new(sender);
+
+        // Create test plugin data
+        let plugin_data = PluginData {
+            src_addr: Vec::from(&[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]),
+            src_addr_type: BluetoothAddressType::Random as _,
+            send_type: PluginDataSendType::WriteType as _,
+            characteristic_uuid: 0x2A19,
+            service_uuid: 0x180F,
+            data: Vec::from(b"Embassy async plugin data"),
+        };
+
+        // Use tokio to run the async test
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Send data through async plugin sender
+            async_plugin_sender.send_async(plugin_data.clone()).await.expect("Should send successfully");
+
+            // Receive raw data from channel
+            let raw_data = receiver.receive().await;
+            let host_received_data = HostReceivedData::new(raw_data);
+            let decoded_data: PluginData = host_received_data.decode().expect("Should decode successfully");
+
+            assert_eq!(plugin_data, decoded_data, "Sent and received data should match");
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_plugin_receiver_with_host_commands_embassy() {
+        use super::async_plugin::*;
+        use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+
+        crate::test_utils::init_critical_section();
+
+        // Create embassy channel for host-to-plugin communication
+        static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        let sender = CHANNEL.sender();
+        let receiver = CHANNEL.receiver();
+
+        // Create async plugin receiver
+        let async_plugin_receiver = AsyncPluginReceiver::new(receiver);
+
+        // Create test host command  
+        let cmd = HostCommandConfigureService {
+            uuid: 0x180A,
+        };
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Serialize and send command as if from host
+            let serialized_cmd: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().unwrap();
+            sender.send(serialized_cmd).await;
+
+            // Receive and verify through async plugin receiver
+            let received_data = async_plugin_receiver.receive().await.expect("Should receive command");
+            let decoded_cmd: HostCommandConfigureService = received_data.decode().expect("Should decode command");
+            assert_eq!(cmd, decoded_cmd);
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_plugin_borrow_send_embassy() {
+        use super::async_plugin::*;
+        use crate::host::HostReceivedData;
+        use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+
+        crate::test_utils::init_critical_section();
+
+        // Create embassy channel
+        static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        let sender = CHANNEL.sender();
+        let receiver = CHANNEL.receiver();
+
+        // Create async plugin sender
+        let async_plugin_sender = AsyncPluginSender::new(sender);
+
+        // Create test plugin error response
+        let error_response = PluginConfigurationError {
+            error_type: PluginConfigurationErrorType::Unspecified as i32,
+        };
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Send response using borrow_send_async (no-std compatible)
+            async_plugin_sender.borrow_send_async(&error_response).await.expect("Should send successfully");
+
+            // Receive and verify
+            let raw_data = receiver.receive().await;
+            let host_received_data = HostReceivedData::new(raw_data);
+            let decoded_response: PluginConfigurationError = host_received_data.decode().expect("Should decode successfully");
+
+            assert_eq!(error_response, decoded_response, "Sent and received responses should match");
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_plugin_multiple_message_types_embassy() {
+        use super::async_plugin::*;
+        use crate::host::HostReceivedData;
+        use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
+
+        // Create embassy channel with NoopRawMutex for multiple message test
+        let channel: Channel<NoopRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        let sender = channel.sender();
+        let receiver = channel.receiver();
+
+        // Create async plugin sender
+        let async_plugin_sender = AsyncPluginSender::new(sender);
+
+        // Create different types of plugin messages
+        let data_msg = PluginData {
+            src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
+            src_addr_type: BluetoothAddressType::Public as _,
+            send_type: PluginDataSendType::NotifyType as _,
+            characteristic_uuid: 0x2A29,
+            service_uuid: 0x180A,
+            data: Vec::from(b"Multi-message test"),
+        };
+
+        let service_info_msg = PluginServiceInfoResponse {
+            service_uuid: 0x180A,
+            characteristic_uuids: Vec::from(&[0x2A29, 0x2A24]),
+            exists: true,
+        };
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Send messages sequentially
+            async_plugin_sender.send_async(data_msg.clone()).await.expect("Should send data message");
+            async_plugin_sender.send_async(service_info_msg.clone()).await.expect("Should send service info");
+
+            // Receive and verify first message
+            let raw_data1 = receiver.receive().await;
+            let host_received_data1 = HostReceivedData::new(raw_data1);
+            let decoded_data1: PluginData = host_received_data1.decode().expect("Should decode data message");
+            assert_eq!(data_msg, decoded_data1);
+
+            // Receive and verify second message
+            let raw_data2 = receiver.receive().await;
+            let host_received_data2 = HostReceivedData::new(raw_data2);
+            let decoded_data2: PluginServiceInfoResponse = host_received_data2.decode().expect("Should decode service info");
+            assert_eq!(service_info_msg, decoded_data2);
+        });
     }
 }

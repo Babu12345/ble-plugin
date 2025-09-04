@@ -568,3 +568,19 @@ mod tests {
         assert_eq!(profile1, profile2);
     }
 }
+
+#[cfg(test)]
+#[cfg(feature = "std")]
+#[allow(missing_docs)]
+pub mod test_utils {
+    struct CriticalSection;
+    
+    unsafe impl critical_section::Impl for CriticalSection {
+        unsafe fn acquire() {}
+        unsafe fn release(_token: ()) {}
+    }
+    
+    pub fn init_critical_section() {
+        critical_section::set_impl!(CriticalSection);
+    }
+}

@@ -159,6 +159,7 @@ mod tests {
     use crate::DEFAULT_PACKET_SIZE;
     use crate::IO;
 
+
     #[test]
     #[cfg(feature = "std")]
     fn test_std_encoding_and_decoding() {
@@ -265,5 +266,154 @@ mod tests {
         // Should get receive error
         let result = host_receiver.receive();
         assert!(result.is_err(), "Should return error when channel is closed");
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_host_sender_receiver_with_critical_section_mutex() {
+        use super::async_host::*;
+        use crate::plugin::PluginReceivedData;
+        use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+
+        crate::test_utils::init_critical_section();
+
+        // Test with CriticalSectionRawMutex
+        static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        
+        let sender = CHANNEL.sender();
+        let receiver = CHANNEL.receiver();
+
+        let async_host_sender = AsyncHostSender::new(sender);
+        let _async_host_receiver = AsyncHostReceiver::new(receiver);
+
+        // Create test command
+        let cmd = HostCommandConfigurePeripheral {
+            name: String::from("AsyncTestDevice"),
+            addr: Vec::from(&[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]),
+        };
+
+        // Use tokio to run the async test
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Send command through async host sender
+            async_host_sender.send_async(cmd.clone()).await.expect("Should send successfully");
+
+            // Receive raw data from channel
+            let raw_data = receiver.receive().await;
+            let plugin_received_data = PluginReceivedData::new(raw_data);
+            let decoded_cmd: HostCommandConfigurePeripheral = plugin_received_data.decode().expect("Should decode successfully");
+
+            assert_eq!(cmd, decoded_cmd, "Sent and received commands should match");
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_host_receiver_with_plugin_data_embassy() {
+        use super::async_host::*;
+        use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+
+        crate::test_utils::init_critical_section();
+
+        // Create embassy channel for plugin-to-host communication
+        static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        let sender = CHANNEL.sender();
+        let receiver = CHANNEL.receiver();
+
+        // Create async host receiver
+        let async_host_receiver = AsyncHostReceiver::new(receiver);
+
+        // Create test plugin data
+        let plugin_data = PluginData {
+            src_addr: Vec::from(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66]),
+            src_addr_type: BluetoothAddressType::Random as _,
+            send_type: PluginDataSendType::NotifyType as _,
+            characteristic_uuid: 0x2A19,
+            service_uuid: 0x180F,
+            data: Vec::from(b"Async plugin data"),
+        };
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Serialize and send data as if from plugin
+            let serialized_data: [u8; DEFAULT_PACKET_SIZE] = plugin_data.to_bytes().unwrap();
+            sender.send(serialized_data).await;
+
+            // Receive and decode through async host receiver
+            let received_data = async_host_receiver.receive().await.expect("Should receive successfully");
+            let decoded_data: PluginData = received_data.decode().expect("Should decode successfully");
+
+            assert_eq!(plugin_data, decoded_data, "Sent and received data should match");
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_host_borrow_send_embassy() {
+        use super::async_host::*;
+        use crate::plugin::PluginReceivedData;
+        use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+
+        crate::test_utils::init_critical_section();
+
+        // Create embassy channel
+        static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        let sender = CHANNEL.sender();
+        let receiver = CHANNEL.receiver();
+
+        // Create async host sender
+        let async_host_sender = AsyncHostSender::new(sender);
+
+        // Create test command
+        let cmd = HostCommandGetServiceInfo { uuid: 0x180A };
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Send command using borrow_send_async (no-std compatible)
+            async_host_sender.borrow_send_async(&cmd).await.expect("Should send successfully");
+
+            // Receive and verify
+            let raw_data = receiver.receive().await;
+            let plugin_received_data = PluginReceivedData::new(raw_data);
+            let decoded_cmd: HostCommandGetServiceInfo = plugin_received_data.decode().expect("Should decode successfully");
+
+            assert_eq!(cmd, decoded_cmd, "Sent and received commands should match");
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_async_host_try_send_methods() {
+        use super::async_host::*;
+        use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
+
+        // Test with NoopRawMutex for try_send methods (doesn't require critical-section)
+        let channel: Channel<NoopRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> = Channel::new();
+        let sender = channel.sender();
+        let receiver = channel.receiver();
+
+        let async_host_sender = AsyncHostSender::new(sender);
+
+        // Create test command
+        let cmd = HostCommandStartAdvertisement {
+            allow_multi_connect: true,
+        };
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // Test try_send method
+            async_host_sender.try_send(cmd.clone()).expect("Should try_send successfully");
+
+            // Test borrow_try_send method  
+            let cmd2 = HostCommandStopAdvertisement {};
+            async_host_sender.borrow_try_send(cmd2).expect("Should borrow_try_send successfully");
+
+            // Verify both messages were sent
+            let raw_data1 = receiver.receive().await;
+            let plugin_received_data1 = crate::plugin::PluginReceivedData::new(raw_data1);
+            let decoded1: HostCommandStartAdvertisement = plugin_received_data1.decode().expect("Should decode first");
+            assert_eq!(cmd, decoded1);
+
+            let raw_data2 = receiver.receive().await;
+            let plugin_received_data2 = crate::plugin::PluginReceivedData::new(raw_data2);
+            let decoded2: HostCommandStopAdvertisement = plugin_received_data2.decode().expect("Should decode second");
+            assert_eq!(cmd2, decoded2);
+        });
     }
 }
