@@ -289,8 +289,6 @@ mod tests {
         use crate::plugin::PluginReceivedData;
         use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 
-        crate::test_utils::init_critical_section();
-
         // Create two channels: host-to-plugin and plugin-to-host
         static HOST_TO_PLUGIN: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> =
             Channel::new();
@@ -360,8 +358,6 @@ mod tests {
         use super::async_host::*;
         use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 
-        crate::test_utils::init_critical_section();
-
         // Create embassy channel for plugin-to-host communication
         static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> =
             Channel::new();
@@ -407,8 +403,6 @@ mod tests {
         use super::async_host::*;
         use crate::plugin::PluginReceivedData;
         use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-
-        crate::test_utils::init_critical_section();
 
         // Create embassy channel for host-to-plugin commands
         static CHANNEL: Channel<CriticalSectionRawMutex, [u8; DEFAULT_PACKET_SIZE], 10> =
