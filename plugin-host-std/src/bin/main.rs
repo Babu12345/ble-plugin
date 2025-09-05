@@ -1,66 +1,50 @@
-use std::time::Duration;
-
-use esp32_nimble::{
-    enums::{AuthReq, SecurityIOCap},
-    BLEDevice,
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
 };
 
+use esp_idf_svc::hal::{
+    gpio::{OutputPin, PinDriver},
+    prelude::Peripherals,
+};
 use esp_idf_sys::cherry_host::ESP_USBH_BASE;
 use host_cherry::CdcAcmHostDevice;
+use plugin_host_std::errors::{PluginHostError, Result};
+use plugin_nvs::EspNvsDefaultPartition;
+use plugin_state_machine_std::PluginStateMachine;
 use protocol::devices::plugin::PluginProcessor;
-use protocol::protocol::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    let device = BLEDevice::take();
-    let _ble_advertising = device.get_advertising();
+    let nvs_default_partition = EspNvsDefaultPartition::take().unwrap();
+    let peripherals = Peripherals::take().map_err(|_| PluginHostError::PeripheralsUnavailable)?;
 
-    device
-        .security()
-        .set_auth(AuthReq::all())
-        .set_passkey(123456)
-        .set_io_cap(SecurityIOCap::DisplayOnly)
-        .resolve_rpa();
+    let indicator = Arc::new(Mutex::new(
+        PinDriver::output(peripherals.pins.gpio21.downgrade_output())
+            .map_err(|_| PluginHostError::GpioInitError("GPIO21"))?,
+    ));
 
+    indicator
+        .lock()
+        .map_err(|_| PluginHostError::GpioOperationError("Failed to lock GPIO"))?
+        .set_high()
+        .map_err(|_| PluginHostError::GpioOperationError("Failed to set GPIO low"))?;
+
+    let device = CdcAcmHostDevice::new()
+        .init(0, ESP_USBH_BASE)
+        .unwrap()
+        .sleep(Duration::from_millis(500));
     std::thread::scope(|scope| {
-        let processors = CdcAcmHostDevice::new()
-            .init(0, ESP_USBH_BASE)
-            .unwrap()
+        let processors = device
             .processors(scope, 200, (Duration::from_millis(10), 10))
             .unwrap();
 
-        scope.spawn(move || loop {
-            processors
-                .0
-                .send(PluginData {
-                    src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
-                    src_addr_type: protocol::protocol::BluetoothAddressType::Public as _,
-                    send_type: protocol::protocol::PluginDataSendType::NotifyType as _,
-                    characteristic_uuid: 0x2A29,
-                    service_uuid: 0x180A,
-                    data: Vec::from(b"Data incoming\0"),
-                })
-                .ok();
-
-            std::thread::sleep(Duration::from_millis(20));
-        });
-
-        scope.spawn(move || loop {
-            std::thread::sleep(Duration::from_millis(10));
-
-            let data = processors.1.receive().unwrap();
-
-            let host_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
-            if let Some(cmd) = host_cmd {
-                log::info!("{:?}", cmd)
-            }
-
-            let host_cmd: Option<HostCommandConfigureService> = data.decode().ok();
-            if let Some(cmd) = host_cmd {
-                log::info!("{:?}", cmd)
-            }
-        });
+        scope.spawn(
+            PluginStateMachine::new(processors.0, processors.1, indicator, nvs_default_partition)
+                .unwrap()
+                .runner_fn(),
+        );
     });
 
     Ok(())

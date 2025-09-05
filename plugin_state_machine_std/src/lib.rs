@@ -56,13 +56,13 @@
 //! use protocol::DEFAULT_PACKET_SIZE;
 //!
 //! // Initialize communication channels
-//! let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
+//! let (sender, receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
 //!     /* your USB channel setup */;
 //! # panic!("This is a documentation example");
 //! let ble_device = BLEDevice::take();
 //!
 //! // Create and run the state machine
-//! let state_machine = PluginStateMachine::new(usb_sender, usb_receiver, ble_device);
+//! let state_machine = PluginStateMachine::new(sender, receiver, ble_device);
 //! let runner = state_machine.runner_fn();
 //!
 //! // Typically run in a separate thread
@@ -122,8 +122,8 @@
 //!
 //! // Create state machine with NVS support
 //! let state_machine = PluginStateMachine::new(
-//!     usb_sender,
-//!     usb_receiver,
+//!     sender,
+//!     receiver,
 //!     indicator,
 //!     nvs_partition
 //! )?;
@@ -341,10 +341,10 @@ where
     T: NvsPartitionId,
 {
     /// Thread-safe USB sender for responses and BLE data forwarding
-    usb_sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
+    sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
 
     /// USB receiver for incoming host commands (exclusive access)
-    usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
+    receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
 
     /// ESP32 BLE device instance (static mutable for hardware integration)
     ble_device: &'static mut BLEDevice,
@@ -391,8 +391,8 @@ where
     ///
     /// # Arguments
     ///
-    /// * `usb_sender` - Channel for sending responses and data to the USB host
-    /// * `usb_receiver` - Channel for receiving commands from the USB host  
+    /// * `sender` - Channel for sending responses and data to the USB host
+    /// * `receiver` - Channel for receiving commands from the USB host  
     /// * `ble_device` - ESP32 BLE device instance (must be static for hardware integration)
     ///
     /// # Returns
@@ -407,16 +407,16 @@ where
     /// use esp32_nimble::BLEDevice;
     /// use protocol::DEFAULT_PACKET_SIZE;
     ///
-    /// let (usb_sender, usb_receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
+    /// let (sender, receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
     ///     /* your USB channel setup */;
     /// # panic!("Documentation example");
     /// let ble_device = BLEDevice::take();
     ///
-    /// let state_machine = PluginStateMachine::new(usb_sender, usb_receiver, ble_device);
+    /// let state_machine = PluginStateMachine::new(sender, receiver, ble_device);
     /// ```
     pub fn new(
-        usb_sender: PluginSender<DEFAULT_PACKET_SIZE>,
-        usb_receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
+        sender: PluginSender<DEFAULT_PACKET_SIZE>,
+        receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
         indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>,
         nvs_partition: EspNvsPartition<T>,
     ) -> Result<Self>
@@ -425,8 +425,8 @@ where
     {
         Ok(Self {
             indicator,
-            usb_sender: Arc::new(usb_sender),
-            usb_receiver,
+            sender: Arc::new(sender),
+            receiver,
             ble_device: BLEDevice::take(),
             server: None,
             metadata: Default::default(),
@@ -537,7 +537,7 @@ where
     fn runner(&mut self) {
         log::info!("Starting USB-BLE bridge runner");
         loop {
-            match self.usb_receiver.receive() {
+            match self.receiver.receive() {
                 Ok(data) => {
                     log::debug!("Received USB data of length : {} bytes", data.size());
 
@@ -834,7 +834,7 @@ where
                 log::error!(
                     "Error: Received advertisement command without peripheral configuration"
                 );
-                self.usb_sender
+                self.sender
                     .send(PluginConfigurationError { error_type: PluginConfigurationErrorType::AdvertisementWithoutPeripheralConfiguration as _ })
                     .map_err(|_| StateMachineError::UsbSendError)?;
                 return Err(StateMachineError::InvalidBleConfiguration);
@@ -863,7 +863,7 @@ where
                     log::info!("Client disconnected ({:?})", reason);
                 });
 
-                let usb_sender = self.usb_sender.clone();
+                let sender = self.sender.clone();
                 server.on_authentication_complete(move |_, desc, status| {
                     log::info!("Authentication completed for client: {:?}", desc);
                     let addr = desc.address().as_be_bytes();
@@ -874,7 +874,7 @@ where
                         ) as _,
                         success: status.is_ok(),
                     };
-                    usb_sender
+                    sender
                         .send(response)
                         .map_err(|e| {
                             log::error!("Failed to send authentication response: {:?}", e);
@@ -899,7 +899,7 @@ where
             Some(server) => server,
             None => {
                 log::error!("BLE server not initialized - peripheral must be configured first");
-                self.usb_sender
+                self.sender
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
@@ -964,7 +964,7 @@ where
                     "Service with UUID {} not found - service must be configured first",
                     cmd.service_uuid
                 );
-                self.usb_sender
+                self.sender
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
@@ -1031,7 +1031,7 @@ where
             }
             None => {
                 log::error!("BLE server not initialized - peripheral must be configured first");
-                self.usb_sender
+                self.sender
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
@@ -1070,7 +1070,7 @@ where
                     "Service with UUID {} not found - service must be configured first",
                     cmd.service_uuid
                 );
-                self.usb_sender
+                self.sender
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
@@ -1105,7 +1105,7 @@ where
                 "Service with UUID {} not found - service must be configured first",
                 cmd.service_uuid
             );
-            self.usb_sender
+            self.sender
                 .send(PluginConfigurationError {
                     error_type:
                         PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
@@ -1175,7 +1175,7 @@ where
             true => {
                 let char_uuid_write = cmd.uuid;
                 let service_uuid_write = cmd.service_uuid;
-                let usb_sender = self.usb_sender.clone();
+                let sender = self.sender.clone();
                 characteristic.lock().on_write(move |args| {
                     log::info!(
                         "BLE write received for characteristic {} in service {}: {:?} bytes",
@@ -1183,7 +1183,7 @@ where
                         service_uuid_write,
                         args.recv_data()
                     );
-                    usb_sender
+                    sender
                         .send(PluginData {
                             src_addr: args.desc().address().as_be_bytes().as_ref().to_vec(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
@@ -1208,7 +1208,7 @@ where
 
         match nimble_properties.contains(NimbleProperties::READ) {
             true => {
-                let usb_sender = self.usb_sender.clone();
+                let sender = self.sender.clone();
                 characteristic.lock().on_read(move |_, desc| {
                     log::info!(
                         "BLE read requested for characteristic {} in service {}",
@@ -1216,7 +1216,7 @@ where
                         cmd.service_uuid
                     );
 
-                    usb_sender
+                    sender
                         .send(PluginData {
                             src_addr: desc.address().as_be_bytes().as_ref().to_vec(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
@@ -1271,7 +1271,7 @@ where
         };
 
         // Send the response to USB
-        self.usb_sender.send(response).map_err(|_| {
+        self.sender.send(response).map_err(|_| {
             log::error!("Failed to send service info response to USB");
             StateMachineError::UsbSendError
         })?;
@@ -1326,7 +1326,7 @@ where
         };
 
         // Send the response to USB
-        self.usb_sender.send(response).map_err(|_| {
+        self.sender.send(response).map_err(|_| {
             log::error!("Failed to send characteristic info response to USB");
             StateMachineError::UsbSendError
         })?;

@@ -30,6 +30,7 @@ protocol = { path = "../protocol", default-features = false, features = [
 ] }
 host-cherry = {path = "../host-cherry"}
 plugin_state_machine_std = { path = "../plugin_state_machine_std" }
+plugin-nvs = { path = "../plugin-nvs" }
 ## Crates
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }
@@ -40,7 +41,6 @@ heapless = "0.8.0"
 embassy-futures = "0.1.1"
 uuid = "1.17.0"
 anyhow = {version = "1.0.98", default-features = false}
-esp32-nimble ={version =  "0.11.0", default-features = false, features = ["no_std"]}
 
 # --- Optional Embassy Integration ---
 # esp-idf-svc = { version = "0.51", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }

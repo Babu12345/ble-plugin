@@ -61,6 +61,7 @@ pub struct CdcAcmHostDevice<STATE> {
 
 /// https://github.com/CherryUSB/cherryusb_esp32/tree/main/examples/device
 impl CdcAcmHostDevice<PREINIT> {
+    /// Create a new instance of the host device
     pub fn new() -> Self {
         Self {
             _state: PhantomData::<PREINIT>,
@@ -85,6 +86,14 @@ impl CdcAcmHostDevice<PREINIT> {
         Ok(CdcAcmHostDevice {
             _state: PhantomData::<POSTINIT>,
         })
+    }
+}
+
+impl CdcAcmHostDevice<POSTINIT> {
+    /// Sleep for a specified duration
+    pub fn sleep(self, duration: Duration) -> Self {
+        std::thread::sleep(duration);
+        self
     }
 }
 

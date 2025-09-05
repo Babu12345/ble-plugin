@@ -40,13 +40,13 @@ use std::time::Duration;
 // Initialize communication channels with throttle configuration
 // Throttle parameters: (interval, max_requests_per_interval)
 let throttle_config = (Duration::from_millis(10), 10);
-let (usb_sender, usb_receiver) = /* USB channel setup with throttle */;
+let (sender, receiver) = /* USB channel setup with throttle */;
 let ble_device = BLEDevice::take();
 
 // Create state machine
 let state_machine = PluginStateMachine::new(
-    usb_sender,
-    usb_receiver, 
+    sender,
+    receiver, 
     ble_device
 );
 
