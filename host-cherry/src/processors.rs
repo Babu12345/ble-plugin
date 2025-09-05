@@ -1,7 +1,7 @@
 use std::{
     sync::{
-        mpsc::{Receiver, SyncSender},
         RwLock,
+        mpsc::{Receiver, SyncSender},
     },
     time::Duration,
 };

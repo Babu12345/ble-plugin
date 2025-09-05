@@ -1,6 +1,6 @@
 //! USB host implementation library of cherry usb
-//! 
-//! Uses `heapless` for internal buffers. Protocol types use `alloc::Vec` and 
+//!
+//! Uses `heapless` for internal buffers. Protocol types use `alloc::Vec` and
 //! `alloc::String` for Protocol Buffer compatibility.
 #[deny(missing_docs)]
 mod constants;
@@ -8,14 +8,20 @@ mod processors;
 mod utils;
 use processors::*;
 use protocol::{
+    devices::plugin::PluginProcessor,
     host::{HostReceiver, HostSender},
     plugin::plugin::{PluginReceiver, PluginSender},
 };
 
 use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
 use protocol::DEFAULT_PACKET_SIZE;
-use std::{sync::mpsc::sync_channel, thread::Scope};
-
+use std::{
+    marker::PhantomData,
+    sync::{atomic::AtomicBool, mpsc::sync_channel},
+    thread::Scope,
+    time::Duration,
+};
+static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 // Initialization
 // https://github.com/zleihao/CherryUSB-CDC-MSC/blob/50095e0b63bbdf6f2d5597e71edfa45dd8be6c1d/cdc_msc/middlewares/CherryUSB-1.4.0/class/cdc/usbh_cdc_acm.c#L170
 // https://github.com/cherry-embedded/CherryUSB/blob/f23f5494920b64987350abc87c8154f410c6f5f9/platform/nuttx/usbh_serial.c#L180
@@ -42,21 +48,65 @@ pub unsafe fn cherry_usb_host<'a, 'b>(
     (HostSender::new(to_usb.0), HostReceiver::new(from_usb.1))
 }
 
-/// Initialize the usb host and send out receivers and senders to process and send information to the connected usb device via the cdc acm driver class.
-pub unsafe fn cherry_usb_host_for_plugin<'a, 'b>(
-    scope: &'a Scope<'a, 'b>,
-    channel_buffer_size: usize,
-) -> (
-    PluginSender<DEFAULT_PACKET_SIZE>,
-    PluginReceiver<DEFAULT_PACKET_SIZE>,
-) {
-    let to_usb = sync_channel(channel_buffer_size);
-    let from_usb = sync_channel(channel_buffer_size);
+/// Pre device configuration
+pub struct PREINIT;
 
-    unsafe { usbh_initialize(0, ESP_USBH_BASE as usize) };
+/// Post device configuration
+pub struct POSTINIT;
 
-    scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
-    scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
+/// Host device that implement the PluginProcessor
+pub struct CdcAcmHostDevice<STATE> {
+    _state: PhantomData<STATE>,
+}
 
-    (PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1))
+/// https://github.com/CherryUSB/cherryusb_esp32/tree/main/examples/device
+impl CdcAcmHostDevice<PREINIT> {
+    pub fn new() -> Self {
+        Self {
+            _state: PhantomData::<PREINIT>,
+        }
+    }
+    /// Initialize the device
+    pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmHostDevice<POSTINIT>, ()> {
+        match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
+            true => {
+                return Err(());
+            }
+            false => {}
+        }
+
+        match unsafe { usbh_initialize(busid, reg_base as usize) } {
+            x if x < 0 => {
+                return Err(());
+            }
+            _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
+        }
+
+        Ok(CdcAcmHostDevice {
+            _state: PhantomData::<POSTINIT>,
+        })
+    }
+}
+
+impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
+    fn processors<'a, 'b>(
+        self,
+        scope: &'a Scope<'a, 'b>,
+        channel_buffer_size: usize,
+        _throttle_info: (Duration, usize),
+    ) -> Result<
+        (
+            PluginSender<DEFAULT_PACKET_SIZE>,
+            PluginReceiver<DEFAULT_PACKET_SIZE>,
+        ),
+        (),
+    > {
+        let to_usb = sync_channel(channel_buffer_size);
+        let from_usb = sync_channel(channel_buffer_size);
+
+        scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
+        scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
+
+        Ok((PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1)))
+    }
 }

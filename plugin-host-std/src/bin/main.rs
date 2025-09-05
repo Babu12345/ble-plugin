@@ -5,9 +5,10 @@ use esp32_nimble::{
     BLEDevice,
 };
 
-use host_cherry::cherry_usb_host_for_plugin;
+use esp_idf_sys::cherry_host::ESP_USBH_BASE;
+use host_cherry::CdcAcmHostDevice;
+use protocol::devices::plugin::PluginProcessor;
 use protocol::protocol::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
-
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
@@ -23,18 +24,24 @@ fn main() -> anyhow::Result<()> {
         .resolve_rpa();
 
     std::thread::scope(|scope| {
-        let io = unsafe { cherry_usb_host_for_plugin(scope, 200) };
+        let processors = CdcAcmHostDevice::new()
+            .init(0, ESP_USBH_BASE)
+            .unwrap()
+            .processors(scope, 200, (Duration::from_millis(10), 10))
+            .unwrap();
 
         scope.spawn(move || loop {
-            io.0.send(PluginData {
-                src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
-                src_addr_type: protocol::protocol::BluetoothAddressType::Public as _,
-                send_type: protocol::protocol::PluginDataSendType::NotifyType as _,
-                characteristic_uuid: 0x2A29,
-                service_uuid: 0x180A,
-                data: Vec::from(b"Data incoming\0"),
-            })
-            .ok();
+            processors
+                .0
+                .send(PluginData {
+                    src_addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
+                    src_addr_type: protocol::protocol::BluetoothAddressType::Public as _,
+                    send_type: protocol::protocol::PluginDataSendType::NotifyType as _,
+                    characteristic_uuid: 0x2A29,
+                    service_uuid: 0x180A,
+                    data: Vec::from(b"Data incoming\0"),
+                })
+                .ok();
 
             std::thread::sleep(Duration::from_millis(20));
         });
@@ -42,7 +49,7 @@ fn main() -> anyhow::Result<()> {
         scope.spawn(move || loop {
             std::thread::sleep(Duration::from_millis(10));
 
-            let data = io.1.receive().unwrap();
+            let data = processors.1.receive().unwrap();
 
             let host_cmd: Option<HostCommandConfigurePeripheral> = data.decode().ok();
             if let Some(cmd) = host_cmd {
