@@ -214,9 +214,9 @@ class BLEConfigurationGUI:
         props_frame.grid(row=2, column=1, pady=5)
         
         self.prop_vars = {}
-        properties = ["READ", "WRITE", "NOTIFY", "INDICATE", "WRITE_WITHOUT_RESPONSE"]
+        properties = ["Read", "WriteRsp", "Notify", "Indicate", "WriteNoRsp"]
         for i, prop in enumerate(properties):
-            var = tk.BooleanVar(value=(prop in ["READ", "WRITE", "NOTIFY"]))
+            var = tk.BooleanVar(value=(prop in ["Read", "WriteRsp", "Notify"]))
             self.prop_vars[prop] = var
             ttk.Checkbutton(props_frame, text=prop, variable=var).grid(row=i//2, column=i%2, sticky="w")
         
@@ -227,9 +227,9 @@ class BLEConfigurationGUI:
         frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         ttk.Label(frame, text="Profile:").grid(row=0, column=0, sticky="w", pady=5)
-        self.profile_var = tk.StringVar(value="CUSTOM")
+        self.profile_var = tk.StringVar(value="Custom")
         profile_combo = ttk.Combobox(frame, textvariable=self.profile_var, width=20)
-        profile_combo['values'] = ["CUSTOM", "HeartRate", "Cycling", "Running"]
+        profile_combo['values'] = ["Custom", "HeartRateMonitor", "BatteryService", "DeviceInformation"]
         profile_combo.grid(row=0, column=1, pady=5)
         
         ttk.Label(frame, text="Profile Delay (seconds):").grid(row=1, column=0, sticky="w", pady=5)
@@ -475,7 +475,7 @@ class BLEConfigurationGUI:
             properties = []
             for prop_name, var in self.prop_vars.items():
                 if var.get():
-                    properties.append(getattr(protocol_pb2.BLEProperties, prop_name))
+                    properties.append(getattr(protocol_pb2.BleProperties, prop_name))
                     
             self.log(f"Configuring characteristic: {char_uuid_str} for service {service_uuid_str}")
             

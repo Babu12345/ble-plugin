@@ -50,9 +50,9 @@ All message types are defined in protobuf and available via:
 import plugin_host.protocol_pb2 as protocol_pb2
 
 # Enums
-protocol_pb2.BLEProperties.READ
-protocol_pb2.PluginDataSendType.NOTIFY_TYPE
-protocol_pb2.BluetoothAddressType.PUBLIC
+protocol_pb2.BleProperties.Read
+protocol_pb2.PluginDataSendType.NotifyType
+protocol_pb2.BluetoothAddressType.Public
 
 # Messages
 protocol_pb2.HostCommandConfigurePeripheral(...)
@@ -82,15 +82,15 @@ from plugin_host.comms import USBHostDevice
 import plugin_host.protocol_pb2 as protocol_pb2
 
 with USBHostDevice() as device:
-    device.configure_profile(protocol_pb2.BLEProfile.CUSTOM)
+    device.configure_profile(protocol_pb2.BleProfile.Custom)
     print("Custom profile configured")
 ```
 
 **Supported Profiles:**
-- `protocol_pb2.BLEProfile.CUSTOM` - Uses existing service/characteristic definitions
-- `protocol_pb2.BLEProfile.HEART_RATE_MONITOR` - Heart rate monitoring profile
-- `protocol_pb2.BLEProfile.BATTERY_SERVICE` - Battery service profile
-- `protocol_pb2.BLEProfile.DEVICE_INFORMATION` - Device information profile
+- `protocol_pb2.BleProfile.Custom` - Uses existing service/characteristic definitions
+- `protocol_pb2.BleProfile.HeartRateMonitor` - Heart rate monitoring profile
+- `protocol_pb2.BleProfile.BatteryService` - Battery service profile
+- `protocol_pb2.BleProfile.DeviceInformation` - Device information profile
 
 ## USBHostDevice Configuration
 
@@ -132,7 +132,7 @@ with USBHostDevice() as device:
     device.configure_service(0x1800)
     
     # Add characteristic
-    device.configure_characteristic(0x2A00, 0x1800, [protocol_pb2.BLEProperties.READ])
+    device.configure_characteristic(0x2A00, 0x1800, [protocol_pb2.BleProperties.Read])
     
     # Start advertising (auto-configures profile on first call)
     device.start_advertisement()
@@ -149,7 +149,7 @@ with USBHostDevice() as device:
     device.configure_service(0x180F)  # Battery Service
     
     # Apply profile configuration
-    device.configure_profile(protocol_pb2.BLEProfile.CUSTOM)  # Apply configuration
+    device.configure_profile(protocol_pb2.BleProfile.Custom)  # Apply configuration
 ```
 
 ## Testing

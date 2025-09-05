@@ -26,8 +26,8 @@ F64 = attrs2bin.Float64      # f64 floating-point
 
 # ====== TEST ENUMS ======
 
-class BLEPropertiesTest(Enum):
-    """Test enum for BLE properties - mirrors Rust BLEPropertiesTest"""
+class BlePropertiesTest(Enum):
+    """Test enum for BLE properties - mirrors Rust BlePropertiesTest"""
     TestRead: U8 = 10
     TestWrite: U8 = 11
     TestNotify: U8 = 12
@@ -80,7 +80,7 @@ class HostCommandConfigureCharacteristicTest:
     """Test host command for characteristic configuration - mirrors Rust struct"""
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
-    test_properties: List[BLEPropertiesTest]  # HeaplessVec<BLEPropertiesTest, 3> in Rust
+    test_properties: List[BlePropertiesTest]  # HeaplessVec<BlePropertiesTest, 3> in Rust
     test_security_level: U8  # u8 in Rust - keep U8
 
 
@@ -162,7 +162,7 @@ class PluginCharacteristicInfoResponseTest:
     """Test plugin characteristic info response - mirrors Rust struct"""
     test_char_uuid: bytes  # Uuid in Rust (16 bytes)
     test_service_uuid: bytes  # Uuid in Rust (16 bytes)
-    test_properties: List[BLEPropertiesTest]  # HeaplessVec<BLEPropertiesTest, 3> in Rust
+    test_properties: List[BlePropertiesTest]  # HeaplessVec<BlePropertiesTest, 3> in Rust
     test_char_exists: bool
     test_value_length: U8  # u8 in Rust - use U8 for compatibility
     test_client_config: U8  # u8 in Rust - use U8 for compatibility
@@ -229,11 +229,11 @@ def uuid_bytes_to_str(uuid_bytes: bytes) -> str:
 
 def validate_test_enum_values():
     """Validate that test enum values match expected values from Rust."""
-    # BLEPropertiesTest
-    assert BLEPropertiesTest.TestRead.value == 10
-    assert BLEPropertiesTest.TestWrite.value == 11
-    assert BLEPropertiesTest.TestNotify.value == 12
-    assert BLEPropertiesTest.TestIndicate.value == 13
+    # BlePropertiesTest
+    assert BlePropertiesTest.TestRead.value == 10
+    assert BlePropertiesTest.TestWrite.value == 11
+    assert BlePropertiesTest.TestNotify.value == 12
+    assert BlePropertiesTest.TestIndicate.value == 13
     
     # BluetoothAddressTypeTest
     assert BluetoothAddressTypeTest.TestPublic.value == 20

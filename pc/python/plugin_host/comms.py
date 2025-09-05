@@ -694,7 +694,7 @@ class USBHostDevice:
         which applies all previously configured services and characteristics.
         
         Args:
-            profile: BLE profile type to configure (currently only BLEProfile.CUSTOM supported)
+            profile: BLE profile type to configure (currently only BleProfile.Custom supported)
             delay: Optional delay in seconds after sending the command (default: 0.05). Needed as it might be required
             to wait for BLE central devices to disconnect and advertising to stop before reconfiguring.
             

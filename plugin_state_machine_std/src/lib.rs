@@ -996,7 +996,8 @@ where
                     .connections()
                     .find(|desc| {
                         if let Ok(val) = slice_to_array(cmd.address.as_slice()) {
-                            if let Ok(addr_type) = BluetoothAddressType::try_from(cmd.address_type)
+                            if let Some(addr_type) =
+                                BluetoothAddressType::try_from(cmd.address_type).ok()
                             {
                                 return desc.address()
                                     == BLEAddress::from_be_bytes(

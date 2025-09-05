@@ -44,7 +44,7 @@ def main():
             host.configure_characteristic(
                 uuid=0xabcd,
                 service_uuid=0x8765,
-                properties=[protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.Write, protocol_pb2.BleProperties.Notify]
+                properties=[protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.WriteRsp, protocol_pb2.BleProperties.Notify]
             )
             print("✓ Characteristic configured")
             
