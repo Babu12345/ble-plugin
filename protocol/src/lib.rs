@@ -192,6 +192,7 @@ pub mod plugin;
 pub mod protocol;
 pub use io::*;
 use lib_utils::exactly_one_feature;
+pub mod devices;
 pub mod utils;
 
 /// Maximum size for BLE peripheral device names

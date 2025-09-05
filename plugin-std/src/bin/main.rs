@@ -12,6 +12,7 @@ use esp_idf_sys::cherry_device::ESP_USBD_BASE;
 use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
 use plugin_std::errors::{PluginError, Result};
+use protocol::devices::plugin::PluginProcessor;
 
 // Examples: https://github.com/taks/esp32-nimble/tree/main/examples
 fn main() -> Result<()> {
@@ -37,7 +38,6 @@ fn main() -> Result<()> {
         .map_err(|_| PluginError::UsbDeviceInitError("Failed to initialize USB device"))?
         .set_dtr(0, false)
         .sleep(Duration::from_millis(500));
-
     std::thread::scope(|scope| {
         let usb_processors = usb_device
             .processors(scope, 20, (Duration::from_millis(10), 10))

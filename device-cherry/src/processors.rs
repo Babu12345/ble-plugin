@@ -24,6 +24,7 @@ use esp_idf_sys::cherry_device::{
     usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
 use protocol::DEFAULT_PACKET_SIZE;
+use protocol::devices::plugin::PluginProcessor;
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use throttle::Throttle;
 
@@ -380,9 +381,9 @@ impl CdcAcmDevice<PREINIT> {
     }
 }
 
-impl CdcAcmDevice<POSTINIT> {
+impl PluginProcessor<SIZE, crate::errors::Error> for CdcAcmDevice<POSTINIT> {
     /// Input and output to process data to and from the usb peripheral
-    pub fn processors<'a, 'b>(
+    fn processors<'a, 'b>(
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
@@ -512,7 +513,9 @@ impl CdcAcmDevice<POSTINIT> {
 
         Ok((PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1)))
     }
+}
 
+impl CdcAcmDevice<POSTINIT> {
     /// Set the dtr of the usb cdc device
     pub fn set_dtr(self, intf: u8, dtr: bool) -> Self {
         let busid = self.busid.unwrap();
