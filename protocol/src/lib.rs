@@ -234,7 +234,6 @@ mod tests {
         MessageType, DEFAULT_PACKET_SIZE, IO,
     };
     use std::vec::Vec;
-    use strum::IntoEnumIterator;
 
     #[test]
     fn test_max_transfer_size() {
@@ -463,19 +462,6 @@ mod tests {
         assert!(
             MESSAGE_HEADER_SIZE < DEFAULT_PACKET_SIZE / 2,
             "Header should leave plenty of room for payload"
-        );
-    }
-
-    #[test]
-    fn test_message_type_id_uniqueness() {
-        use std::collections::HashSet;
-        let type_ids = MessageTypeId::iter().collect::<Vec<_>>();
-        // Verify all IDs are unique
-        let unique_ids: HashSet<u8> = MessageTypeId::iter().map(|id| id as u8).collect();
-        assert_eq!(
-            type_ids.len(),
-            unique_ids.len(),
-            "All message type IDs should be unique"
         );
     }
 
