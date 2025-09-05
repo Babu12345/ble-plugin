@@ -15,7 +15,6 @@ rust-version = "1.70"
 # Local protocol definitions
 protocol = { path = "../protocol", default-features = false, features = [
     "std",
-    "protocol_buffer",
 ] }
 plugin-nvs = { path = "../plugin-nvs" }
 
@@ -41,3 +40,8 @@ throttle = "0.1.0"
 
 # Thread pool for managing concurrent tasks
 threadpool = "1.8.1"
+
+[features]
+default = ["protocol_buffer"]
+protocol_buffer = ["protocol/protocol_buffer"]
+quick_protocol_buffer = ["protocol/quick_protocol_buffer"]
