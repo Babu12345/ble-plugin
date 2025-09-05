@@ -443,7 +443,7 @@ pub enum BleProperties {
     /// Read property
     Read = 1,
     /// Write property
-    Write = 2,
+    WriteRsp = 2,
     /// Write without response property
     WriteNoRsp = 3,
     /// Notify property
@@ -460,7 +460,7 @@ impl BleProperties {
         match self {
             Self::Unspecified => "BlePropertiesUnspecified",
             Self::Read => "Read",
-            Self::Write => "Write",
+            Self::WriteRsp => "WriteRsp",
             Self::WriteNoRsp => "WriteNoRsp",
             Self::Notify => "Notify",
             Self::Indicate => "Indicate",
@@ -471,7 +471,7 @@ impl BleProperties {
         match value {
             "BlePropertiesUnspecified" => Some(Self::Unspecified),
             "Read" => Some(Self::Read),
-            "Write" => Some(Self::Write),
+            "WriteRsp" => Some(Self::WriteRsp),
             "WriteNoRsp" => Some(Self::WriteNoRsp),
             "Notify" => Some(Self::Notify),
             "Indicate" => Some(Self::Indicate),

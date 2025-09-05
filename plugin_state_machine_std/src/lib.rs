@@ -835,7 +835,7 @@ where
                     "Error: Received advertisement command without peripheral configuration"
                 );
                 self.usb_sender
-                    .send(PluginConfigurationError { error_type: PluginConfigurationErrorType::AdvertisementWithoutPeripheralConfiguration as i32 })
+                    .send(PluginConfigurationError { error_type: PluginConfigurationErrorType::AdvertisementWithoutPeripheralConfiguration as _ })
                     .map_err(|_| StateMachineError::UsbSendError)?;
                 return Err(StateMachineError::InvalidBleConfiguration);
             }
@@ -871,7 +871,7 @@ where
                         address: addr.to_vec(),
                         address_type: Self::ble_address_type_to_bluetooth_address_type(
                             desc.address().addr_type(),
-                        ) as i32,
+                        ) as _,
                         success: status.is_ok(),
                     };
                     usb_sender
@@ -903,7 +903,7 @@ where
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
-                                as i32,
+                                as _,
                     })
                     .map_err(|_| StateMachineError::UsbSendError)?;
                 return Err(StateMachineError::ServerNotInitialized);
@@ -968,7 +968,7 @@ where
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
-                                as i32,
+                                as _,
                     })
                     .ok();
                 StateMachineError::InvalidBleConfiguration
@@ -1034,7 +1034,7 @@ where
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
-                                as i32,
+                                as _,
                     })
                     .map_err(|_| StateMachineError::UsbSendError)?;
                 return Err(StateMachineError::ServerNotInitialized);
@@ -1073,7 +1073,7 @@ where
                     .send(PluginConfigurationError {
                         error_type:
                             PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
-                                as i32,
+                                as _,
                     })
                     .ok();
                 StateMachineError::InvalidBleConfiguration
@@ -1108,7 +1108,7 @@ where
                 .send(PluginConfigurationError {
                     error_type:
                         PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
-                            as i32,
+                            as _,
                 })
                 .ok();
             StateMachineError::InvalidBleConfiguration
@@ -1119,19 +1119,19 @@ where
 
         // Convert properties from u8 to NimbleProperties
         let mut nimble_properties = NimbleProperties::empty();
-        if cmd.properties.contains(&(BleProperties::Read as i32)) {
+        if cmd.properties.contains(&(BleProperties::Read as _)) {
             nimble_properties |= NimbleProperties::READ;
         }
-        if cmd.properties.contains(&(BleProperties::Write as i32)) {
+        if cmd.properties.contains(&(BleProperties::WriteRsp as _)) {
             nimble_properties |= NimbleProperties::WRITE;
         }
-        if cmd.properties.contains(&(BleProperties::WriteNoRsp as i32)) {
+        if cmd.properties.contains(&(BleProperties::WriteNoRsp as _)) {
             nimble_properties |= NimbleProperties::WRITE_NO_RSP;
         }
-        if cmd.properties.contains(&(BleProperties::Notify as i32)) {
+        if cmd.properties.contains(&(BleProperties::Notify as _)) {
             nimble_properties |= NimbleProperties::NOTIFY;
         }
-        if cmd.properties.contains(&(BleProperties::Indicate as i32)) {
+        if cmd.properties.contains(&(BleProperties::Indicate as _)) {
             nimble_properties |= NimbleProperties::INDICATE;
         }
 
@@ -1159,7 +1159,10 @@ where
             ),
             false => {
                 characteristics
-                    .push((cmd.uuid as u16, cmd.properties))
+                    .push((
+                        cmd.uuid as u16,
+                        cmd.properties.into_iter().map(|x| x as _).collect(),
+                    ))
                     .map_err(|_| {
                         log::error!("Failed to store characteristic UUID: {}", cmd.uuid);
                         StateMachineError::CharacteristicUuidStorageError
@@ -1184,8 +1187,8 @@ where
                             src_addr: args.desc().address().as_be_bytes().as_ref().to_vec(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 args.desc().address().addr_type(),
-                            ) as i32,
-                            send_type: protocol::protocol::PluginDataSendType::WriteType as i32,
+                            ) as _,
+                            send_type: protocol::protocol::PluginDataSendType::WriteType as _,
                             characteristic_uuid: char_uuid_write,
                             service_uuid: service_uuid_write,
                             data: args.recv_data().to_vec(),
@@ -1217,8 +1220,8 @@ where
                             src_addr: desc.address().as_be_bytes().as_ref().to_vec(),
                             src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
                                 desc.address().addr_type(),
-                            ) as i32,
-                            send_type: protocol::protocol::PluginDataSendType::ReadType as i32,
+                            ) as _,
+                            send_type: protocol::protocol::PluginDataSendType::ReadType as _,
                             characteristic_uuid: cmd.uuid,
                             service_uuid: cmd.service_uuid,
                             data: Vec::new(),
@@ -1313,6 +1316,7 @@ where
                 (false, Vec::new())
             });
 
+        let properties = properties.into_iter().map(|x| x.into()).collect();
         let response = PluginCharacteristicInfoResponse {
             characteristic_uuid: cmd.characteristic_uuid,
             service_uuid: cmd.service_uuid,
@@ -1342,7 +1346,7 @@ where
             protocol::protocol::BluetoothAddressType::Random => BLEAddressType::Random,
             protocol::protocol::BluetoothAddressType::PublicId => BLEAddressType::PublicID,
             protocol::protocol::BluetoothAddressType::RandomId => BLEAddressType::RandomID,
-            protocol::protocol::BluetoothAddressType::Unspecified => todo!(),
+            _ => unreachable!(),
         }
     }
 
@@ -1396,7 +1400,7 @@ where
                 );
             }
             Err(_) => {
-                log::error!("Unknown BLE profile ID: {}", cmd.profile);
+                log::error!("Unknown BLE profile ID: {:?}", cmd.profile);
                 return Err(StateMachineError::InvalidBleConfiguration);
             }
         }

@@ -86,7 +86,7 @@ enum BleProperties {
   // Read property
   Read = 1;
   // Write property
-  Write = 2;
+  WriteRsp = 2;
   // Write without response property
   WriteNoRsp = 3;
   // Notify property

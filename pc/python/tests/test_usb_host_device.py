@@ -93,7 +93,7 @@ class TestUSBHostDevice:
         """Test configure_characteristic method"""
         uuid = 0x1234
         service_uuid = 0x8765
-        properties = [protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.Write]
+        properties = [protocol_pb2.BleProperties.Read, protocol_pb2.BleProperties.WriteRsp]
         
         self.host_device.configure_characteristic(uuid, service_uuid, properties)
         
