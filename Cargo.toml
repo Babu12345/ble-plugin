@@ -1,5 +1,5 @@
 [workspace]
-members = ["protocol", "protocol_io", "lib_utils", "device-cherry", "host-cherry"]
+members = ["protocol", "protocol_io", "lib_utils", "device-cherry", "host-cherry", "device-embassy"]
 exclude = [
     "plugin-nvs",
     "plugin_state_machine_std",
@@ -14,12 +14,12 @@ exclude = [
 ]
 resolver = "2"
 
-
 [workspace.package]
 version = "0.0.1"
 authors = ["Babuabel Wanyeki <bwanyeki12@gmail.com>"]
 repository = "https://github.com/Babu12345/ble-plugin"
 edition = "2021"
+rust-version = "1.77"
 
 [profile.bench]
 debug = true
