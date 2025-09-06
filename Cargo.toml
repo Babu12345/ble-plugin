@@ -1,5 +1,12 @@
 [workspace]
-members = ["protocol", "protocol_io", "lib_utils", "device-cherry", "host-cherry", "device-embassy"]
+members = [
+    "protocol",
+    "protocol_io",
+    "lib_utils",
+    "device-cherry",
+    "host-cherry",
+    "device-embassy",
+]
 exclude = [
     "plugin-nvs",
     "plugin_state_machine_std",
@@ -8,8 +15,6 @@ exclude = [
     "plugin-echo-example",
     "plugin-no-std",
     "plugin-host-std",
-    "device-cherry",
-    "host-cherry",
     "host-no-std",
 ]
 resolver = "2"
