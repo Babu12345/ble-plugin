@@ -2,6 +2,8 @@
 //!
 //! Uses `heapless` for internal buffers. Protocol types use `alloc::Vec` and
 //! `alloc::String` for Protocol Buffer compatibility.
+
+#![cfg(all(target_arch = "xtensa", target_os = "espidf"))]
 #[deny(missing_docs)]
 mod constants;
 mod processors;

@@ -4,14 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 
-[profile.release]
-opt-level = "s"
-
-[profile.dev]
-debug = true    # Symbols are nice and they don't increase the size on Flash
-opt-level = "z"
-
-[dependencies]
+[target.'cfg(all(target_arch = "xtensa", target_os = "espidf"))'.dependencies]
 protocol = { path = "../protocol", default-features = false, features = [
     "std",
 ] }
@@ -34,3 +27,8 @@ throttle = "0.1.0"
 component_dirs = "components/cherryusb"
 bindings_header = "cherry_usb_device_bindings.h"
 bindings_module = "cherry_device"
+
+
+[features]
+default = ["protocol_buffer"]
+protocol_buffer = ["protocol/protocol_buffer"]

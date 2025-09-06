@@ -1,5 +1,5 @@
 [workspace]
-members = ["protocol", "protocol_io", "lib_utils", "device-embassy"]
+members = ["protocol", "protocol_io", "lib_utils", "device-cherry", "host-cherry"]
 exclude = [
     "plugin-nvs",
     "plugin_state_machine_std",

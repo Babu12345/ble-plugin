@@ -1,5 +1,6 @@
 //! USB host implementation library of cherry usb
 #![deny(missing_docs)]
+#![cfg(all(target_arch = "xtensa", target_os = "espidf"))]
 mod constants;
 mod errors;
 mod processors;

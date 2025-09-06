@@ -21,7 +21,7 @@ opt-level = "z"
 [dependencies]
 ## Custom
 lib_utils = {path = "../lib_utils"}
-device-cherry = {path = "../device-cherry"}
+device-cherry = {path = "../device-cherry", features = ["protocol_buffer"]}
 plugin_state_machine_std = { path = "../plugin_state_machine_std" , default-features = false, features = ["protocol_buffer"]}
 plugin-nvs = { path = "../plugin-nvs" }
 protocol = { path = "../protocol", default-features = false, features = [

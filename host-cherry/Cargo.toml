@@ -3,7 +3,7 @@ name = "host-cherry"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[target.'cfg(all(target_arch = "xtensa", target_os = "espidf"))'.dependencies]
 # Custom
 protocol = { path = "../protocol", default-features = false, features = [
     "std",
@@ -19,3 +19,8 @@ heapless = "0.8.0"
 component_dirs = "components/cherryusb"
 bindings_header = "cherry_usb_host_bindings.h"
 bindings_module = "cherry_host"
+
+
+[features]
+default = ["protocol_buffer"]
+protocol_buffer = ["protocol/protocol_buffer"]

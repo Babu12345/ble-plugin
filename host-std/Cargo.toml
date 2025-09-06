@@ -26,10 +26,9 @@ default = []
 lib_utils = {path = "../lib_utils"}
 protocol = { path = "../protocol", default-features = false, features = [
     "std",
-    "protocol_buffer",
 ] }
 host-esp ={ path = "../host-esp" }
-host-cherry = {path = "../host-cherry"}
+host-cherry = {path = "../host-cherry", features = ["protocol_buffer"]}
 ## Crates
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }
