@@ -6,6 +6,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# Workspace crates
+device-embassy = { path = "../device-embassy", features = ["esp32s3"] }
+# External crates
 anyhow = { version = "1.0", default-features = false }
 esp-backtrace = { version = "0.15.1", features = [
     "esp32s3",
