@@ -1,16 +1,8 @@
-use std::{str::FromStr, time::Duration};
+use std::time::Duration;
 
-use esp_idf_svc::hal::{
-    prelude::Peripherals,
-    spi::{
-        config::{Config, DriverConfig},
-        SpiDeviceDriver, SpiDriver,
-    },
-    units::Hertz,
-};
-use host_cherry::cherry_usb_host;
-use protocol::protocol::{HostCommandConfigurePeripheral, HostCommandConfigureService, PluginData};
-
+use esp_idf_sys::cherry_host::ESP_USBH_BASE;
+use host_cherry::CdcAcmHost;
+use protocol::devices::host::HostProcessor;
 /**
  * General protocal is as follows:
  * There will be 2 tasks. One task is responsible for sending commands and data.
@@ -23,53 +15,15 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    let peripherals = Peripherals::take().unwrap();
-    let mosi = peripherals.pins.gpio9;
-    let miso = peripherals.pins.gpio8;
-    let sclk = peripherals.pins.gpio7;
-    let cs = peripherals.pins.gpio1;
-
-    let _spi: SpiDeviceDriver<'_, SpiDriver<'_>> = SpiDeviceDriver::new_single(
-        peripherals.spi2,
-        sclk,
-        mosi,
-        Some(miso),
-        Some(cs),
-        &DriverConfig::default(),
-        &Config::default().baudrate(Hertz(80_000_000)),
-    )
-    .unwrap();
-
-    // use host_esp::usb_host;
-    // std::thread::scope(|scope| {
-    //     scope.spawn(move || {
-    //         let io = unsafe { usb_host(scope, 100) };
-    //     });
-    // });
+    let device = CdcAcmHost::new()
+        .init(0, ESP_USBH_BASE)
+        .unwrap()
+        .sleep(Duration::from_millis(500));
 
     std::thread::scope(|scope| {
-        let io = unsafe { cherry_usb_host(scope, 200) };
-        scope.spawn(move || loop {
-            io.0.send(HostCommandConfigurePeripheral {
-                addr: Vec::try_from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).unwrap(),
-                name: String::from_str("Portrait").unwrap(),
-            })
-            .ok();
-            io.0.send(HostCommandConfigureService { uuid: 0xAAAA }).ok();
-
-            std::thread::sleep(Duration::from_millis(20));
-        });
-
-        scope.spawn(move || loop {
-            std::thread::sleep(Duration::from_millis(10));
-
-            let data = io.1.receive().unwrap();
-
-            let plugin_data: Option<PluginData> = data.decode().ok();
-            if let Some(data) = plugin_data {
-                log::info!("{:?}", data)
-            }
-        });
+        let _processors = device
+            .processors(scope, 20, (Duration::from_millis(10), 10))
+            .unwrap();
     });
 
     Ok(())

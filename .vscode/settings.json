@@ -17,7 +17,8 @@
           "./plugin-std/Cargo.toml",
           "./plugin_state_machine_std/Cargo.toml",
           "./plugin-echo-example/Cargo.toml",
-          "./plugin-host-std/Cargo.toml"
+          "./plugin-host-std/Cargo.toml",
+          "./host-std/Cargo.toml"
         //   "./device-cherry/Cargo.toml",
         //   "./host-cherry/Cargo.toml"
     ]

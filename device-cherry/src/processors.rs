@@ -24,7 +24,9 @@ use esp_idf_sys::cherry_device::{
     usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
 use protocol::DEFAULT_PACKET_SIZE;
+use protocol::devices::host::HostProcessor;
 use protocol::devices::plugin::PluginProcessor;
+use protocol::host::{HostReceiver, HostSender};
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use throttle::Throttle;
 
@@ -295,6 +297,18 @@ pub struct CdcAcmDevice<STATE> {
     _state: PhantomData<STATE>,
 }
 
+/// Main CDC ACM host that's a usb device
+#[derive(Debug)]
+pub struct CdcAcmDeviceHost<STATE> {
+    descriptor: &'static usb_descriptor,
+    cdc_out_ep: &'static mut usbd_endpoint,
+    cdc_in_ep: &'static mut usbd_endpoint,
+    intf0: &'static mut usbd_interface,
+    intf1: &'static mut usbd_interface,
+    busid: Option<u8>,
+    _state: PhantomData<STATE>,
+}
+
 /// Pre device configuration
 pub struct PREINIT;
 
@@ -302,6 +316,7 @@ pub struct PREINIT;
 pub struct POSTINIT;
 
 /// https://github.com/CherryUSB/cherryusb_esp32/tree/main/examples/device
+/// USB Device that implements the PluginProcessor
 impl CdcAcmDevice<PREINIT> {
     /// Initiates a new cdc device
     pub fn new() -> Self {
@@ -389,129 +404,12 @@ impl PluginProcessor<SIZE, crate::errors::Error> for CdcAcmDevice<POSTINIT> {
         channel_buffer_size: usize,
         throttle_info: (Duration, usize),
     ) -> Result<(PluginSender<SIZE>, PluginReceiver<SIZE>)> {
-        let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
-            sync_channel(channel_buffer_size);
-        let from_usb = sync_channel(channel_buffer_size);
-
         let busid = self.busid.ok_or(Error::BusidUndefined)?;
-        // Writing to USB endpoint with proper flow control
-        scope.spawn(move || {
-            loop {
-                match to_usb.1.recv() {
-                    Ok(mut data) => {
-                        match unsafe {
-                            usbd_ep_start_write(
-                                busid,
-                                CDC_IN_EP as u8,
-                                data.as_mut_ptr(),
-                                min(data.len() as u32, SIZE as u32),
-                            )
-                        } {
-                            x if x < 0 => ::log::error!("Failed to send via usb device: {data:?}"),
-                            _ => {}
-                        }
-                    }
-                    Err(e) => ::log::error!("Unable to recieve data: {e}"),
-                }
-            }
-        });
 
-        // Reading from USB endpoint - optimized for high-speed burst handling
-        scope.spawn(move || {
-            let mut throttle = Throttle::new(throttle_info.0, throttle_info.1);
-            let mut packet_count = 0u64;
+        let (sender, receiver) =
+            processor_common(scope, channel_buffer_size, throttle_info, busid)?;
 
-            // Sliding window for dropped packet tracking
-            const WINDOW_SIZE: usize = 10000; // Track last 10k packets
-            let mut window_total = 0u64;
-            let mut window_dropped = 0u64;
-            let mut total_dropped = 0u64; // Keep total for overall stats
-
-            loop {
-                let data = block_on(SIGNAL.wait());
-                packet_count += 1;
-                window_total += 1;
-
-                // Reset window when it reaches the size limit
-                if window_total >= WINDOW_SIZE as u64 {
-                    // Log window statistics before reset
-                    if window_dropped > 0 {
-                        let drop_rate = (window_dropped as f64 / window_total as f64) * 100.0;
-                        ::log::info!(
-                            "Window stats: {:.2}% drop rate ({}/{} packets dropped)",
-                            drop_rate,
-                            window_dropped,
-                            window_total
-                        );
-                    }
-                    // Reset window counters
-                    window_total = 0;
-                    window_dropped = 0;
-                }
-
-                // More aggressive throttle bypass for high-speed scenarios
-                if packet_count > 100 {
-                    // Increased from 10 to 100
-                    if let Err(_) = throttle.accept() {
-                        window_dropped += 1;
-                        total_dropped += 1;
-                        // Log periodically but don't spam
-                        if total_dropped % 1000 == 0 {
-                            let recent_rate = if window_total > 0 {
-                                (window_dropped as f64 / window_total as f64) * 100.0
-                            } else {
-                                0.0
-                            };
-                            ::log::debug!(
-                                "Throttle: recent drop rate {:.2}%, total dropped {}",
-                                recent_rate,
-                                total_dropped
-                            );
-                        }
-                        continue;
-                    }
-                }
-
-                // Try non-blocking send with better error handling
-                match from_usb.0.try_send(data) {
-                    Ok(_) => {
-                        // Log successful processing periodically with window stats
-                        if packet_count % 5000 == 0 && window_total > 0 {
-                            let recent_rate = (window_dropped as f64 / window_total as f64) * 100.0;
-                            ::log::debug!(
-                                "Processing: {} total packets, recent drop rate {:.2}%",
-                                packet_count,
-                                recent_rate
-                            );
-                        }
-                    }
-                    Err(std::sync::mpsc::TrySendError::Full(_)) => {
-                        window_dropped += 1;
-                        total_dropped += 1;
-                        // Channel full - drop packet to maintain USB responsiveness
-                        // Log channel overflow periodically
-                        if total_dropped % 1000 == 0 {
-                            let recent_rate = if window_total > 0 {
-                                (window_dropped as f64 / window_total as f64) * 100.0
-                            } else {
-                                0.0
-                            };
-                            ::log::warn!(
-                                "Channel overflow: recent drop rate {:.2}%, total dropped {}",
-                                recent_rate,
-                                total_dropped
-                            );
-                        }
-                    }
-                    Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
-                        ::log::info!("USB read thread exiting - channel disconnected");
-                        break;
-                    }
-                };
-            }
-        });
-
-        Ok((PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1)))
+        Ok((PluginSender::new(sender), PluginReceiver::new(receiver)))
     }
 }
 
@@ -531,4 +429,249 @@ impl CdcAcmDevice<POSTINIT> {
         std::thread::sleep(duration);
         self
     }
+}
+
+/// USB Device that implements the HostProcessor
+impl CdcAcmDeviceHost<PREINIT> {
+    /// Initiates a new cdc device host
+    pub fn new() -> Self {
+        let descriptor = mk_static!(
+            usb_descriptor,
+            usb_descriptor {
+                device_descriptor_callback: Some(device_descriptor_callback),
+                config_descriptor_callback: Some(config_descriptor_callback),
+                device_quality_descriptor_callback: Some(device_quality_descriptor_callback),
+                string_descriptor_callback: Some(string_descriptor_callback),
+                ..Default::default()
+            }
+        );
+        let intf0 = mk_static!(usbd_interface, usbd_interface::default());
+        let intf1 = mk_static!(usbd_interface, usbd_interface::default());
+
+        let cdc_out_ep = mk_static!(
+            usbd_endpoint,
+            usbd_endpoint {
+                ep_addr: CDC_OUT_EP as u8,
+                ep_cb: Some(usbd_cdc_acm_bulk_out),
+            }
+        );
+
+        let cdc_in_ep = mk_static!(
+            usbd_endpoint,
+            usbd_endpoint {
+                ep_addr: CDC_IN_EP as u8,
+                ep_cb: Some(usbd_cdc_acm_bulk_in),
+            }
+        );
+
+        Self {
+            cdc_out_ep,
+            cdc_in_ep,
+            intf0,
+            intf1,
+            descriptor,
+            busid: None,
+            _state: PhantomData::<PREINIT>,
+        }
+    }
+
+    /// initialize the device
+    pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmDeviceHost<POSTINIT>> {
+        match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
+            true => {
+                return Err(Error::DeviceAlreadyInitialized);
+            }
+            false => {}
+        }
+        unsafe {
+            usbd_desc_register(busid, self.descriptor);
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf0)); // 0
+            usbd_add_interface(busid, usbd_cdc_acm_init_intf(busid, self.intf1)); // 1
+            usbd_add_endpoint(busid, self.cdc_out_ep);
+            usbd_add_endpoint(busid, self.cdc_in_ep);
+
+            match usbd_initialize(busid, reg_base as usize, Some(usbd_event_handler)) {
+                x if x < 0 => {
+                    return Err(Error::InitializationFailure);
+                }
+                _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
+            }
+        }
+        ::log::info!("Usb device initialized");
+
+        Ok(CdcAcmDeviceHost {
+            cdc_out_ep: self.cdc_out_ep,
+            cdc_in_ep: self.cdc_in_ep,
+            intf0: self.intf0,
+            intf1: self.intf1,
+            descriptor: self.descriptor,
+            busid: Some(busid),
+            _state: PhantomData::<POSTINIT>,
+        })
+    }
+}
+
+impl HostProcessor<SIZE, crate::errors::Error> for CdcAcmDeviceHost<POSTINIT> {
+    /// Input and output to process data to and from the usb peripheral
+    fn processors<'a, 'b>(
+        self,
+        scope: &'a Scope<'a, 'b>,
+        channel_buffer_size: usize,
+        throttle_info: (Duration, usize),
+    ) -> Result<(HostSender<SIZE>, HostReceiver<SIZE>)> {
+        let busid = self.busid.ok_or(Error::BusidUndefined)?;
+
+        let (sender, receiver) =
+            processor_common(scope, channel_buffer_size, throttle_info, busid)?;
+
+        Ok((HostSender::new(sender), HostReceiver::new(receiver)))
+    }
+}
+
+impl CdcAcmDeviceHost<POSTINIT> {
+    /// Set the dtr of the usb cdc device
+    pub fn set_dtr(self, intf: u8, dtr: bool) -> Self {
+        let busid = self.busid.unwrap();
+        unsafe {
+            usbd_cdc_acm_set_dtr(busid, intf, dtr);
+        }
+
+        self
+    }
+
+    /// Sleep for a specified duration
+    pub fn sleep(self, duration: Duration) -> Self {
+        std::thread::sleep(duration);
+        self
+    }
+}
+
+fn processor_common<'a, 'b>(
+    scope: &'a Scope<'a, 'b>,
+    channel_buffer_size: usize,
+    throttle_info: (Duration, usize),
+    busid: u8,
+) -> Result<(SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>)> {
+    let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
+        sync_channel(channel_buffer_size);
+    let from_usb = sync_channel(channel_buffer_size);
+
+    // Writing to USB endpoint with proper flow control
+    scope.spawn(move || {
+        loop {
+            match to_usb.1.recv() {
+                Ok(mut data) => {
+                    match unsafe {
+                        usbd_ep_start_write(
+                            busid,
+                            CDC_IN_EP as u8,
+                            data.as_mut_ptr(),
+                            min(data.len() as u32, SIZE as u32),
+                        )
+                    } {
+                        x if x < 0 => ::log::error!("Failed to send via usb device: {data:?}"),
+                        _ => {}
+                    }
+                }
+                Err(e) => ::log::error!("Unable to recieve data: {e}"),
+            }
+        }
+    });
+
+    // Reading from USB endpoint - optimized for high-speed burst handling
+    scope.spawn(move || {
+        let mut throttle = Throttle::new(throttle_info.0, throttle_info.1);
+        let mut packet_count = 0u64;
+
+        // Sliding window for dropped packet tracking
+        const WINDOW_SIZE: usize = 10000; // Track last 10k packets
+        let mut window_total = 0u64;
+        let mut window_dropped = 0u64;
+        let mut total_dropped = 0u64; // Keep total for overall stats
+
+        loop {
+            let data = block_on(SIGNAL.wait());
+            packet_count += 1;
+            window_total += 1;
+
+            // Reset window when it reaches the size limit
+            if window_total >= WINDOW_SIZE as u64 {
+                // Log window statistics before reset
+                if window_dropped > 0 {
+                    let drop_rate = (window_dropped as f64 / window_total as f64) * 100.0;
+                    ::log::info!(
+                        "Window stats: {:.2}% drop rate ({}/{} packets dropped)",
+                        drop_rate,
+                        window_dropped,
+                        window_total
+                    );
+                }
+                // Reset window counters
+                window_total = 0;
+                window_dropped = 0;
+            }
+
+            // More aggressive throttle bypass for high-speed scenarios
+            if packet_count > 100 {
+                // Increased from 10 to 100
+                if let Err(_) = throttle.accept() {
+                    window_dropped += 1;
+                    total_dropped += 1;
+                    // Log periodically but don't spam
+                    if total_dropped % 1000 == 0 {
+                        let recent_rate = if window_total > 0 {
+                            (window_dropped as f64 / window_total as f64) * 100.0
+                        } else {
+                            0.0
+                        };
+                        ::log::debug!(
+                            "Throttle: recent drop rate {:.2}%, total dropped {}",
+                            recent_rate,
+                            total_dropped
+                        );
+                    }
+                    continue;
+                }
+            }
+
+            // Try non-blocking send with better error handling
+            match from_usb.0.try_send(data) {
+                Ok(_) => {
+                    // Log successful processing periodically with window stats
+                    if packet_count % 5000 == 0 && window_total > 0 {
+                        let recent_rate = (window_dropped as f64 / window_total as f64) * 100.0;
+                        ::log::debug!(
+                            "Processing: {} total packets, recent drop rate {:.2}%",
+                            packet_count,
+                            recent_rate
+                        );
+                    }
+                }
+                Err(std::sync::mpsc::TrySendError::Full(_)) => {
+                    window_dropped += 1;
+                    total_dropped += 1;
+                    // Channel full - drop packet to maintain USB responsiveness
+                    // Log channel overflow periodically
+                    if total_dropped % 1000 == 0 {
+                        let recent_rate = if window_total > 0 {
+                            (window_dropped as f64 / window_total as f64) * 100.0
+                        } else {
+                            0.0
+                        };
+                        ::log::warn!(
+                            "Channel overflow: recent drop rate {:.2}%, total dropped {}",
+                            recent_rate,
+                            total_dropped
+                        );
+                    }
+                }
+                Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
+                    ::log::info!("USB read thread exiting - channel disconnected");
+                    break;
+                }
+            };
+        }
+    });
+
+    Ok((to_usb.0, from_usb.1))
 }

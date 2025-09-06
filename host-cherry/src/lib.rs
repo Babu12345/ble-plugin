@@ -8,12 +8,12 @@ mod processors;
 mod utils;
 use processors::*;
 use protocol::{
-    devices::plugin::PluginProcessor,
+    devices::{host::HostProcessor, plugin::PluginProcessor},
     host::{HostReceiver, HostSender},
     plugin::plugin::{PluginReceiver, PluginSender},
 };
 
-use esp_idf_sys::cherry_host::{ESP_USBH_BASE, usbh_initialize};
+use esp_idf_sys::cherry_host::usbh_initialize;
 use protocol::DEFAULT_PACKET_SIZE;
 use std::{
     marker::PhantomData,
@@ -30,29 +30,78 @@ static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 // https://github.com/CherryUSB/cherryusb_esp32/blob/main/examples/host/sdkconfig
 
 /// Initialize the usb host and send out receivers and senders to process and send information to the connected usb device via the cdc acm driver class.
-pub unsafe fn cherry_usb_host<'a, 'b>(
-    scope: &'a Scope<'a, 'b>,
-    channel_buffer_size: usize,
-) -> (
-    HostSender<DEFAULT_PACKET_SIZE>,
-    HostReceiver<DEFAULT_PACKET_SIZE>,
-) {
-    let to_usb = sync_channel(channel_buffer_size);
-    let from_usb = sync_channel(channel_buffer_size);
-
-    unsafe { usbh_initialize(0, ESP_USBH_BASE as usize) };
-
-    scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
-    scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
-
-    (HostSender::new(to_usb.0), HostReceiver::new(from_usb.1))
-}
 
 /// Pre device configuration
 pub struct PREINIT;
 
 /// Post device configuration
 pub struct POSTINIT;
+
+/// Host device that implement the HostProcessor
+pub struct CdcAcmHost<STATE> {
+    _state: PhantomData<STATE>,
+}
+
+/// https://github.com/CherryUSB/cherryusb_esp32/tree/main/examples/device
+impl CdcAcmHost<PREINIT> {
+    /// Create a new instance of the host device
+    pub fn new() -> Self {
+        Self {
+            _state: PhantomData::<PREINIT>,
+        }
+    }
+    /// Initialize the device
+    pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmHost<POSTINIT>, ()> {
+        match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
+            true => {
+                return Err(());
+            }
+            false => {}
+        }
+
+        match unsafe { usbh_initialize(busid, reg_base as usize) } {
+            x if x < 0 => {
+                return Err(());
+            }
+            _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
+        }
+
+        Ok(CdcAcmHost {
+            _state: PhantomData::<POSTINIT>,
+        })
+    }
+}
+
+impl CdcAcmHost<POSTINIT> {
+    /// Sleep for a specified duration
+    pub fn sleep(self, duration: Duration) -> Self {
+        std::thread::sleep(duration);
+        self
+    }
+}
+
+impl HostProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHost<POSTINIT> {
+    fn processors<'a, 'b>(
+        self,
+        scope: &'a Scope<'a, 'b>,
+        channel_buffer_size: usize,
+        _throttle_info: (Duration, usize),
+    ) -> Result<
+        (
+            HostSender<DEFAULT_PACKET_SIZE>,
+            HostReceiver<DEFAULT_PACKET_SIZE>,
+        ),
+        (),
+    > {
+        let to_usb = sync_channel(channel_buffer_size);
+        let from_usb = sync_channel(channel_buffer_size);
+
+        scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
+        scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
+
+        Ok((HostSender::new(to_usb.0), HostReceiver::new(from_usb.1)))
+    }
+}
 
 /// Host device that implement the PluginProcessor
 pub struct CdcAcmHostDevice<STATE> {
