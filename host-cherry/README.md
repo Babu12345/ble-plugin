@@ -19,11 +19,25 @@ Host-Cherry implements a USB host controller that can enumerate and communicate 
 
 ### Components
 
-1. **USB Host Initialization**: Sets up the USB host controller
-2. **CDC-ACM Class Driver**: Manages CDC device communication
-3. **Thread-Safe Wrapper**: Ensures safe access from multiple threads
-4. **Channel Processors**: Separate threads for sending and receiving data
-5. **Protocol Adapters**: Support for both host and plugin communication protocols
+1. **CdcAcmHost**: Main host struct implementing `HostProcessor` for standard host communication
+2. **CdcAcmHostDevice**: Host struct implementing `PluginProcessor` for plugin communication
+3. **USB Host Initialization**: Sets up the USB host controller with type-safe state management
+4. **CDC-ACM Class Driver**: Manages CDC device communication
+5. **Thread-Safe Wrapper**: Ensures safe access from multiple threads
+6. **Channel Processors**: Separate threads for sending and receiving data
+7. **Protocol Adapters**: Support for both host and plugin communication protocols
+
+### State Machine
+
+Both host types use a type-state pattern to ensure proper initialization:
+
+```rust
+// Host processor
+CdcAcmHost<PREINIT> -> init() -> CdcAcmHost<POSTINIT>
+
+// Plugin processor
+CdcAcmHostDevice<PREINIT> -> init() -> CdcAcmHostDevice<POSTINIT>
+```
 
 ### Threading Model
 
@@ -35,70 +49,108 @@ The library uses a multi-threaded architecture:
 
 ## Usage
 
-### Basic Host Mode
+### Host Mode Example
 
 ```rust
-use host_cherry::cherry_usb_host;
-use std::thread;
+use host_cherry::{CdcAcmHost, PREINIT};
+use protocol::devices::host::HostProcessor;
+use std::time::Duration;
 
-fn main() {
-    thread::scope(|scope| {
-        // Initialize USB host with channel buffer size of 10
-        let (sender, receiver) = unsafe {
-            cherry_usb_host(scope, 10)
-        };
+fn main() -> Result<(), ()> {
+    // Create new host in PREINIT state
+    let host = CdcAcmHost::<PREINIT>::new();
+    
+    // Initialize with bus ID and register base
+    let host = host.init(0, 0x60080000)?;
+    
+    // Start host processors
+    std::thread::scope(|scope| {
+        let throttle_info = (Duration::from_millis(10), 1000);
+        let (host_sender, host_receiver) = host.processors(
+            scope,
+            100, // channel buffer size
+            throttle_info
+        )?;
         
-        // Send data to USB device
-        sender.send(b"Hello USB Device").unwrap();
+        // Send data to connected USB device
+        let data = [0x01, 0x02, 0x03, 0x00]; // Must match DEFAULT_PACKET_SIZE
+        host_sender.send(data)?;
         
-        // Receive data from USB device
-        if let Ok(data) = receiver.try_recv() {
-            println!("Received: {:?}", data);
+        // Receive data from connected USB device
+        if let Ok(data) = host_receiver.try_recv() {
+            println!("Host received: {:?}", data);
         }
-    });
+        
+        Ok(())
+    })
 }
 ```
 
-### Plugin Mode Support
+### Plugin Mode Example
 
 ```rust
-use host_cherry::cherry_usb_host_for_plugin;
-use std::thread;
+use host_cherry::{CdcAcmHostDevice, PREINIT};
+use protocol::devices::plugin::PluginProcessor;
+use std::time::Duration;
 
-fn main() {
-    thread::scope(|scope| {
-        // Initialize for plugin protocol
-        let (sender, receiver) = unsafe {
-            cherry_usb_host_for_plugin(scope, 10)
-        };
+fn main() -> Result<(), ()> {
+    // Create new host device for plugin protocol
+    let host_device = CdcAcmHostDevice::<PREINIT>::new();
+    
+    // Initialize with bus ID and register base
+    let host_device = host_device.init(0, 0x60080000)?;
+    
+    // Start plugin processors
+    std::thread::scope(|scope| {
+        let throttle_info = (Duration::from_millis(10), 1000);
+        let (plugin_sender, plugin_receiver) = host_device.processors(
+            scope,
+            100, // channel buffer size
+            throttle_info
+        )?;
         
-        // Use plugin protocol for communication
-        // sender and receiver are typed for plugin messages
-    });
+        // Send data as plugin to host
+        let data = [0x04, 0x05, 0x06, 0x00]; // Must match DEFAULT_PACKET_SIZE
+        plugin_sender.send(data)?;
+        
+        // Receive data from host
+        if let Ok(data) = plugin_receiver.try_recv() {
+            println!("Plugin received: {:?}", data);
+        }
+        
+        Ok(())
+    })
 }
 ```
 
 ## API Reference
 
-### Functions
+### Structures
 
-#### `cherry_usb_host`
-```rust
-pub unsafe fn cherry_usb_host<'a, 'b>(
-    scope: &'a Scope<'a, 'b>,
-    channel_buffer_size: usize,
-) -> (HostSender<DEFAULT_PACKET_SIZE>, HostReceiver<DEFAULT_PACKET_SIZE>)
-```
-Initializes USB host for standard host protocol communication.
+#### `CdcAcmHost<STATE>`
 
-#### `cherry_usb_host_for_plugin`
-```rust
-pub unsafe fn cherry_usb_host_for_plugin<'a, 'b>(
-    scope: &'a Scope<'a, 'b>,
-    channel_buffer_size: usize,
-) -> (PluginSender<DEFAULT_PACKET_SIZE>, PluginReceiver<DEFAULT_PACKET_SIZE>)
-```
-Initializes USB host for plugin protocol communication.
+Main USB host implementation for standard host communication.
+
+**Methods:**
+- `new()` - Creates a new host in PREINIT state
+- `init(busid, reg_base)` - Initializes the USB host controller
+- `sleep(duration)` - Utility method for delays
+- `processors(scope, buffer_size, throttle_info)` - Creates communication channels
+
+#### `CdcAcmHostDevice<STATE>`
+
+USB host implementation for plugin protocol communication.
+
+**Methods:**
+- `new()` - Creates a new host device in PREINIT state
+- `init(busid, reg_base)` - Initializes the USB host controller
+- `sleep(duration)` - Utility method for delays
+- `processors(scope, buffer_size, throttle_info)` - Creates plugin communication channels
+
+#### State Types
+
+- `PREINIT` - Uninitialized state, allows calling `init()`
+- `POSTINIT` - Initialized state, allows calling `processors()`
 
 ### Callbacks
 
@@ -127,40 +179,73 @@ The module includes `sdkconfig.defaults` with required ESP-IDF configurations:
 
 The implementation ensures thread safety through:
 
-1. **RwLock Protection**: CDC device handle is protected by a read-write lock
-2. **Channel Isolation**: Send and receive operations use separate channels
-3. **Atomic Operations**: Device state changes are handled atomically
-4. **Safe Wrappers**: Raw pointers are wrapped in `Send`/`Sync` types
+1. **AtomicBool**: Initialization state tracking to prevent double initialization
+2. **Type-State Pattern**: Compile-time guarantees for proper initialization order
+3. **Channel Isolation**: Send and receive operations use separate channels
+4. **Atomic Operations**: Device state changes are handled atomically
+5. **Safe Wrappers**: Raw pointers are wrapped in `Send`/`Sync` types
+6. **RwLock Protection**: CDC device handle is protected by a read-write lock (in processors module)
 
 ## Error Handling
 
-The library handles various error conditions:
+The library provides simple but effective error handling:
 
-- **Device Not Connected**: Operations wait for device connection
-- **Buffer Full**: Warns when receive buffer is full
-- **Transfer Errors**: Logs USB transfer failures
-- **Disconnection**: Gracefully handles device removal
+### Initialization Errors
+- **Double Initialization**: Prevented by `AtomicBool` state tracking
+- **USB Controller Failure**: Returns `Err(())` if host controller initialization fails
+- **Type Safety**: State machine prevents calling methods in wrong initialization state
+
+### Runtime Errors
+- **Device Not Connected**: Operations wait for device connection (handled in processors)
+- **Buffer Full**: Channel operations handle backpressure automatically
+- **Transfer Errors**: Logged by the underlying processor threads
+- **Disconnection**: Gracefully handled by CDC driver callbacks
+
+### Error Types
+- Simple `Result<T, ()>` for most operations
+- Detailed error logging through the `log` crate
+- Automatic recovery for transient USB errors
 
 ## Performance Considerations
 
+### USB Transfer Optimizations
+
 - **Polling Interval**: 10ms sleep when no device is connected
 - **Timeout**: Infinite timeout for USB transfers (u32::MAX)
-- **Buffer Size**: Configurable channel buffer size
-- **Zero-Copy**: Direct buffer transfers to minimize overhead
+- **Buffer Size**: Configurable channel buffer size for backpressure management
+- **Zero-Copy**: Direct buffer transfers to minimize memory overhead
+- **Fixed Packet Size**: Uses `DEFAULT_PACKET_SIZE` for predictable performance
+
+### Threading Performance
+
+- **Separate Send/Receive Threads**: Independent processing of USB I/O operations
+- **Non-blocking Operations**: Uses `try_recv()` and `try_send()` to avoid blocking
+- **Channel-based Communication**: Efficient inter-thread communication
+- **Throttling Support**: Built-in throttling parameters (though not actively used in host mode)
 
 ## Dependencies
 
 ### Rust Crates
 
-- `esp-idf-sys`: ESP-IDF system bindings
-- `heapless`: Fixed-size collections (internal use)
-- `log`: Logging framework
-- `protocol`: Communication protocol definitions (uses `alloc` for Protocol Buffer types)
+- **`esp-idf-sys`**: ESP-IDF system bindings with CherryUSB host support
+- **`heapless`**: Fixed-size collections for internal buffers
+- **`log`**: Logging framework for debugging and monitoring
+- **`protocol`**: Communication protocol definitions
+  - Uses `alloc::Vec` and `alloc::String` for Protocol Buffer compatibility
+  - Defines `DEFAULT_PACKET_SIZE` and processor traits
+  - Provides `HostSender`/`HostReceiver` and `PluginSender`/`PluginReceiver` types
 
 ### C Components
 
-- CherryUSB: USB host stack implementation
-- ESP-IDF: USB OTG driver and HAL
+- **CherryUSB**: Full-featured USB host stack implementation
+  - CDC-ACM host class driver
+  - Device enumeration and management
+  - Bulk transfer support for high-speed data
+  - Event handling for connect/disconnect
+- **ESP-IDF**: Espressif IoT Development Framework
+  - USB OTG peripheral drivers
+  - DMA support for efficient transfers
+  - Interrupt handling and power management
 
 ## Building
 
@@ -186,10 +271,21 @@ Common debug points:
 
 ## Limitations
 
+### Hardware Limitations
 - Only supports one CDC device at a time
-- Requires ESP32 variants with USB OTG support (S2, S3, C3)
-- Fixed packet size determined at compile time
+- Requires ESP32 variants with USB OTG support (S2, S3, C3, C6)
+- Fixed register base address (0x60080000 for ESP32-S3)
+
+### Software Limitations
+- Fixed packet size determined by `DEFAULT_PACKET_SIZE` at compile time
 - No dynamic device configuration
+- Single bus ID support (typically bus 0)
+- Simple error handling with unit type `()` errors
+
+### Protocol Limitations
+- Separate types for host vs plugin protocols (not interchangeable)
+- No runtime protocol switching
+- Fixed channel buffer sizes (set at initialization)
 
 ## References
 
