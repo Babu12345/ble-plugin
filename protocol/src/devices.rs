@@ -34,7 +34,7 @@ pub mod plugin {
     >
     {
         /// Handles the generation of the processors for receiving and sending data
-        fn processors<'ch, 'b>(
+        async fn processors<'ch>(
             self,
             channel_buffer_size: usize,
         ) -> Result<
@@ -43,7 +43,9 @@ pub mod plugin {
                 AsyncPluginReceiver<'ch, R, BUFFER_SIZE, CH_SIZE>,
             ),
             ERROR,
-        >;
+        >
+        where
+            R: 'ch;
     }
 }
 
@@ -76,7 +78,7 @@ pub mod host {
     pub trait AsyncHostProcessor<const CH_SIZE: usize, const BUFFER_SIZE: usize, R: RawMutex, ERROR>
     {
         /// Handles the generation of the processors for receiving and sending data
-        fn processors<'ch, 'b>(
+        async fn processors<'ch>(
             self,
             channel_buffer_size: usize,
         ) -> Result<
@@ -85,6 +87,8 @@ pub mod host {
                 AsyncHostReceiver<'ch, R, BUFFER_SIZE, CH_SIZE>,
             ),
             ERROR,
-        >;
+        >
+        where
+            R: 'ch;
     }
 }
