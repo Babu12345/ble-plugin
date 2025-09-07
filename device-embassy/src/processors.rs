@@ -90,7 +90,7 @@ impl<'a, const CH_SIZE: usize>
         Receiver<'ch, CriticalSectionRawMutex, [u8; BUFFER_SIZE], CH_SIZE>,
     );
 
-    async fn processors<'ch>(
+    fn processors<'ch>(
         mut self,
         to: Self::T<'ch>,
         from: Self::T<'ch>,

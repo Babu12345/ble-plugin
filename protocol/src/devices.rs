@@ -40,7 +40,7 @@ pub mod plugin {
             R: 'ch;
 
         /// Handles the generation of the processors for receiving and sending data
-        async fn processors<'ch>(
+        fn processors<'ch>(
             self,
             to: Self::T<'ch>,
             from: Self::T<'ch>,
@@ -92,7 +92,7 @@ pub mod host {
             R: 'ch;
         // type T<'ch, A, B, const C: usize>;
         /// Handles the generation of the processors for receiving and sending data
-        async fn processors<'ch>(
+        fn processors<'ch>(
             self,
             to: Self::T<'ch>,
             from: Self::T<'ch>,
