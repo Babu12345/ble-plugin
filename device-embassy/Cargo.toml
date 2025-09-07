@@ -32,3 +32,4 @@ embassy-sync = { version = "0.6.1", default-features = false }
 default = ["esp32s3"]
 esp32s3 = ["esp-hal/esp32s3"]
 esp32s2 = ["esp-hal/esp32s2"]
+esp32c3 = ["esp-hal/esp32c3"]
