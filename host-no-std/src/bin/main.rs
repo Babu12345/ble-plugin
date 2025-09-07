@@ -18,7 +18,7 @@ use protocol::devices::host::AsyncHostProcessor;
 async fn main(_spawner: Spawner) {
     let peripherals = esp_hal::init(esp_hal::Config::default().with_cpu_clock(CpuClock::max()));
 
-    esp_alloc::heap_allocator!(72 * 1024);
+    esp_alloc::heap_allocator!(size: 72 * 1024);
 
     initalize_logger().ok();
 
@@ -45,8 +45,12 @@ async fn main(_spawner: Spawner) {
     let to = Channel::new();
     let from = Channel::new();
 
-    let processors = device_host.processors(
-        (to.sender(), to.receiver()),
-        (from.sender(), from.receiver()),
-    );
+    let (processor_fn, _sender, _receiver) = device_host
+        .processors(
+            (to.sender(), to.receiver()),
+            (from.sender(), from.receiver()),
+        )
+        .unwrap();
+
+    processor_fn.await;
 }

@@ -159,10 +159,11 @@ compile_selected_crates() {
     # Additional crates to check for compilation only
     local compile_crates=(
         "host-std"
-        "plugin-echo-example"
+        "host-no-std"
+        "plugin-std"
         "plugin-no-std"
         "plugin-host-std"
-        "plugin-std"
+        "plugin-echo-example"
     )
     
     local failed_crates=()

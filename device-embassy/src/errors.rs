@@ -1,6 +1,7 @@
 //! Error and result types for the crate
 
 /// Error types
+#[derive(Debug)]
 pub enum Error {}
 
 /// Result type
