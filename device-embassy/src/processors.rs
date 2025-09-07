@@ -2,9 +2,11 @@
 
 use core::{future::Future, marker::PhantomData};
 
-use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
+    channel::Channel,
+};
 use esp_hal::otg_fs::asynch::Driver;
-use lib_utils::mk_static;
 use protocol::{
     devices::host::AsyncHostProcessor,
     host::{AsyncHostReceiver, AsyncHostSender},
@@ -18,6 +20,8 @@ use embassy_usb::{
     Builder, UsbDevice,
 };
 use esp_hal::otg_fs::{asynch::Config, Usb};
+
+const BUFFER_SIZE: u16 = 64;
 
 /// Cdc acm device that implements a AsyncHostProcessor. Pre init.
 pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize> {
@@ -75,17 +79,36 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
     }
 }
 
-impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
-    AsyncHostProcessor<CH_SIZE, BUFFER_SIZE, NoopRawMutex, crate::errors::Error>
-    for CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE>
-{
-    async fn processors<'ch>(
-        self,
-        channel_buffer_size: usize,
-    ) -> Result<(
-        protocol::host::AsyncHostSender<'ch, NoopRawMutex, BUFFER_SIZE, CH_SIZE>,
-        protocol::host::AsyncHostReceiver<'ch, NoopRawMutex, BUFFER_SIZE, CH_SIZE>,
-    )> {
-        todo!()
-    }
-}
+// impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
+//     AsyncHostProcessor<CH_SIZE, BUFFER_SIZE, CriticalSectionRawMutex, crate::errors::Error>
+//     for CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE>
+// {
+//     async fn processors<'ch>(
+//         mut self,
+//     ) -> Result<(
+//         protocol::host::AsyncHostSender<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
+//         protocol::host::AsyncHostReceiver<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
+//     )> {
+//         let sender =
+//             Channel::<CriticalSectionRawMutex, [u8; BUFFER_SIZE], channel_buffer_size>::new();
+//         let usb_future = self.usb_device.run();
+
+//         let sender = async {
+//             loop {
+//                 self.class.wait_connection().await;
+//                 let mut buf = [0; 64];
+//                 loop {
+
+//                     // match self.class.read_packet(&mut buf).await {
+//                     //     Ok(_) => {}
+//                     //     Err(_) => {}
+//                     // }
+//                 }
+//             }
+//         };
+
+//         join3(usb_future, sender, async {}).await;
+
+//         todo!()
+//     }
+// }

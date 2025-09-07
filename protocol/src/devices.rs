@@ -36,7 +36,6 @@ pub mod plugin {
         /// Handles the generation of the processors for receiving and sending data
         async fn processors<'ch>(
             self,
-            channel_buffer_size: usize,
         ) -> Result<
             (
                 AsyncPluginSender<'ch, R, BUFFER_SIZE, CH_SIZE>,
@@ -80,7 +79,6 @@ pub mod host {
         /// Handles the generation of the processors for receiving and sending data
         async fn processors<'ch>(
             self,
-            channel_buffer_size: usize,
         ) -> Result<
             (
                 AsyncHostSender<'ch, R, BUFFER_SIZE, CH_SIZE>,

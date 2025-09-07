@@ -1158,7 +1158,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 [[package]]
 name = "lib_utils"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#5a8345b608df28791c612ae37b519874c9a0d842"
+source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#8aab98206e977fe0796c212e082767298cd7cd45"
 
 [[package]]
 name = "libc"
@@ -1336,7 +1336,7 @@ dependencies = [
 [[package]]
 name = "protocol"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#5a8345b608df28791c612ae37b519874c9a0d842"
+source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#8aab98206e977fe0796c212e082767298cd7cd45"
 dependencies = [
  "embassy-sync",
  "heapless",
@@ -1351,7 +1351,7 @@ dependencies = [
 [[package]]
 name = "protocol_io"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#5a8345b608df28791c612ae37b519874c9a0d842"
+source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#8aab98206e977fe0796c212e082767298cd7cd45"
 dependencies = [
  "proc-macro2",
  "quote",
