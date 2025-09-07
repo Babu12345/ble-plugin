@@ -19,60 +19,111 @@ Device-Cherry implements a USB device that appears as a virtual serial port when
 
 ### Components
 
-1. **CdcAcmDevice**: Main device struct with state machine pattern
-2. **AlignedBuffer**: Memory-aligned buffer for USB DMA operations
-3. **Error Types**: Comprehensive error handling
-4. **USB Descriptors**: Device, configuration, and CDC-ACM descriptors
-5. **Event Handlers**: USB event processing (connect, disconnect, suspend, resume)
+1. **CdcAcmDevice**: Main device struct implementing `PluginProcessor` for plugin communication
+2. **CdcAcmDeviceHost**: Device struct implementing `HostProcessor` for host communication
+3. **AlignedBuffer**: Memory-aligned buffer for USB DMA operations
+4. **Error Types**: Comprehensive error handling
+5. **USB Descriptors**: Device, configuration, and CDC-ACM descriptors
+6. **Event Handlers**: USB event processing (connect, disconnect, suspend, resume)
 
 ### State Machine
 
-The device uses a type-state pattern to ensure proper initialization:
+Both device types use a type-state pattern to ensure proper initialization:
 
 ```rust
+// Plugin device
 CdcAcmDevice<PREINIT> -> init() -> CdcAcmDevice<POSTINIT>
+
+// Host device
+CdcAcmDeviceHost<PREINIT> -> init() -> CdcAcmDeviceHost<POSTINIT>
 ```
 
 ## Usage
 
-### Basic Example
+### Plugin Device Example
 
 ```rust
-use device_cherry::{CdcAcmDevice, Result};
+use device_cherry::processors::{CdcAcmDevice, PREINIT};
+use protocol::devices::plugin::PluginProcessor;
 use std::time::Duration;
 
 fn main() -> Result<()> {
-    // Create new device in PREINIT state
-    let device = CdcAcmDevice::new();
+    // Create new plugin device in PREINIT state
+    let device = CdcAcmDevice::<PREINIT>::new();
     
     // Initialize with bus ID and register base
     let device = device.init(0, 0x60080000)?;
     
-    // Create channels for communication
-    let (tx_send, tx_recv) = std::sync::mpsc::sync_channel(10);
-    let (rx_send, rx_recv) = std::sync::mpsc::channel();
-    
-    // Start device processors
+    // Start device processors with throttling
     std::thread::scope(|scope| {
-        device.processors(scope, tx_recv, rx_send)?;
+        let throttle_info = (Duration::from_millis(10), 1000);
+        let (plugin_sender, plugin_receiver) = device.processors(
+            scope, 
+            100, // channel buffer size
+            throttle_info
+        )?;
+        
+        // Use plugin_sender and plugin_receiver for communication
         Ok(())
     })
 }
 ```
 
-### Sending Data
+### Host Device Example
 
 ```rust
-// Send data through the tx channel
-tx_send.send(vec![0x01, 0x02, 0x03])?;
+use device_cherry::processors::{CdcAcmDeviceHost, PREINIT};
+use protocol::devices::host::HostProcessor;
+use std::time::Duration;
+
+fn main() -> Result<()> {
+    // Create new host device in PREINIT state
+    let device_host = CdcAcmDeviceHost::<PREINIT>::new();
+    
+    // Initialize with bus ID and register base
+    let device_host = device_host.init(0, 0x60080000)?;
+    
+    // Start host processors with throttling
+    std::thread::scope(|scope| {
+        let throttle_info = (Duration::from_millis(10), 1000);
+        let (host_sender, host_receiver) = device_host.processors(
+            scope,
+            100, // channel buffer size
+            throttle_info
+        )?;
+        
+        // Use host_sender and host_receiver for communication
+        Ok(())
+    })
+}
+```
 ```
 
-### Receiving Data
+### Device Communication
+
+#### Plugin Device Communication
 
 ```rust
-// Receive data from the rx channel
-if let Ok(data) = rx_recv.try_recv() {
-    println!("Received: {:?}", data);
+// Sending data from plugin to host
+let data = [0x01, 0x02, 0x03, 0x00]; // Must match DEFAULT_PACKET_SIZE
+plugin_sender.send(data)?;
+
+// Receiving data from host
+if let Ok(data) = plugin_receiver.try_recv() {
+    println!("Plugin received: {:?}", data);
+}
+```
+
+#### Host Device Communication
+
+```rust
+// Sending data from host to plugin
+let data = [0x04, 0x05, 0x06, 0x00]; // Must match DEFAULT_PACKET_SIZE
+host_sender.send(data)?;
+
+// Receiving data from plugin
+if let Ok(data) = host_receiver.try_recv() {
+    println!("Host received: {:?}", data);
 }
 ```
 
@@ -109,8 +160,14 @@ The module includes `sdkconfig.defaults` for proper ESP-IDF configuration. Key s
 
 ### C Components
 
-- CherryUSB: USB device stack implementation
-- ESP-IDF: Espressif IoT Development Framework
+- **CherryUSB**: Full-featured USB device stack implementation
+  - CDC-ACM class support
+  - High-speed USB 2.0 operations
+  - Multiple endpoint management
+- **ESP-IDF**: Espressif IoT Development Framework
+  - USB peripheral drivers
+  - DMA support
+  - Interrupt handling
 
 ## Error Handling
 
@@ -123,18 +180,33 @@ The library provides comprehensive error types:
 
 ## Thread Safety
 
-The implementation uses:
-- `AtomicBool` for initialization state
-- `Signal` for async event notification
-- `LazyLock` for static initialization
-- Critical sections for interrupt safety
+The implementation uses multiple thread-safety mechanisms:
+
+- **`AtomicBool`**: For device initialization state tracking
+- **`AtomicUsize`**: For active buffer index management in double buffering
+- **`Signal`**: Embassy-based async event notification for USB data
+- **`LazyLock`**: Thread-safe lazy initialization of USB descriptors
+- **Critical sections**: For interrupt-safe operations
+- **Channel-based communication**: Thread-safe message passing between USB and application layers
+- **Atomic ordering**: Uses `Acquire`/`Release` ordering for proper memory synchronization
 
 ## Performance Considerations
 
-- Uses DMA-aligned buffers for efficient transfers
-- Default packet size: Configured via `DEFAULT_PACKET_SIZE`
-- Non-blocking async operations minimize CPU usage
-- Zero-copy data paths where possible
+### High-Speed Optimizations
+
+- **Double Buffering**: Uses two alternating buffers (`READ_BUFFER_A` and `READ_BUFFER_B`) for continuous USB data flow
+- **DMA-Aligned Buffers**: All buffers are properly aligned for efficient DMA transfers
+- **Aggressive Retry Logic**: Up to 20 retries with microsecond delays for USB endpoint operations
+- **Throttling Support**: Built-in rate limiting to prevent overwhelming the communication channels
+- **Zero-Copy Operations**: Minimizes memory copies in the data path
+- **Atomic Buffer Switching**: Race-free buffer management using atomic operations
+
+### Throughput Features
+
+- **Immediate USB Read Restart**: Minimizes gaps between USB transfers for continuous communication
+- **Non-blocking Channel Operations**: Uses `try_send` to avoid blocking on full channels
+- **Burst Handling**: Optimized for high-speed data bursts with sliding window drop rate tracking
+- **Default packet size**: Fixed at `DEFAULT_PACKET_SIZE` (typically 64 bytes) for predictable performance
 
 ## Building
 
