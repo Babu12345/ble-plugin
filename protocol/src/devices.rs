@@ -2,6 +2,7 @@
 
 /// Plugin device communication
 pub mod plugin {
+    use core::future::Future;
     #[cfg(feature = "std")]
     use core::time::Duration;
     #[cfg(feature = "std")]
@@ -33,11 +34,19 @@ pub mod plugin {
         ERROR,
     >
     {
+        /// To and from definitions
+        type T<'ch>
+        where
+            R: 'ch;
+
         /// Handles the generation of the processors for receiving and sending data
         async fn processors<'ch>(
             self,
+            to: Self::T<'ch>,
+            from: Self::T<'ch>,
         ) -> Result<
             (
+                impl Future<Output = ()>,
                 AsyncPluginSender<'ch, R, BUFFER_SIZE, CH_SIZE>,
                 AsyncPluginReceiver<'ch, R, BUFFER_SIZE, CH_SIZE>,
             ),
@@ -50,6 +59,7 @@ pub mod plugin {
 
 /// Host device communication
 pub mod host {
+    use core::future::Future;
     #[cfg(feature = "std")]
     use core::time::Duration;
     #[cfg(feature = "std")]
@@ -76,11 +86,19 @@ pub mod host {
     /// Async host processor
     pub trait AsyncHostProcessor<const CH_SIZE: usize, const BUFFER_SIZE: usize, R: RawMutex, ERROR>
     {
+        /// To and from definitions
+        type T<'ch>
+        where
+            R: 'ch;
+        // type T<'ch, A, B, const C: usize>;
         /// Handles the generation of the processors for receiving and sending data
         async fn processors<'ch>(
             self,
+            to: Self::T<'ch>,
+            from: Self::T<'ch>,
         ) -> Result<
             (
+                impl Future<Output = ()>,
                 AsyncHostSender<'ch, R, BUFFER_SIZE, CH_SIZE>,
                 AsyncHostReceiver<'ch, R, BUFFER_SIZE, CH_SIZE>,
             ),

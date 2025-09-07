@@ -1,18 +1,20 @@
 //! Processor crate
 
-use core::{future::Future, marker::PhantomData};
+use core::future::Future;
 
 use embassy_sync::{
-    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
-    channel::Channel,
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    channel::{Receiver, Sender},
+    mutex::Mutex,
 };
+use embassy_time::{Duration, WithTimeout};
 use esp_hal::otg_fs::asynch::Driver;
 use protocol::{
     devices::host::AsyncHostProcessor,
     host::{AsyncHostReceiver, AsyncHostSender},
 };
 
-use crate::errors::{Error, Result};
+use crate::errors::Result;
 use embassy_futures::join::join3;
 use embassy_usb::{
     class::cdc_acm::{CdcAcmClass, State},
@@ -21,7 +23,7 @@ use embassy_usb::{
 };
 use esp_hal::otg_fs::{asynch::Config, Usb};
 
-const BUFFER_SIZE: u16 = 64;
+const BUFFER_SIZE: usize = 64;
 
 /// Cdc acm device that implements a AsyncHostProcessor. Pre init.
 pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize> {
@@ -70,7 +72,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
         );
 
         // Create classes on the builder.
-        let class = CdcAcmClass::new(&mut builder, state, 64);
+        let class = CdcAcmClass::new(&mut builder, state, BUFFER_SIZE as u16);
 
         // Build the builder.
         let usb_device = builder.build();
@@ -79,36 +81,98 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
     }
 }
 
-// impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
-//     AsyncHostProcessor<CH_SIZE, BUFFER_SIZE, CriticalSectionRawMutex, crate::errors::Error>
-//     for CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE>
-// {
-//     async fn processors<'ch>(
-//         mut self,
-//     ) -> Result<(
-//         protocol::host::AsyncHostSender<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
-//         protocol::host::AsyncHostReceiver<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
-//     )> {
-//         let sender =
-//             Channel::<CriticalSectionRawMutex, [u8; BUFFER_SIZE], channel_buffer_size>::new();
-//         let usb_future = self.usb_device.run();
+impl<'a, const CH_SIZE: usize>
+    AsyncHostProcessor<CH_SIZE, BUFFER_SIZE, CriticalSectionRawMutex, crate::errors::Error>
+    for CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE>
+{
+    type T<'ch> = (
+        Sender<'ch, CriticalSectionRawMutex, [u8; BUFFER_SIZE], CH_SIZE>,
+        Receiver<'ch, CriticalSectionRawMutex, [u8; BUFFER_SIZE], CH_SIZE>,
+    );
 
-//         let sender = async {
-//             loop {
-//                 self.class.wait_connection().await;
-//                 let mut buf = [0; 64];
-//                 loop {
+    async fn processors<'ch>(
+        mut self,
+        to: Self::T<'ch>,
+        from: Self::T<'ch>,
+    ) -> Result<(
+        impl Future<Output = ()>,
+        AsyncHostSender<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
+        AsyncHostReceiver<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
+    )>
+    where
+        CriticalSectionRawMutex: 'ch,
+    {
+        let class_mutex: Mutex<CriticalSectionRawMutex, CdcAcmClass<'a, Driver<'a>>> =
+            Mutex::new(self.class);
 
-//                     // match self.class.read_packet(&mut buf).await {
-//                     //     Ok(_) => {}
-//                     //     Err(_) => {}
-//                     // }
-//                 }
-//             }
-//         };
+        let processor_runner = async move {
+            let usb_runner = self.usb_device.run();
 
-//         join3(usb_future, sender, async {}).await;
+            let to_usb_fn = async {
+                'conn: loop {
+                    {
+                        let mut class = class_mutex.lock().await;
+                        class.wait_connection().await;
+                    }
+                    'process: loop {
+                        let data = to.1.receive().await;
+                        let mut class = class_mutex.lock().await;
+                        match class.write_packet(&data).await {
+                            Ok(_) => {}
+                            Err(e) => match e {
+                                EndpointError::BufferOverflow => continue 'process,
+                                EndpointError::Disabled => {
+                                    log::warn!("USB Disconnected. Retrying");
+                                    continue 'conn;
+                                }
+                            },
+                        }
+                    }
+                }
+            };
 
-//         todo!()
-//     }
-// }
+            let from_usb_fn = async {
+                'conn: loop {
+                    {
+                        let mut class = class_mutex.lock().await;
+                        class.wait_connection().await;
+                    }
+                    let mut buf = [0; BUFFER_SIZE];
+                    'process: loop {
+                        let mut class = class_mutex.lock().await;
+                        match class
+                            .read_packet(&mut buf)
+                            .with_timeout(Duration::from_millis(1))
+                            .await
+                        {
+                            Ok(res) => match res {
+                                Ok(_) => {}
+                                Err(e) => match e {
+                                    EndpointError::BufferOverflow => continue 'process,
+                                    EndpointError::Disabled => {
+                                        log::warn!("USB Disconnected. Retrying");
+                                        continue 'conn;
+                                    }
+                                },
+                            },
+                            Err(e) => {
+                                log::error!("Timeout error: {:?}", e);
+                                continue 'process;
+                            }
+                        }
+
+                        from.0.send(buf).await;
+                    }
+                }
+            };
+
+            join3(usb_runner, to_usb_fn, from_usb_fn).await;
+        };
+
+        Ok((
+            processor_runner,
+            AsyncHostSender::new(to.0),
+            AsyncHostReceiver::new(from.1),
+        ))
+    }
+}

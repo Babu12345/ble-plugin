@@ -7,9 +7,13 @@ edition.workspace = true
 rust-version.workspace = true
 
 [target.'cfg(all(target_arch = "xtensa", target_os = "none"))'.dependencies]
-protocol = { git = "ssh://git@github.com/Babu12345/ble-plugin.git", default-features = false, features = [
+# protocol = { git = "ssh://git@github.com/Babu12345/ble-plugin.git", default-features = false, features = [
+#     "quick_protocol_buffer",
+# ] }
+protocol = { path = "../protocol", default-features = false, features = [
     "quick_protocol_buffer",
 ] }
+lib_utils = { path = "../lib_utils" }
 
 ## External crates
 esp-backtrace = { version = "0.15.1", features = [
