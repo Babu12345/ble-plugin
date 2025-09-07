@@ -241,18 +241,13 @@ dependencies = [
 name = "device-embassy"
 version = "0.0.1"
 dependencies = [
- "embassy-executor",
  "embassy-futures",
  "embassy-sync 0.6.2",
  "embassy-time",
  "embassy-usb",
- "esp-alloc 0.7.0",
  "esp-hal",
- "heapless",
- "lib_utils 0.1.0",
  "log",
  "protocol",
- "static_cell",
 ]
 
 [[package]]
@@ -583,19 +578,6 @@ name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
-
-[[package]]
-name = "esp-alloc"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a78132d362cbf62ce22a1466eb9e98424f6b2d1e476e7a3cb46ca9063c5833f7"
-dependencies = [
- "cfg-if",
- "critical-section",
- "document-features",
- "enumset",
- "linked_list_allocator",
-]
 
 [[package]]
 name = "esp-alloc"
@@ -1007,7 +989,7 @@ dependencies = [
  "embassy-usb",
  "embassy-usb-logger",
  "embedded-hal-async",
- "esp-alloc 0.8.0",
+ "esp-alloc",
  "esp-backtrace",
  "esp-hal",
  "esp-hal-embassy",
@@ -1070,10 +1052,6 @@ name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
-
-[[package]]
-name = "lib_utils"
-version = "0.1.0"
 
 [[package]]
 name = "lib_utils"
@@ -1229,7 +1207,7 @@ source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#7b82cfcce0e180f35d23
 dependencies = [
  "embassy-sync 0.6.2",
  "heapless",
- "lib_utils 0.1.0 (git+ssh://git@github.com/Babu12345/ble-plugin.git)",
+ "lib_utils",
  "log",
  "pb-rs",
  "protocol_io",

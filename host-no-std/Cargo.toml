@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 # Workspace crates
-device-embassy = { path = "../device-embassy", features = ["esp32s3"] }
+device-embassy = { path = "../device-embassy" }
 protocol = { git = "ssh://git@github.com/Babu12345/ble-plugin.git", default-features = false, features = [
     "quick_protocol_buffer",
 ] }
