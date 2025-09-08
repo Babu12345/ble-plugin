@@ -6,6 +6,7 @@ members = [
     "device-cherry",
     "host-cherry",
     "device-embassy",
+    "device-embassy-jtag",
 ]
 exclude = [
     "plugin-nvs",

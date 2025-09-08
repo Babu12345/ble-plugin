@@ -6,7 +6,7 @@ repository.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
-[target.'cfg(all(any(target_arch = "xtensa", target_arch = "riscv32"), target_os = "none"))'.dependencies]
+[target.'cfg(all(target_arch = "xtensa", target_os = "none"))'.dependencies]
 protocol = { git = "ssh://git@github.com/Babu12345/ble-plugin.git", default-features = false, features = [
     "quick_protocol_buffer",
 ] }
