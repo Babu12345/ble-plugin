@@ -881,7 +881,6 @@ dependencies = [
  "embassy-time",
  "embassy-usb",
  "embassy-usb-logger",
- "embedded-hal-async",
  "esp-alloc",
  "esp-backtrace",
  "esp-hal",
