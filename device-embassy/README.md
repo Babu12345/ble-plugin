@@ -174,14 +174,7 @@ type Device = CdcAcmDeviceHost<CHANNEL_SIZE, BUFFER_SIZE>;
 
 ### ESP32 Variant Support
 
-The crate supports ESP32 variants with USB OTG capabilities:
-
-```toml
-[features]
-default = ["esp32s3"]
-esp32s3 = ["esp-hal/esp32s3"]
-esp32s2 = ["esp-hal/esp32s2"]
-```
+The crate supports ESP32 variants with USB OTG capabilities. Ex. esp32s2, esp32s3, etc.
 
 ## API Reference
 
@@ -358,7 +351,7 @@ This crate is designed for bare-metal ESP32 projects. Add to your `Cargo.toml`:
 [dependencies]
 device-embassy = { path = "../device-embassy" }
 embassy-executor = { version = "0.7.0", features = ["task-arena-size-65536"] }
-esp-hal = { version = "1.0.0-beta.0", features = ["esp32s3", "unstable"] }
+esp-hal = { version = "0.23.0", features = ["esp32s3", "unstable"] }
 ```
 
 Build with the appropriate target:
