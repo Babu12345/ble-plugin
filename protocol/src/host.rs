@@ -39,10 +39,6 @@ mod common {
         /// for efficient command dispatch. It performs integrity checks including magic
         /// number validation and header size verification.
         ///
-        /// # Arguments
-        ///
-        /// * `data` - Raw USB data buffer containing message header and payload
-        ///
         /// # Returns
         ///
         /// * `Ok(MessageTypeId)` - Successfully extracted message type ID
