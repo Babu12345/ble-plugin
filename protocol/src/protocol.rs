@@ -298,6 +298,8 @@ pub struct PluginAuthenticationCompletedResponse {
 /// Note: Each message type is identified by its corresponding MessageTypeId enum value
 /// when serialized. The protocol uses the MessageTypeId in the message header to
 /// determine which specific message type to deserialize.
+/// @derive(strum::EnumIter)
+#[derive(strum::EnumIter)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum MessageTypeId {

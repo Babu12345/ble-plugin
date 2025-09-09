@@ -25,6 +25,7 @@ prost = { git = "https://github.com/Babu12345/prost", default-features = false, 
 ] }
 quick-protobuf = { version = "0.8", default-features = false, optional = true }
 heapless = { version = "0.8.0" }
+strum = { version = "0.27.2", default-features = false, features = ["derive"] }
 
 [build-dependencies]
 prost-build = { version = "0.14.1", optional = true }

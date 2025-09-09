@@ -17,6 +17,8 @@ pub use common::*;
 
 /// Common types and traits
 mod common {
+    use strum::IntoEnumIterator;
+
     use crate::{
         errors::Result, protocol::MessageTypeId, HostIO, MESSAGE_HEADER_SIZE, MESSAGE_MAGIC,
         MESSAGE_MAGIC_BYTES,
@@ -90,8 +92,14 @@ mod common {
 
             // Extract message type ID
             let type_id = data[MESSAGE_MAGIC_BYTES];
-            MessageTypeId::try_from(type_id as i32)
-                .map_err(|_| crate::errors::Error::InvalidMessageType)
+
+            let message_type_id = MessageTypeId::iter()
+                .find(|message_type_id| (*message_type_id as i32) == (type_id as i32));
+
+            match message_type_id {
+                Some(id) => Ok(id),
+                None => Err(crate::errors::Error::InvalidMessageType),
+            }
         }
     }
 }
@@ -575,5 +583,139 @@ mod tests {
                 .expect("Should decode service info");
             assert_eq!(service_info_msg, decoded_data2);
         });
+    }
+
+    #[test]
+    fn test_plugin_received_data_extract_message_type_id_valid() {
+        use super::*;
+        use crate::{protocol::MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
+
+        // Create a valid message header with PluginData type
+        let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
+
+        // Set magic number (little-endian)
+        buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
+        buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+
+        // Set message type ID
+        buffer[MESSAGE_MAGIC_BYTES] = MessageTypeId::TypePluginData as u8;
+
+        // Set length (little-endian) - some reasonable payload size
+        let payload_length = 20u16;
+        buffer[3] = (payload_length & 0xFF) as u8;
+        buffer[4] = ((payload_length >> 8) & 0xFF) as u8;
+
+        let received_data = PluginReceivedData::new(buffer);
+        let result = received_data.extract_message_type_id();
+
+        assert!(
+            result.is_ok(),
+            "Should extract message type ID successfully"
+        );
+        assert_eq!(result.unwrap(), MessageTypeId::TypePluginData);
+    }
+
+    #[test]
+    fn test_plugin_received_data_extract_message_type_id_invalid_magic() {
+        use super::*;
+        use crate::{protocol::MessageTypeId, MESSAGE_MAGIC_BYTES};
+
+        let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
+
+        // Set invalid magic number
+        buffer[0] = 0xFF;
+        buffer[1] = 0xFF;
+
+        // Set valid message type ID
+        buffer[MESSAGE_MAGIC_BYTES] = MessageTypeId::TypePluginData as u8;
+
+        let received_data = PluginReceivedData::new(buffer);
+        let result = received_data.extract_message_type_id();
+
+        assert!(result.is_err(), "Should fail with invalid magic number");
+        assert!(matches!(
+            result.unwrap_err(),
+            crate::errors::Error::InvalidMagicNumber
+        ));
+    }
+
+    #[test]
+    fn test_plugin_received_data_extract_message_type_id_invalid_length() {
+        use super::*;
+
+        // Create buffer smaller than header size
+        let small_buffer = [0u8; 3]; // Less than MESSAGE_HEADER_SIZE (5)
+        let received_data = PluginReceivedData::new(small_buffer);
+        let result = received_data.extract_message_type_id();
+
+        assert!(result.is_err(), "Should fail with insufficient data length");
+        assert!(matches!(
+            result.unwrap_err(),
+            crate::errors::Error::InvalidDataLengthForHeader
+        ));
+    }
+
+    #[test]
+    fn test_plugin_received_data_extract_message_type_id_invalid_type() {
+        use super::*;
+        use crate::{MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
+
+        let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
+
+        // Set valid magic number
+        buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
+        buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+
+        // Set invalid message type ID (0xFF is not defined in the enum)
+        buffer[MESSAGE_MAGIC_BYTES] = 0xFF;
+
+        let received_data = PluginReceivedData::new(buffer);
+        let result = received_data.extract_message_type_id();
+
+        assert!(result.is_err(), "Should fail with invalid message type ID");
+        assert!(matches!(
+            result.unwrap_err(),
+            crate::errors::Error::InvalidMessageType
+        ));
+    }
+
+    #[test]
+    fn test_plugin_received_data_extract_message_type_id_all_valid_types() {
+        use super::*;
+        use crate::{protocol::MessageTypeId, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES};
+
+        let test_cases = [
+            MessageTypeId::TypeHostCommandConfigurePeripheral,
+            MessageTypeId::TypeHostCommandConfigureService,
+            MessageTypeId::TypeHostCommandConfigureCharacteristic,
+            MessageTypeId::TypePluginData,
+            MessageTypeId::TypePluginConfigurationError,
+            MessageTypeId::TypePluginServiceInfoResponse,
+        ];
+
+        for &expected_type_id in &test_cases {
+            let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
+
+            // Set valid magic number
+            buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
+            buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+
+            // Set message type ID
+            buffer[MESSAGE_MAGIC_BYTES] = expected_type_id as u8;
+
+            // Set valid length
+            buffer[3] = 10; // 10-byte payload
+            buffer[4] = 0;
+
+            let received_data = PluginReceivedData::new(buffer);
+            let result = received_data.extract_message_type_id();
+
+            assert!(
+                result.is_ok(),
+                "Should extract {} successfully",
+                expected_type_id as u8
+            );
+            assert_eq!(result.unwrap(), expected_type_id);
+        }
     }
 }
