@@ -60,11 +60,11 @@
 //! ```text
 //! ┌─────────────┬─────────────┬─────────────┬─────────────────┐
 //! │   Magic     │   Type ID   │   Length    │     Payload     │
-//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │  (limited size) │
+//! │  (1 byte)   │  (2 bytes)  │  (2 bytes)  │  (limited size) │
 //! └─────────────┴─────────────┴─────────────┴─────────────────┘
 //! ```
 //!
-//! - **Magic Number**: 0xDEAD (little-endian) for message integrity validation
+//! - **Magic Number**: 0xDE for message integrity validation
 //! - **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
 //! - **Length**: Payload size in bytes (little-endian)
 //! - **Payload**: Protocol Buffer serialized message data (optionally with bincode support)
@@ -246,9 +246,9 @@ mod tests {
     #[test]
     fn test_message_header_constants() {
         // Test that header constants are correct
-        assert_eq!(MESSAGE_MAGIC, 0xDEAD, "Magic number should be 0xDEAD");
-        assert_eq!(MESSAGE_MAGIC_BYTES, 2, "Magic number should be 2 bytes");
-        assert_eq!(MESSAGE_TYPE_ID_BYTES, 1, "Message type ID should be 1 byte");
+        assert_eq!(MESSAGE_MAGIC, 0xDE, "Magic number should be 0xDE");
+        assert_eq!(MESSAGE_MAGIC_BYTES, 1, "Magic number should be 1 byte");
+        assert_eq!(MESSAGE_TYPE_ID_BYTES, 2, "Message type ID should be 2 bytes");
         assert_eq!(
             DATA_BYTES_LENGTH_IN_BYTES, 2,
             "Data length should be 2 bytes"
@@ -360,15 +360,15 @@ mod tests {
         let serialized: [u8; DEFAULT_PACKET_SIZE] =
             cmd.to_bytes().expect("Should serialize successfully");
 
-        // Verify magic number in first 2 bytes
-        let magic = u16::from_le_bytes([serialized[0], serialized[1]]);
+        // Verify magic number in first byte
+        let magic = serialized[0];
         assert_eq!(
             magic, MESSAGE_MAGIC,
             "Magic number should be present in header"
         );
 
-        // Verify message type ID in byte 2
-        let type_id = serialized[MESSAGE_MAGIC_BYTES];
+        // Verify message type ID in bytes 1-2
+        let type_id = u16::from_le_bytes([serialized[MESSAGE_MAGIC_BYTES], serialized[MESSAGE_MAGIC_BYTES + 1]]) as u8;
         assert_eq!(
             type_id,
             MessageTypeId::TypeHostCommandConfigurePeripheral as u8,
@@ -406,11 +406,11 @@ mod tests {
             response.to_bytes().expect("Should serialize successfully");
 
         // Verify magic number
-        let magic = u16::from_le_bytes([serialized[0], serialized[1]]);
+        let magic = serialized[0];
         assert_eq!(magic, MESSAGE_MAGIC, "Magic number should be present");
 
         // Verify message type ID
-        let type_id = serialized[MESSAGE_MAGIC_BYTES];
+        let type_id = u16::from_le_bytes([serialized[MESSAGE_MAGIC_BYTES], serialized[MESSAGE_MAGIC_BYTES + 1]]) as u8;
         assert_eq!(
             type_id,
             MessageTypeId::TypePluginServiceInfoResponse as u8,
@@ -430,10 +430,10 @@ mod tests {
             .expect("Should serialize");
 
         // Verify header structure before deserialization
-        let magic = u16::from_le_bytes([buffer[0], buffer[1]]);
+        let magic = buffer[0];
         assert_eq!(magic, MESSAGE_MAGIC);
 
-        let type_id = buffer[MESSAGE_MAGIC_BYTES];
+        let type_id = u16::from_le_bytes([buffer[MESSAGE_MAGIC_BYTES], buffer[MESSAGE_MAGIC_BYTES + 1]]) as u8;
         assert_eq!(type_id, MessageTypeId::TypeHostCommandGetServiceInfo as u8);
 
         // Deserialize and verify round-trip
@@ -468,7 +468,7 @@ mod tests {
     #[test]
     fn test_message_header_size_calculation() {
         // Verify that MESSAGE_HEADER_SIZE calculation is correct
-        let expected_size = 2 + 1 + 2; // magic + type_id + length
+        let expected_size = 1 + 2 + 2; // magic + type_id + length
         assert_eq!(MESSAGE_HEADER_SIZE, expected_size);
         assert_eq!(MESSAGE_HEADER_SIZE, 5);
     }
@@ -479,9 +479,10 @@ mod tests {
         let mut invalid_buffer = [0u8; DEFAULT_PACKET_SIZE];
 
         // Set correct magic and type ID
-        invalid_buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-        invalid_buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
-        invalid_buffer[2] = MessageTypeId::TypeHostCommandGetServiceInfo as u8;
+        invalid_buffer[0] = MESSAGE_MAGIC;
+        let type_id_bytes = (MessageTypeId::TypeHostCommandGetServiceInfo as u16).to_le_bytes();
+        invalid_buffer[1] = type_id_bytes[0];
+        invalid_buffer[2] = type_id_bytes[1];
 
         // Set impossibly large length (bigger than packet size)
         let invalid_length = DEFAULT_PACKET_SIZE + 100;
@@ -528,11 +529,11 @@ mod tests {
         let serialized: [u8; DEFAULT_PACKET_SIZE] = cmd.to_bytes().expect("Should serialize");
 
         // Verify magic number
-        let magic = u16::from_le_bytes([serialized[0], serialized[1]]);
+        let magic = serialized[0];
         assert_eq!(magic, MESSAGE_MAGIC);
 
         // Verify message type ID
-        let type_id = serialized[MESSAGE_MAGIC_BYTES];
+        let type_id = u16::from_le_bytes([serialized[MESSAGE_MAGIC_BYTES], serialized[MESSAGE_MAGIC_BYTES + 1]]) as u8;
         assert_eq!(
             type_id,
             MessageTypeId::TypeHostCommandConfigureProfile as u8

@@ -12,7 +12,7 @@
 //! ```text
 //! ┌─────────────┬─────────────┬─────────────┬─────────────────┐
 //! │   Magic     │   Type ID   │   Length    │     Payload     │
-//! │  (2 bytes)  │  (1 byte)   │  (2 bytes)  │  (limited size) │
+//! │  (1 byte)   │  (2 bytes)  │  (2 bytes)  │  (limited size) │
 //! └─────────────┴─────────────┴─────────────┴─────────────────┘
 //! ```
 //!
@@ -82,30 +82,27 @@ use quick_protobuf::{MessageRead, MessageWrite};
 use serde::{Deserialize, Serialize};
 /// Size in bytes of the message type identifier field
 ///
-/// Each message includes a single byte identifying its type, enabling
+/// Each message includes two bytes identifying its type, enabling
 /// efficient O(1) dispatch without trial-and-error deserialization.
-pub const MESSAGE_TYPE_ID_BYTES: usize = 1;
+pub const MESSAGE_TYPE_ID_BYTES: usize = 2;
 
-/// Magic number for message integrity validation (0xDEAD)
+/// Magic number for message integrity validation (0xDE)
 ///
 /// This constant magic number is included at the start of every message
-/// to validate message integrity and detect corruption. The value 0xDEAD
+/// to validate message integrity and detect corruption. The value 0xDE
 /// was chosen for easy identification in debugging and network analysis.
-///
-/// The magic number is transmitted in little-endian byte order for
-/// consistency across different architectures.
-pub const MESSAGE_MAGIC: u16 = 0xDEAD;
+pub const MESSAGE_MAGIC: u8 = 0xDE;
 
 /// Size in bytes of the magic number field
 ///
-/// The magic number occupies the first 2 bytes of every message header.
-pub const MESSAGE_MAGIC_BYTES: usize = 2;
+/// The magic number occupies the first byte of every message header.
+pub const MESSAGE_MAGIC_BYTES: usize = 1;
 
 /// Total message header size in bytes
 ///
 /// The header consists of:
-/// - Magic number: 2 bytes
-/// - Message type ID: 1 byte  
+/// - Magic number: 1 byte
+/// - Message type ID: 2 bytes  
 /// - Payload length: 2 bytes
 /// - **Total: 5 bytes**
 ///
@@ -408,11 +405,11 @@ pub trait IO<'a>: IOBase<'a> {
         // Create full message header: magic + type_id + length
         let mut payload_data: std::vec::Vec<u8> = std::vec::Vec::new();
 
-        // Add magic bytes (0xDEAD)
-        payload_data.extend_from_slice(&MESSAGE_MAGIC.to_le_bytes());
+        // Add magic byte (0xDE)
+        payload_data.push(MESSAGE_MAGIC);
 
-        // Add message type ID
-        payload_data.push(Self::message_type_id() as u8);
+        // Add message type ID (2 bytes)
+        payload_data.extend_from_slice(&(Self::message_type_id() as u16).to_le_bytes());
 
         // Add length bytes
         payload_data
@@ -435,11 +432,11 @@ pub trait IO<'a>: IOBase<'a> {
         // Create header: magic + type_id + length
         let mut header_bytes: heapless::Vec<u8, MESSAGE_HEADER_SIZE> = heapless::Vec::new();
 
-        // Add magic bytes (0xDEAD)
-        let _ = header_bytes.extend_from_slice(&MESSAGE_MAGIC.to_le_bytes());
+        // Add magic byte (0xDE)
+        let _ = header_bytes.push(MESSAGE_MAGIC);
 
-        // Add message type ID
-        let _ = header_bytes.push(Self::message_type_id() as u8);
+        // Add message type ID (2 bytes)
+        let _ = header_bytes.extend_from_slice(&(Self::message_type_id() as u16).to_le_bytes());
 
         // Add length bytes
         for x in 0..DATA_BYTES_LENGTH_IN_BYTES {

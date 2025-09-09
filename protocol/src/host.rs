@@ -57,8 +57,8 @@ mod common {
         /// # Message Header Format
         ///
         /// ```text
-        /// [0-1]: Magic number (0xDEAD, little-endian)
-        /// [2]:   Message type ID
+        /// [0]:   Magic number (0xDE)
+        /// [1-2]: Message type ID (little-endian)
         /// [3-4]: Payload length (little-endian)
         /// [5+]:  Payload data
         /// ```
@@ -70,13 +70,15 @@ mod common {
             }
 
             // Verify magic number
-            let magic = u16::from_le_bytes([data[0], data[1]]);
+            let magic = data[0];
             if magic != MESSAGE_MAGIC {
                 return Err(crate::errors::Error::InvalidMagicNumber);
             }
 
             // Extract message type ID
-            let type_id = data[MESSAGE_MAGIC_BYTES];
+            let type_id =
+                u16::from_le_bytes([data[MESSAGE_MAGIC_BYTES], data[MESSAGE_MAGIC_BYTES + 1]])
+                    as u8;
 
             let message_type_id = MessageTypeId::iter()
                 .find(|message_type_id| (*message_type_id as i32) == (type_id as i32));
@@ -552,12 +554,14 @@ mod tests {
         // Create a valid message header with PluginData type
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
 
-        // Set magic number (little-endian)
-        buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-        buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+        // Set magic number
+        buffer[0] = MESSAGE_MAGIC;
 
-        // Set message type ID
-        buffer[MESSAGE_MAGIC_BYTES] = MessageTypeId::TypeHostCommandConfigurePeripheral as u8;
+        // Set message type ID (2 bytes)
+        let type_id_bytes =
+            (MessageTypeId::TypeHostCommandConfigurePeripheral as u16).to_le_bytes();
+        buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+        buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
 
         // Set length (little-endian) - some reasonable payload size
         let payload_length = 25u16;
@@ -588,8 +592,11 @@ mod tests {
         buffer[0] = 0xBE;
         buffer[1] = 0xEF;
 
-        // Set valid message type ID
-        buffer[MESSAGE_MAGIC_BYTES] = MessageTypeId::TypeHostCommandConfigurePeripheral as u8;
+        // Set valid message type ID (2 bytes)
+        let type_id_bytes =
+            (MessageTypeId::TypeHostCommandConfigurePeripheral as u16).to_le_bytes();
+        buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+        buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
 
         let received_data = HostReceivedData::new(buffer);
         let result = received_data.extract_message_type_id();
@@ -625,11 +632,11 @@ mod tests {
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
 
         // Set valid magic number
-        buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-        buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+        buffer[0] = MESSAGE_MAGIC;
 
         // Set invalid message type ID (0xEE is not defined in the enum)
         buffer[MESSAGE_MAGIC_BYTES] = 0xEE;
+        buffer[MESSAGE_MAGIC_BYTES + 1] = 0xEE;
 
         let received_data = HostReceivedData::new(buffer);
         let result = received_data.extract_message_type_id();
@@ -660,11 +667,12 @@ mod tests {
             let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
 
             // Set valid magic number
-            buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-            buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+            buffer[0] = MESSAGE_MAGIC;
 
-            // Set message type ID
-            buffer[MESSAGE_MAGIC_BYTES] = expected_type_id as u8;
+            // Set message type ID (2 bytes)
+            let type_id_bytes = (expected_type_id as u16).to_le_bytes();
+            buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+            buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
 
             // Set valid length
             buffer[3] = 15; // 15-byte payload
@@ -691,9 +699,10 @@ mod tests {
 
         // Test with exact header size buffer
         let mut header_buffer = [0u8; MESSAGE_HEADER_SIZE];
-        header_buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-        header_buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
-        header_buffer[MESSAGE_MAGIC_BYTES] = MessageTypeId::TypePluginData as u8;
+        header_buffer[0] = MESSAGE_MAGIC;
+        let type_id_bytes = (MessageTypeId::TypePluginData as u16).to_le_bytes();
+        header_buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+        header_buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
         header_buffer[3] = 0; // Zero-length payload
         header_buffer[4] = 0;
 
@@ -705,10 +714,11 @@ mod tests {
 
         // Test with maximum valid payload length
         let mut max_buffer = [0u8; DEFAULT_PACKET_SIZE];
-        max_buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-        max_buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
-        max_buffer[MESSAGE_MAGIC_BYTES] =
-            MessageTypeId::TypeHostCommandNotifyCharacteristicValue as u8;
+        max_buffer[0] = MESSAGE_MAGIC;
+        let type_id_bytes =
+            (MessageTypeId::TypeHostCommandNotifyCharacteristicValue as u16).to_le_bytes();
+        max_buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+        max_buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
 
         let max_payload_length = DEFAULT_PACKET_SIZE - MESSAGE_HEADER_SIZE;
         max_buffer[3] = (max_payload_length & 0xFF) as u8;

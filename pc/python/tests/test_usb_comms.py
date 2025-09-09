@@ -30,12 +30,13 @@ def test_command_serialization_with_message_header() -> None:
     # Verify packet size is correct
     assert len(serialized) == DEFAULT_PACKET_SIZE, f"Expected packet size {DEFAULT_PACKET_SIZE}, got {len(serialized)}"
     
-    # Verify magic number (first 2 bytes)
-    magic = struct.unpack('<H', serialized[:MESSAGE_MAGIC_BYTES])[0]
-    assert magic == MESSAGE_MAGIC, f"Expected magic 0x{MESSAGE_MAGIC:04X}, got 0x{magic:04X}"
+    # Verify magic number (first byte)
+    magic = serialized[0]
+    assert magic == MESSAGE_MAGIC, f"Expected magic 0x{MESSAGE_MAGIC:02X}, got 0x{magic:02X}"
     
-    # Verify message type ID (byte 2)
-    type_id = serialized[MESSAGE_MAGIC_BYTES]
+    # Verify message type ID (bytes 1-2)
+    type_id_bytes = serialized[MESSAGE_MAGIC_BYTES:MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES]
+    type_id = struct.unpack('<H', type_id_bytes)[0]
     assert type_id == 0x01, f"Expected type ID 0x01 for HostCommandConfigurePeripheral, got 0x{type_id:02X}"
     
     # Verify data length (bytes 3-4)
@@ -57,11 +58,12 @@ def test_service_command_serialization() -> None:
     assert len(serialized_service) == DEFAULT_PACKET_SIZE, "Service command packet size incorrect"
     
     # Verify magic number
-    magic = struct.unpack('<H', serialized_service[:MESSAGE_MAGIC_BYTES])[0]
-    assert magic == MESSAGE_MAGIC, f"Expected magic 0x{MESSAGE_MAGIC:04X}, got 0x{magic:04X}"
+    magic = serialized_service[0]
+    assert magic == MESSAGE_MAGIC, f"Expected magic 0x{MESSAGE_MAGIC:02X}, got 0x{magic:02X}"
     
     # Verify message type ID for HostCommandGetServiceInfo
-    type_id = serialized_service[MESSAGE_MAGIC_BYTES]
+    type_id_bytes = serialized_service[MESSAGE_MAGIC_BYTES:MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES]
+    type_id = struct.unpack('<H', type_id_bytes)[0]
     assert type_id == 0x05, f"Expected type ID 0x05 for HostCommandGetServiceInfo, got 0x{type_id:02X}"
     
     # Verify data length
@@ -103,12 +105,13 @@ def test_message_header_protocol_roundtrip() -> None:
     # Verify message header format
     assert len(serialized) == DEFAULT_PACKET_SIZE, "Serialized packet should match default size"
     
-    # Verify magic number (first 2 bytes)
-    magic = struct.unpack('<H', serialized[:MESSAGE_MAGIC_BYTES])[0]
-    assert magic == MESSAGE_MAGIC, f"Expected magic 0x{MESSAGE_MAGIC:04X}, got 0x{magic:04X}"
+    # Verify magic number (first byte)
+    magic = serialized[0]
+    assert magic == MESSAGE_MAGIC, f"Expected magic 0x{MESSAGE_MAGIC:02X}, got 0x{magic:02X}"
     
-    # Verify message type ID (byte 2)
-    type_id = serialized[MESSAGE_MAGIC_BYTES]
+    # Verify message type ID (bytes 1-2)
+    type_id_bytes = serialized[MESSAGE_MAGIC_BYTES:MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES]
+    type_id = struct.unpack('<H', type_id_bytes)[0]
     assert type_id == 0x05, f"Expected type ID 0x05 for HostCommandGetServiceInfo, got 0x{type_id:02X}"
     
     # Verify data length (bytes 3-4)

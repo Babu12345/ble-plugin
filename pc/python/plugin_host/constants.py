@@ -7,15 +7,15 @@ and replaces the constants that were previously imported from generated_types.
 
 # ==================== USB PROTOCOL CONSTANTS ====================
 
-# Magic number for message integrity validation (0xDEAD)
-MESSAGE_MAGIC = 0xDEAD
+# Magic number for message integrity validation (0xDE)
+MESSAGE_MAGIC = 0xDE
 
 # Default USB packet size for communication
 DEFAULT_PACKET_SIZE = 64
 
 # Message header field sizes in bytes
-MESSAGE_MAGIC_BYTES = 2  # Size in bytes of the magic number field
-MESSAGE_TYPE_ID_BYTES = 1  # Size in bytes of the message type identifier field  
+MESSAGE_MAGIC_BYTES = 1  # Size in bytes of the magic number field
+MESSAGE_TYPE_ID_BYTES = 2  # Size in bytes of the message type identifier field  
 DATA_BYTES_LENGTH_IN_BYTES = 2  # Size in bytes of the payload length field
 
 # Total message header size

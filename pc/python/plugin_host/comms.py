@@ -277,7 +277,7 @@ def serialize_command(command: Any) -> bytes:
     """
     Serialize a protocol command object to bytes using protobuf with full message header
     
-    Format: [2-byte magic][1-byte type_id][2-byte length][serialized data][padding to DEFAULT_PACKET_SIZE]
+    Format: [1-byte magic][2-byte type_id][2-byte length][serialized data][padding to DEFAULT_PACKET_SIZE]
     
     Args:
         command: Protobuf command object
@@ -308,11 +308,11 @@ def serialize_command(command: Any) -> bytes:
         # Create message header
         header = bytearray()
         
-        # Add magic bytes (0xDEAD, little-endian)
-        header.extend(struct.pack('<H', MESSAGE_MAGIC))
+        # Add magic byte (0xDE)
+        header.append(MESSAGE_MAGIC)
         
-        # Add message type ID (ensure it's an integer)
-        header.append(int(message_type_id))
+        # Add message type ID (2-byte little-endian)
+        header.extend(struct.pack('<H', int(message_type_id)))
         
         # Add length (2-byte little-endian)
         header.extend(struct.pack('<H', data_length))
@@ -332,7 +332,7 @@ def deserialize_response(data: bytes, response_type: type = None) -> Any:
     """
     Deserialize bytes to a protocol response object using protobuf with full message header
     
-    Format: [2-byte magic][1-byte type_id][2-byte length][serialized data][padding]
+    Format: [1-byte magic][2-byte type_id][2-byte length][serialized data][padding]
     
     Args:
         data: Raw bytes received from USB
@@ -351,12 +351,13 @@ def deserialize_response(data: bytes, response_type: type = None) -> Any:
             raise USBCommunicationError(f"Data too short to contain message header: {len(data)} bytes")
         
         # Verify magic number
-        magic = struct.unpack('<H', data[:MESSAGE_MAGIC_BYTES])[0]
+        magic = data[0]
         if magic != MESSAGE_MAGIC:
-            raise USBCommunicationError(f"Invalid magic number: expected 0x{MESSAGE_MAGIC:04X}, got 0x{magic:04X}")
+            raise USBCommunicationError(f"Invalid magic number: expected 0x{MESSAGE_MAGIC:02X}, got 0x{magic:02X}")
         
-        # Extract message type ID
-        type_id_byte = data[MESSAGE_MAGIC_BYTES]
+        # Extract message type ID (2-byte little-endian)
+        type_id_bytes = data[MESSAGE_MAGIC_BYTES:MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES]
+        type_id_byte = struct.unpack('<H', type_id_bytes)[0]
         
         # Extract data length
         length_start = MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES

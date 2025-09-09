@@ -38,12 +38,12 @@ class TestProtobufSerialization:
         # Verify the result is exactly the packet size
         assert len(result) == DEFAULT_PACKET_SIZE
         
-        # Verify magic number (first 2 bytes, little-endian)
-        magic = struct.unpack('<H', result[:2])[0]
+        # Verify magic number (first byte)
+        magic = result[0]
         assert magic == MESSAGE_MAGIC
         
-        # Verify message type ID (3rd byte)
-        type_id = result[2]
+        # Verify message type ID (2nd and 3rd bytes, little-endian)
+        type_id = struct.unpack('<H', result[1:3])[0]
         expected_type_id = protocol_pb2.MessageTypeId.TypeHostCommandConfigurePeripheral
         assert type_id == expected_type_id
         
@@ -74,10 +74,11 @@ class TestProtobufSerialization:
         assert len(result) == DEFAULT_PACKET_SIZE
         
         # Verify magic and type ID
-        magic = struct.unpack('<H', result[:2])[0]
+        magic = result[0]
         assert magic == MESSAGE_MAGIC
         expected_type_id = protocol_pb2.MessageTypeId.TypeHostCommandGetServiceInfo
-        assert result[2] == expected_type_id
+        type_id = struct.unpack('<H', result[1:3])[0]
+        assert type_id == expected_type_id
         
         # Verify the data can be deserialized correctly
         length = struct.unpack('<H', result[3:5])[0]
@@ -146,8 +147,8 @@ class TestProtobufDeserialization:
         
         # Create complete message with header
         header = bytearray()
-        header.extend(struct.pack('<H', MESSAGE_MAGIC))
-        header.append(protocol_pb2.MessageTypeId.TypePluginData)
+        header.append(MESSAGE_MAGIC)
+        header.extend(struct.pack('<H', protocol_pb2.MessageTypeId.TypePluginData))
         header.extend(struct.pack('<H', len(protobuf_data)))
         
         complete_message = bytes(header) + protobuf_data
@@ -176,8 +177,8 @@ class TestProtobufDeserialization:
         
         # Create complete message with header
         header = bytearray()
-        header.extend(struct.pack('<H', MESSAGE_MAGIC))
-        header.append(protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse)
+        header.append(MESSAGE_MAGIC)
+        header.extend(struct.pack('<H', protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse))
         header.extend(struct.pack('<H', len(protobuf_data)))
         
         complete_message = bytes(header) + protobuf_data
@@ -198,8 +199,8 @@ class TestProtobufDeserialization:
         protobuf_data = response.SerializeToString()
         
         header = bytearray()
-        header.extend(struct.pack('<H', MESSAGE_MAGIC))
-        header.append(protocol_pb2.MessageTypeId.TypePluginConfigurationError)
+        header.append(MESSAGE_MAGIC)
+        header.extend(struct.pack('<H', protocol_pb2.MessageTypeId.TypePluginConfigurationError))
         header.extend(struct.pack('<H', len(protobuf_data)))
         
         complete_message = bytes(header) + protobuf_data
@@ -222,7 +223,7 @@ class TestProtobufDeserialization:
     def test_deserialize_unknown_message_type(self):
         """Test that unknown message type ID raises error"""
         # Create data with unknown message type
-        header = struct.pack('<H', MESSAGE_MAGIC) + b'\xFF' + struct.pack('<H', 5)
+        header = bytes([MESSAGE_MAGIC]) + struct.pack('<H', 0xFF) + struct.pack('<H', 5)
         data = header + b'hello' + b'\x00' * (DEFAULT_PACKET_SIZE - len(header) - 5)
         
         with pytest.raises(USBCommunicationError, match="No protobuf handler for message type ID"):
@@ -236,7 +237,7 @@ class TestProtobufDeserialization:
     def test_deserialize_insufficient_data(self):
         """Test that insufficient data for declared length raises error"""
         # Create header claiming 20 bytes but provide less (stay within packet size)
-        header = struct.pack('<H', MESSAGE_MAGIC) + bytes([protocol_pb2.MessageTypeId.TypePluginData]) + struct.pack('<H', 20)
+        header = bytes([MESSAGE_MAGIC]) + struct.pack('<H', protocol_pb2.MessageTypeId.TypePluginData) + struct.pack('<H', 20)
         data = header + b'short'  # Only 5 bytes when we claimed 20
         
         with pytest.raises(USBCommunicationError, match="Insufficient data"):
@@ -281,8 +282,8 @@ class TestProtobufRoundTrip:
         
         # Create complete message as device would send
         header = bytearray()
-        header.extend(struct.pack('<H', MESSAGE_MAGIC))
-        header.append(protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse)
+        header.append(MESSAGE_MAGIC)
+        header.extend(struct.pack('<H', protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse))
         header.extend(struct.pack('<H', len(protobuf_data)))
         
         complete_message = bytes(header) + protobuf_data
@@ -324,9 +325,10 @@ class TestProtobufIntegrationWithUSBFunctions:
         assert len(sent_data) == DEFAULT_PACKET_SIZE
         
         # Verify magic and type ID
-        magic = struct.unpack('<H', sent_data[:2])[0]
+        magic = sent_data[0]
         assert magic == MESSAGE_MAGIC
-        assert sent_data[2] == protocol_pb2.MessageTypeId.TypeHostCommandGetServiceInfo
+        type_id = struct.unpack('<H', sent_data[1:3])[0]
+        assert type_id == protocol_pb2.MessageTypeId.TypeHostCommandGetServiceInfo
     
     @patch('plugin_host.comms.USBDevice')
     def test_usb_receive_response_with_protobuf(self, mock_usb_device_class):
@@ -342,8 +344,8 @@ class TestProtobufIntegrationWithUSBFunctions:
         
         protobuf_data = response.SerializeToString()
         header = bytearray()
-        header.extend(struct.pack('<H', MESSAGE_MAGIC))
-        header.append(protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse)
+        header.append(MESSAGE_MAGIC)
+        header.extend(struct.pack('<H', protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse))
         header.extend(struct.pack('<H', len(protobuf_data)))
         
         complete_message = bytes(header) + protobuf_data

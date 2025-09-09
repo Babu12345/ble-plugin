@@ -85,13 +85,13 @@ mod common {
             }
 
             // Verify magic number
-            let magic = u16::from_le_bytes([data[0], data[1]]);
+            let magic = data[0];
             if magic != MESSAGE_MAGIC {
                 return Err(crate::errors::Error::InvalidMagicNumber);
             }
 
             // Extract message type ID
-            let type_id = data[MESSAGE_MAGIC_BYTES];
+            let type_id = u16::from_le_bytes([data[MESSAGE_MAGIC_BYTES], data[MESSAGE_MAGIC_BYTES + 1]]) as u8;
 
             let message_type_id = MessageTypeId::iter()
                 .find(|message_type_id| (*message_type_id as i32) == (type_id as i32));
@@ -593,12 +593,13 @@ mod tests {
         // Create a valid message header with PluginData type
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
 
-        // Set magic number (little-endian)
-        buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-        buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+        // Set magic number
+        buffer[0] = MESSAGE_MAGIC;
 
-        // Set message type ID
-        buffer[MESSAGE_MAGIC_BYTES] = MessageTypeId::TypePluginData as u8;
+        // Set message type ID (2 bytes)
+        let type_id_bytes = (MessageTypeId::TypePluginData as u16).to_le_bytes();
+        buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+        buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
 
         // Set length (little-endian) - some reasonable payload size
         let payload_length = 20u16;
@@ -626,8 +627,10 @@ mod tests {
         buffer[0] = 0xFF;
         buffer[1] = 0xFF;
 
-        // Set valid message type ID
-        buffer[MESSAGE_MAGIC_BYTES] = MessageTypeId::TypePluginData as u8;
+        // Set valid message type ID (2 bytes)
+        let type_id_bytes = (MessageTypeId::TypePluginData as u16).to_le_bytes();
+        buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+        buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
 
         let received_data = PluginReceivedData::new(buffer);
         let result = received_data.extract_message_type_id();
@@ -663,11 +666,11 @@ mod tests {
         let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
 
         // Set valid magic number
-        buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-        buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+        buffer[0] = MESSAGE_MAGIC;
 
         // Set invalid message type ID (0xFF is not defined in the enum)
         buffer[MESSAGE_MAGIC_BYTES] = 0xFF;
+        buffer[MESSAGE_MAGIC_BYTES + 1] = 0xFF;
 
         let received_data = PluginReceivedData::new(buffer);
         let result = received_data.extract_message_type_id();
@@ -697,11 +700,12 @@ mod tests {
             let mut buffer = [0u8; DEFAULT_PACKET_SIZE];
 
             // Set valid magic number
-            buffer[0] = (MESSAGE_MAGIC & 0xFF) as u8;
-            buffer[1] = ((MESSAGE_MAGIC >> 8) & 0xFF) as u8;
+            buffer[0] = MESSAGE_MAGIC;
 
-            // Set message type ID
-            buffer[MESSAGE_MAGIC_BYTES] = expected_type_id as u8;
+            // Set message type ID (2 bytes)
+            let type_id_bytes = (expected_type_id as u16).to_le_bytes();
+            buffer[MESSAGE_MAGIC_BYTES] = type_id_bytes[0];
+            buffer[MESSAGE_MAGIC_BYTES + 1] = type_id_bytes[1];
 
             // Set valid length
             buffer[3] = 10; // 10-byte payload
