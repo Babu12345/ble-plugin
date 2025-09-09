@@ -91,7 +91,8 @@ mod common {
             }
 
             // Extract message type ID
-            let type_id = u16::from_le_bytes([data[MESSAGE_MAGIC_BYTES], data[MESSAGE_MAGIC_BYTES + 1]]) as u8;
+            let type_id =
+                u16::from_le_bytes([data[MESSAGE_MAGIC_BYTES], data[MESSAGE_MAGIC_BYTES + 1]]);
 
             let message_type_id = MessageTypeId::iter()
                 .find(|message_type_id| (*message_type_id as i32) == (type_id as i32));
