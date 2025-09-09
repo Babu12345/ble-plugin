@@ -42,4 +42,10 @@ pub enum Error {
         /// Actual length
         got: usize,
     },
+    /// Invalid data length for header
+    InvalidDataLengthForHeader,
+    /// Invalid magic number
+    InvalidMagicNumber,
+    /// Unknown message type
+    InvalidMessageType,
 }

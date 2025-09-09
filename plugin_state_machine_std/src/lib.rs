@@ -440,60 +440,6 @@ where
     /// Throttle information for blink indication - allow 5 blinks per second
     const THROTTLE_INFO: (Duration, usize) = (Duration::from_millis(500), 1);
 
-    /// Extract message type ID from received USB data with validation
-    ///
-    /// This method validates the message header format and extracts the message type ID
-    /// for efficient command dispatch. It performs integrity checks including magic
-    /// number validation and header size verification.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - Raw USB data buffer containing message header and payload
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(MessageTypeId)` - Successfully extracted message type ID
-    /// * `Err(StateMachineError)` - Invalid message format or unknown type ID
-    ///
-    /// # Errors
-    ///
-    /// * `InvalidMessageFormat` - Data too short, invalid magic number
-    /// * `UnknownMessageType` - Unrecognized message type ID
-    ///
-    /// # Message Header Format
-    ///
-    /// ```text
-    /// [0-1]: Magic number (0xDEAD, little-endian)
-    /// [2]:   Message type ID
-    /// [3-4]: Payload length (little-endian)
-    /// [5+]:  Payload data
-    /// ```
-    fn extract_message_type_id(data: &[u8]) -> Result<MessageTypeId> {
-        // Check if we have enough bytes for a valid header
-        if data.len() < MESSAGE_HEADER_SIZE {
-            log::error!("Received data too short for valid message header");
-            return Err(StateMachineError::InvalidMessageFormat);
-        }
-
-        // Verify magic number
-        let magic = u16::from_le_bytes([data[0], data[1]]);
-        if magic != MESSAGE_MAGIC {
-            log::error!(
-                "Invalid magic number: expected 0x{:X}, got 0x{:X}",
-                MESSAGE_MAGIC,
-                magic
-            );
-            return Err(StateMachineError::InvalidMessageFormat);
-        }
-
-        // Extract message type ID
-        let type_id = data[MESSAGE_MAGIC_BYTES];
-        MessageTypeId::try_from(type_id as i32).map_err(|_| {
-            log::error!("Unknown message type ID: 0x{:02X}", type_id);
-            StateMachineError::UnknownMessageType
-        })
-    }
-
     /// Returns a closure that can be used to run the state machine in a separate thread
     ///
     /// This method consumes the state machine and returns a closure suitable for
@@ -542,7 +488,7 @@ where
                     log::debug!("Received USB data of length : {} bytes", data.size());
 
                     // Extract message type ID for efficient dispatch
-                    match Self::extract_message_type_id(data.raw_bytes()) {
+                    match data.extract_message_type_id() {
                         Ok(message_type) => {
                             let result = match message_type {
                                 MessageTypeId::TypeHostCommandConfigurePeripheral => {
@@ -678,7 +624,7 @@ where
                             }
                         }
                         Err(e) => {
-                            log::error!("Failed to extract message type ID: {e}");
+                            log::error!("Failed to extract message type ID: {:?}", e);
                             log::warn!(
                                 "Received unrecognized command data from USB, raw data length: {} bytes",
                                 data.size()

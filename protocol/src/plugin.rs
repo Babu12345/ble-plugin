@@ -17,7 +17,10 @@ pub use common::*;
 
 /// Common types and traits
 mod common {
-    use crate::{errors::Result, HostIO};
+    use crate::{
+        errors::Result, protocol::MessageTypeId, HostIO, MESSAGE_HEADER_SIZE, MESSAGE_MAGIC,
+        MESSAGE_MAGIC_BYTES,
+    };
 
     /// Securely stores received data
     pub struct PluginReceivedData<const N: usize>([u8; N]);
@@ -39,8 +42,56 @@ mod common {
         }
 
         /// Get access to the raw bytes
-        pub fn raw_bytes(&self) -> &[u8] {
+        pub(crate) fn raw_bytes(&self) -> &[u8] {
             &self.0
+        }
+
+        /// Extract message type ID from received data with validation
+        ///
+        /// This method validates the message header format and extracts the message type ID
+        /// for efficient command dispatch. It performs integrity checks including magic
+        /// number validation and header size verification.
+        ///
+        /// # Arguments
+        ///
+        /// * `data` - Raw USB data buffer containing message header and payload
+        ///
+        /// # Returns
+        ///
+        /// * `Ok(MessageTypeId)` - Successfully extracted message type ID
+        /// * `Err(Error)` - Invalid message format or unknown type ID
+        ///
+        /// # Errors
+        ///
+        /// * `InvalidDataLengthForHeader` - Data too short
+        /// * `InvalidMagicNumber` - Invalid magic number
+        /// * `InvalidMessageType` - Unrecognized message type ID
+        ///
+        /// # Message Header Format
+        ///
+        /// ```text
+        /// [0-1]: Magic number (0xDEAD, little-endian)
+        /// [2]:   Message type ID
+        /// [3-4]: Payload length (little-endian)
+        /// [5+]:  Payload data
+        /// ```
+        pub fn extract_message_type_id(&self) -> Result<MessageTypeId> {
+            let data = self.raw_bytes();
+            // Check if we have enough bytes for a valid header
+            if data.len() < MESSAGE_HEADER_SIZE {
+                return Err(crate::errors::Error::InvalidDataLengthForHeader);
+            }
+
+            // Verify magic number
+            let magic = u16::from_le_bytes([data[0], data[1]]);
+            if magic != MESSAGE_MAGIC {
+                return Err(crate::errors::Error::InvalidMagicNumber);
+            }
+
+            // Extract message type ID
+            let type_id = data[MESSAGE_MAGIC_BYTES];
+            MessageTypeId::try_from(type_id as i32)
+                .map_err(|_| crate::errors::Error::InvalidMessageType)
         }
     }
 }
