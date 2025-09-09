@@ -4,6 +4,7 @@
 
 use device_embassy::processors::CdcAcmDeviceHost;
 use embassy_executor::Spawner;
+use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_usb::class::cdc_acm::State;
 use esp_backtrace as _;
@@ -42,8 +43,8 @@ async fn main(_spawner: Spawner) {
         &mut state,
     );
 
-    let to = Channel::new();
-    let from = Channel::new();
+    let to = Channel::<NoopRawMutex, _, 20>::new();
+    let from = Channel::<NoopRawMutex, _, 20>::new();
 
     let (processor_fn, _sender, _receiver) = device_host
         .processors(

@@ -3,7 +3,7 @@
 use core::future::Future;
 
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
+    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex, RawMutex},
     channel::{Receiver, Sender},
     mutex::Mutex,
 };
@@ -81,14 +81,17 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
     }
 }
 
-impl<'a, const CH_SIZE: usize>
-    AsyncHostProcessor<CH_SIZE, BUFFER_SIZE, CriticalSectionRawMutex, crate::errors::Error>
+impl<'a, const CH_SIZE: usize, M: RawMutex>
+    AsyncHostProcessor<CH_SIZE, BUFFER_SIZE, M, crate::errors::Error>
     for CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE>
 {
-    type T<'ch> = (
-        Sender<'ch, CriticalSectionRawMutex, [u8; BUFFER_SIZE], CH_SIZE>,
-        Receiver<'ch, CriticalSectionRawMutex, [u8; BUFFER_SIZE], CH_SIZE>,
-    );
+    type T<'ch>
+        = (
+        Sender<'ch, M, [u8; BUFFER_SIZE], CH_SIZE>,
+        Receiver<'ch, M, [u8; BUFFER_SIZE], CH_SIZE>,
+    )
+    where
+        M: 'ch;
 
     fn processors<'ch>(
         mut self,
@@ -96,14 +99,10 @@ impl<'a, const CH_SIZE: usize>
         from: Self::T<'ch>,
     ) -> Result<(
         impl Future<Output = ()>,
-        AsyncHostSender<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
-        AsyncHostReceiver<'ch, CriticalSectionRawMutex, BUFFER_SIZE, CH_SIZE>,
-    )>
-    where
-        CriticalSectionRawMutex: 'ch,
-    {
-        let class_mutex: Mutex<CriticalSectionRawMutex, CdcAcmClass<'a, Driver<'a>>> =
-            Mutex::new(self.class);
+        AsyncHostSender<'ch, M, BUFFER_SIZE, CH_SIZE>,
+        AsyncHostReceiver<'ch, M, BUFFER_SIZE, CH_SIZE>,
+    )> {
+        let class_mutex: Mutex<NoopRawMutex, CdcAcmClass<'a, Driver<'a>>> = Mutex::new(self.class);
 
         let processor_runner = async move {
             let usb_runner = self.usb_device.run();
