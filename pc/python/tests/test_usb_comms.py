@@ -1,5 +1,4 @@
 import struct
-import uuid as uuid_module
 from plugin_host.comms import (
     serialize_command,
     deserialize_response,

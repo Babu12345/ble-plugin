@@ -32,12 +32,12 @@ All messages use a standardized 5-byte header followed by serialized payload:
 ```text
 ┌─────────────┬─────────────┬─────────────┬─────────────────┐
 │   Magic     │   Type ID   │   Length    │     Payload     │
-│  (2 bytes)  │  (1 byte)   │  (2 bytes)  │  (limited size) │
+│  (1 byte)   │  (2 bytes)  │  (2 bytes)  │  (limited size) │
 └─────────────┴─────────────┴─────────────┴─────────────────┘
 ```
 
-- **Magic Number**: 0xDEAD (little-endian) for message integrity validation
-- **Type ID**: Unique identifier for each message type (enables O(1) dispatch)
+- **Magic Number**: 0xDE for message integrity validation
+- **Type ID**: Unique identifier for each message type (enables O(1) dispatch) - 2 bytes for expanded type space
 - **Length**: Payload size in bytes (little-endian)
 - **Payload**: Binary serialized message data
 
@@ -144,7 +144,7 @@ let command = HostCommandConfigurePeripheral::from_bytes(received_data)?;
 - `MAX_NAME_SIZE`: Maximum length for device names (30 characters)
 - `DEFAULT_PACKET_SIZE`: Standard USB packet size
 - `MESSAGE_HEADER_SIZE`: Protocol header size
-- `MESSAGE_MAGIC`: Magic number for validation (0xDEAD)
+- `MESSAGE_MAGIC`: Magic number for validation (0xDE)
 - **Maximum Payload Size**: `DEFAULT_PACKET_SIZE` - `MESSAGE_HEADER_SIZE` bytes
 
 ## Dependencies

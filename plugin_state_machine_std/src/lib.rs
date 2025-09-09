@@ -228,9 +228,7 @@ use esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS;
 use heapless::String;
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use protocol::protocol::MessageTypeId;
-use protocol::{
-    DEFAULT_PACKET_SIZE, MAX_NAME_SIZE, MESSAGE_HEADER_SIZE, MESSAGE_MAGIC, MESSAGE_MAGIC_BYTES,
-};
+use protocol::{DEFAULT_PACKET_SIZE, MAX_NAME_SIZE};
 
 /// Maximum number of characteristics per service
 const MAX_CHARACTERISTICS_PER_SERVICE: usize = 16;

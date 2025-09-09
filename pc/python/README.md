@@ -32,8 +32,8 @@ This Python library provides a high-level interface for communicating with BLE p
 
 The library uses **Protocol Buffers (protobuf)** exclusively for message serialization between the host PC and the USB plugin device. All communication follows this protocol:
 
-- **Message Format**: `[2-byte magic][1-byte type_id][2-byte length][protobuf data][padding]`
-- **Magic Number**: `0xDEAD` for message integrity validation
+- **Message Format**: `[1-byte magic][2-byte type_id][2-byte length][protobuf data][padding]`
+- **Magic Number**: `0xDE` for message integrity validation
 - **Packet Size**: Fixed 64-byte USB packets
 - **Constants**: Centralized in `plugin_host.constants` module
 
