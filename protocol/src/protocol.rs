@@ -305,7 +305,7 @@ pub struct PluginAuthenticationCompletedResponse {
 pub enum MessageTypeId {
     /// Proto3 requires a zero value
     Unspecified = 0,
-    /// Host Commands (0x01-0x0F)
+    /// Host Commands
     /// Configure BLE peripheral device with name and 6-byte address
     TypeHostCommandConfigurePeripheral = 1,
     /// Create a new BLE service with specified u16 UUID
@@ -328,7 +328,7 @@ pub enum MessageTypeId {
     TypeHostCommandConfigureProfile = 10,
     /// Stop BLE advertising
     TypeHostCommandStopAdvertisement = 11,
-    /// Plugin Responses (0x80+)
+    /// Plugin Responses
     /// Data forwarded from BLE client to BLE plugin
     TypePluginData = 128,
     /// Configuration error response from plugin

@@ -10,7 +10,7 @@ package protocol;
 enum MessageTypeId {
   MessageTypeIdUnspecified = 0; // Proto3 requires a zero value
   
-  // Host Commands (0x01-0x0F)
+  // Host Commands
   // Configure BLE peripheral device with name and 6-byte address
   TypeHostCommandConfigurePeripheral = 0x01;
   // Create a new BLE service with specified u16 UUID
@@ -34,7 +34,7 @@ enum MessageTypeId {
   // Stop BLE advertising
   TypeHostCommandStopAdvertisement = 0x0B;
   
-  // Plugin Responses (0x80+)
+  // Plugin Responses
   // Data forwarded from BLE client to BLE plugin
   TypePluginData = 0x80;
   // Configuration error response from plugin

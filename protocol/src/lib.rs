@@ -164,7 +164,7 @@
 //! - [`MAX_NAME_SIZE`]: Maximum length for device names (30 characters)
 //! - [`DEFAULT_PACKET_SIZE`]: Standard USB packet size (256 bytes)
 //! - [`MESSAGE_HEADER_SIZE`]: Protocol header size (5 bytes)
-//! - [`MESSAGE_MAGIC`]: Magic number for validation (0xDEAD)
+//! - [`MESSAGE_MAGIC`]: Magic number for validation (0xDE)
 //!
 //! ## Feature Flags
 //!

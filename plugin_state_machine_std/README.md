@@ -99,10 +99,10 @@ The state machine implements input throttling to ensure stable data processing:
 The state machine uses a 5-byte message header format:
 
 ```
-[Magic (2 bytes)][Type ID (1 byte)][Length (2 bytes)][Payload (limited size)]
+[Magic (1 byte)][Type ID (2 bytes)][Length (2 bytes)][Payload (limited size)]
 ```
 
-- **Magic Number**: 0xDEAD for message integrity validation
+- **Magic Number**: 0xDE for message integrity validation
 - **Type ID**: Efficient command routing (0x01-0x7F for host commands, 0x80-0xFF for plugin responses)
 - **Length**: Payload size for proper deserialization
 - **Payload**: Serialized command/response data using Protocol Buffers

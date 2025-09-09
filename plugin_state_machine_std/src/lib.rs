@@ -38,7 +38,7 @@
 //! └─────────────┴─────────────┴─────────────┴─────────────────┘
 //! ```
 //!
-//! - **Magic Number**: 0xDEAD for message integrity validation
+//! - **Magic Number**: 0xDE for message integrity validation
 //! - **Type ID**: Enables efficient O(1) command dispatch
 //! - **Length**: Payload size for proper deserialization
 //! - **Payload**: Bincode-serialized command/response data

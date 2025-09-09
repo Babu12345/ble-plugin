@@ -72,7 +72,7 @@ mod common {
         /// # Message Header Format
         ///
         /// ```text
-        /// [0-1]: Magic number (0xDEAD, little-endian)
+        /// [0]:   Magic number (0xDE)
         /// [2]:   Message type ID
         /// [3-4]: Payload length (little-endian)
         /// [5+]:  Payload data

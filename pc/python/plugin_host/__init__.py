@@ -89,7 +89,7 @@ Dependencies:
 
 Protocol:
 The library uses Protocol Buffers with a custom USB message format:
-[2-byte magic][1-byte type_id][2-byte length][protobuf data][padding]
+[1-byte magic][2-byte type_id][2-byte length][protobuf data][padding]
 
 All commands and responses are automatically serialized/deserialized using protobuf.
 """
