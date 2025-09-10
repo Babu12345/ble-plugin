@@ -132,7 +132,7 @@ cargo test -- --nocapture
 ## Python (also in the pc/python readme)
 ### Generate the protobuf files for serialization/deserialization in python
 1. First install protoc via `brew install protobuf`
-2. Run `protoc --python_out=../pc/python/plugin_host/ protocol.proto`
+2. Run `protoc --python_out=../pc/python/plugin_host/ protocol.proto` or `protoc --python_out=../pc/python/plugin_host/  --mypy_out=../pc/python/plugin_host/ protocol.proto` (for full typechecking in python. Just make sure to download "mypy-protobuf" via `pip install mypy-protobuf`)
 
 ### Create a virtual environment
 `python3 -m venv /Users/babuwanyeki/Documents/Rusty/ble-plugin/pc/python`

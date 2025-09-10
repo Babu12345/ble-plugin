@@ -10,6 +10,9 @@ pip install pyusb
 pip install libusb
 pip install pytest
 pip install protobuf
+pip install mypy-protobuf
+pip install mypy
+
 
 brew install libusb # Make sure that this is run
 brew install python-tk # for the gui
