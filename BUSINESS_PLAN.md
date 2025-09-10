@@ -68,7 +68,7 @@ Our BLE plugin framework enables IoT device manufacturers to add Bluetooth conne
 
 ### Core Product: BLE Plugin Module
 **Hardware:**
-- ESP32-based pre-certified module
+- ESP32 or NRF52-based pre-certified module
 - USB/UART interface to host device
 - Standard form factor options
 
