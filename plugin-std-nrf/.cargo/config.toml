@@ -1,0 +1,8 @@
+[build]
+target = "thumbv7em-none-eabihf"
+
+[unstable]
+build-std = ["std", "panic_abort", "core"]
+
+[alias]
+r = "run --release"
