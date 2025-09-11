@@ -33,8 +33,8 @@ Our framework provides a novel solution combining pre-certified hardware with pr
 - Eliminates need for BLE GATT stack implementation
 - Simple message-based communication (host commands + plugin responses)
 - Structured message ID management:
-  - Host commands: 0x01-0x7F
-  - Plugin responses: 0x80-0xFF
+  - Unique host command ids
+  - Unique plugin response ids
 
 ### 3. Cross-Platform Code Generation
 - Automatic client library generation for multiple languages (Rust, Python, C++)
