@@ -174,6 +174,29 @@ pub struct HostCommandNotifyCharacteristicValue {
     #[prost(bytes = "vec", tag = "5")]
     pub value: ::prost::alloc::vec::Vec<u8>,
 }
+/// Host command. Query connections
+/// @derive(serde::Deserialize, serde::Serialize)
+/// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandQueryConnections))
+#[derive(serde::Deserialize, serde::Serialize)]
+#[protocol_io::HostIO(MessageTypeId::TypeHostCommandQueryConnections)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct HostCommandQueryConnections {}
+/// Plugin connection response.
+/// @derive(serde::Deserialize, serde::Serialize)
+/// @rust_macro(protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse))
+#[derive(serde::Deserialize, serde::Serialize)]
+#[protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PluginOnConnectResponse {
+    /// Device Address
+    ///
+    /// 6 bytes
+    #[prost(bytes = "vec", tag = "1")]
+    pub address: ::prost::alloc::vec::Vec<u8>,
+    /// Address type
+    #[prost(enumeration = "BluetoothAddressType", tag = "2")]
+    pub address_type: i32,
+}
 /// Host command. Configure BLE profile
 /// @derive(serde::Deserialize, serde::Serialize)
 /// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigureProfile))
@@ -328,6 +351,8 @@ pub enum MessageTypeId {
     TypeHostCommandConfigureProfile = 10,
     /// Stop BLE advertising
     TypeHostCommandStopAdvertisement = 11,
+    /// Query bluetooth connections
+    TypeHostCommandQueryConnections = 12,
     /// Plugin Responses
     /// Data forwarded from BLE client to BLE plugin
     TypePluginData = 128,
@@ -339,6 +364,8 @@ pub enum MessageTypeId {
     TypePluginCharacteristicInfoResponse = 131,
     /// Authentication completed response from plugin
     TypePluginAuthenticationCompletedResponse = 132,
+    /// Central device on connect response
+    TypePluginOnConnectResponse = 133,
 }
 impl MessageTypeId {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -373,6 +400,7 @@ impl MessageTypeId {
             }
             Self::TypeHostCommandConfigureProfile => "TypeHostCommandConfigureProfile",
             Self::TypeHostCommandStopAdvertisement => "TypeHostCommandStopAdvertisement",
+            Self::TypeHostCommandQueryConnections => "TypeHostCommandQueryConnections",
             Self::TypePluginData => "TypePluginData",
             Self::TypePluginConfigurationError => "TypePluginConfigurationError",
             Self::TypePluginServiceInfoResponse => "TypePluginServiceInfoResponse",
@@ -382,6 +410,7 @@ impl MessageTypeId {
             Self::TypePluginAuthenticationCompletedResponse => {
                 "TypePluginAuthenticationCompletedResponse"
             }
+            Self::TypePluginOnConnectResponse => "TypePluginOnConnectResponse",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -419,6 +448,9 @@ impl MessageTypeId {
             "TypeHostCommandStopAdvertisement" => {
                 Some(Self::TypeHostCommandStopAdvertisement)
             }
+            "TypeHostCommandQueryConnections" => {
+                Some(Self::TypeHostCommandQueryConnections)
+            }
             "TypePluginData" => Some(Self::TypePluginData),
             "TypePluginConfigurationError" => Some(Self::TypePluginConfigurationError),
             "TypePluginServiceInfoResponse" => Some(Self::TypePluginServiceInfoResponse),
@@ -428,6 +460,7 @@ impl MessageTypeId {
             "TypePluginAuthenticationCompletedResponse" => {
                 Some(Self::TypePluginAuthenticationCompletedResponse)
             }
+            "TypePluginOnConnectResponse" => Some(Self::TypePluginOnConnectResponse),
             _ => None,
         }
     }

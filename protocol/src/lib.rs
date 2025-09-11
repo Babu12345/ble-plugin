@@ -248,7 +248,10 @@ mod tests {
         // Test that header constants are correct
         assert_eq!(MESSAGE_MAGIC, 0xDE, "Magic number should be 0xDE");
         assert_eq!(MESSAGE_MAGIC_BYTES, 1, "Magic number should be 1 byte");
-        assert_eq!(MESSAGE_TYPE_ID_BYTES, 2, "Message type ID should be 2 bytes");
+        assert_eq!(
+            MESSAGE_TYPE_ID_BYTES, 2,
+            "Message type ID should be 2 bytes"
+        );
         assert_eq!(
             DATA_BYTES_LENGTH_IN_BYTES, 2,
             "Data length should be 2 bytes"
@@ -368,7 +371,10 @@ mod tests {
         );
 
         // Verify message type ID in bytes 1-2
-        let type_id = u16::from_le_bytes([serialized[MESSAGE_MAGIC_BYTES], serialized[MESSAGE_MAGIC_BYTES + 1]]) as u8;
+        let type_id = u16::from_le_bytes([
+            serialized[MESSAGE_MAGIC_BYTES],
+            serialized[MESSAGE_MAGIC_BYTES + 1],
+        ]) as u8;
         assert_eq!(
             type_id,
             MessageTypeId::TypeHostCommandConfigurePeripheral as u8,
@@ -410,7 +416,10 @@ mod tests {
         assert_eq!(magic, MESSAGE_MAGIC, "Magic number should be present");
 
         // Verify message type ID
-        let type_id = u16::from_le_bytes([serialized[MESSAGE_MAGIC_BYTES], serialized[MESSAGE_MAGIC_BYTES + 1]]) as u8;
+        let type_id = u16::from_le_bytes([
+            serialized[MESSAGE_MAGIC_BYTES],
+            serialized[MESSAGE_MAGIC_BYTES + 1],
+        ]) as u8;
         assert_eq!(
             type_id,
             MessageTypeId::TypePluginServiceInfoResponse as u8,
@@ -433,7 +442,9 @@ mod tests {
         let magic = buffer[0];
         assert_eq!(magic, MESSAGE_MAGIC);
 
-        let type_id = u16::from_le_bytes([buffer[MESSAGE_MAGIC_BYTES], buffer[MESSAGE_MAGIC_BYTES + 1]]) as u8;
+        let type_id =
+            u16::from_le_bytes([buffer[MESSAGE_MAGIC_BYTES], buffer[MESSAGE_MAGIC_BYTES + 1]])
+                as u8;
         assert_eq!(type_id, MessageTypeId::TypeHostCommandGetServiceInfo as u8);
 
         // Deserialize and verify round-trip
@@ -533,7 +544,10 @@ mod tests {
         assert_eq!(magic, MESSAGE_MAGIC);
 
         // Verify message type ID
-        let type_id = u16::from_le_bytes([serialized[MESSAGE_MAGIC_BYTES], serialized[MESSAGE_MAGIC_BYTES + 1]]) as u8;
+        let type_id = u16::from_le_bytes([
+            serialized[MESSAGE_MAGIC_BYTES],
+            serialized[MESSAGE_MAGIC_BYTES + 1],
+        ]) as u8;
         assert_eq!(
             type_id,
             MessageTypeId::TypeHostCommandConfigureProfile as u8

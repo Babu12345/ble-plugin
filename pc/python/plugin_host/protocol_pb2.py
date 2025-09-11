@@ -24,25 +24,25 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0eprotocol.proto\x12\x08protocol\"<\n\x1eHostCommandConfigurePeripheral\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\x0c\"9\n&HostCommandConfigurePeripheralSecurity\x12\x0f\n\x07passkey\x18\x01 \x01(\r\"+\n\x1bHostCommandConfigureService\x12\x0c\n\x04uuid\x18\x01 \x01(\r\"u\n\"HostCommandConfigureCharacteristic\x12\x0c\n\x04uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\x12+\n\nproperties\x18\x03 \x03(\x0e\x32\x17.protocol.BleProperties\"[\n&HostCommandConfigureCharacteristicRead\x12\x0c\n\x04uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\x12\r\n\x05value\x18\x03 \x01(\x0c\")\n\x19HostCommandGetServiceInfo\x12\x0c\n\x04uuid\x18\x01 \x01(\r\"U\n HostCommandGetCharacteristicInfo\x12\x1b\n\x13\x63haracteristic_uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\"<\n\x1dHostCommandStartAdvertisement\x12\x1b\n\x13\x61llow_multi_connect\x18\x01 \x01(\x08\"\x1e\n\x1cHostCommandStopAdvertisement\"\xaf\x01\n$HostCommandNotifyCharacteristicValue\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x0c\x12\x34\n\x0c\x61\x64\x64ress_type\x18\x02 \x01(\x0e\x32\x1e.protocol.BluetoothAddressType\x12\x1b\n\x13\x63haracteristic_uuid\x18\x03 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x04 \x01(\r\x12\r\n\x05value\x18\x05 \x01(\x0c\"D\n\x1bHostCommandConfigureProfile\x12%\n\x07profile\x18\x01 \x01(\x0e\x32\x14.protocol.BleProfile\"\xc7\x01\n\nPluginData\x12\x10\n\x08src_addr\x18\x01 \x01(\x0c\x12\x35\n\rsrc_addr_type\x18\x02 \x01(\x0e\x32\x1e.protocol.BluetoothAddressType\x12/\n\tsend_type\x18\x03 \x01(\x0e\x32\x1c.protocol.PluginDataSendType\x12\x1b\n\x13\x63haracteristic_uuid\x18\x04 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x05 \x01(\r\x12\x0c\n\x04\x64\x61ta\x18\x06 \x01(\x0c\"V\n\x18PluginConfigurationError\x12:\n\nerror_type\x18\x01 \x01(\x0e\x32&.protocol.PluginConfigurationErrorType\"_\n\x19PluginServiceInfoResponse\x12\x14\n\x0cservice_uuid\x18\x01 \x01(\r\x12\x1c\n\x14\x63haracteristic_uuids\x18\x02 \x03(\r\x12\x0e\n\x06\x65xists\x18\x03 \x01(\x08\"\x92\x01\n PluginCharacteristicInfoResponse\x12\x1b\n\x13\x63haracteristic_uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\x12+\n\nproperties\x18\x03 \x03(\x0e\x32\x17.protocol.BleProperties\x12\x0e\n\x06\x65xists\x18\x04 \x01(\x08\"\x7f\n%PluginAuthenticationCompletedResponse\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x0c\x12\x34\n\x0c\x61\x64\x64ress_type\x18\x02 \x01(\x0e\x32\x1e.protocol.BluetoothAddressType\x12\x0f\n\x07success\x18\x03 \x01(\x08*\xaa\x05\n\rMessageTypeId\x12\x1c\n\x18MessageTypeIdUnspecified\x10\x00\x12&\n\"TypeHostCommandConfigurePeripheral\x10\x01\x12#\n\x1fTypeHostCommandConfigureService\x10\x02\x12*\n&TypeHostCommandConfigureCharacteristic\x10\x03\x12.\n*TypeHostCommandConfigureCharacteristicRead\x10\x04\x12!\n\x1dTypeHostCommandGetServiceInfo\x10\x05\x12(\n$TypeHostCommandGetCharacteristicInfo\x10\x06\x12%\n!TypeHostCommandStartAdvertisement\x10\x07\x12,\n(TypeHostCommandNotifyCharacteristicValue\x10\x08\x12.\n*TypeHostCommandConfigurePeripheralSecurity\x10\t\x12#\n\x1fTypeHostCommandConfigureProfile\x10\n\x12$\n TypeHostCommandStopAdvertisement\x10\x0b\x12\x13\n\x0eTypePluginData\x10\x80\x01\x12!\n\x1cTypePluginConfigurationError\x10\x81\x01\x12\"\n\x1dTypePluginServiceInfoResponse\x10\x82\x01\x12)\n$TypePluginCharacteristicInfoResponse\x10\x83\x01\x12.\n)TypePluginAuthenticationCompletedResponse\x10\x84\x01*o\n\rBleProperties\x12\x1c\n\x18\x42lePropertiesUnspecified\x10\x00\x12\x08\n\x04Read\x10\x01\x12\x0c\n\x08WriteRsp\x10\x02\x12\x0e\n\nWriteNoRsp\x10\x03\x12\n\n\x06Notify\x10\x04\x12\x0c\n\x08Indicate\x10\x05*o\n\x14\x42luetoothAddressType\x12#\n\x1f\x42luetoothAddressTypeUnspecified\x10\x00\x12\n\n\x06Public\x10\x01\x12\n\n\x06Random\x10\x02\x12\x0c\n\x08PublicId\x10\x03\x12\x0c\n\x08RandomId\x10\x04*t\n\nBleProfile\x12\x19\n\x15\x42leProfileUnspecified\x10\x00\x12\n\n\x06\x43ustom\x10\x01\x12\x14\n\x10HeartRateMonitor\x10\x02\x12\x12\n\x0e\x42\x61tteryService\x10\x03\x12\x15\n\x11\x44\x65viceInformation\x10\x04*d\n\x12PluginDataSendType\x12!\n\x1dPluginDataSendTypeUnspecified\x10\x00\x12\x0e\n\nNotifyType\x10\x01\x12\x0c\n\x08ReadType\x10\x02\x12\r\n\tWriteType\x10\x03*\xc3\x02\n\x1cPluginConfigurationErrorType\x12+\n\'PluginConfigurationErrorTypeUnspecified\x10\x00\x12\x19\n\x15PeripheralNameTooLong\x10\x01\x12\x19\n\x15InvalidPeripheralUuid\x10\x02\x12\x16\n\x12InvalidServiceUuid\x10\x03\x12\x1d\n\x19InvalidCharacteristicUuid\x10\x04\x12/\n+AdvertisementWithoutPeripheralConfiguration\x10\x05\x12)\n%ServiceWithoutPeripheralConfiguration\x10\x06\x12-\n)CharacteristicWithoutServiceConfiguration\x10\x07\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0eprotocol.proto\x12\x08protocol\"<\n\x1eHostCommandConfigurePeripheral\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\x0c\"9\n&HostCommandConfigurePeripheralSecurity\x12\x0f\n\x07passkey\x18\x01 \x01(\r\"+\n\x1bHostCommandConfigureService\x12\x0c\n\x04uuid\x18\x01 \x01(\r\"u\n\"HostCommandConfigureCharacteristic\x12\x0c\n\x04uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\x12+\n\nproperties\x18\x03 \x03(\x0e\x32\x17.protocol.BleProperties\"[\n&HostCommandConfigureCharacteristicRead\x12\x0c\n\x04uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\x12\r\n\x05value\x18\x03 \x01(\x0c\")\n\x19HostCommandGetServiceInfo\x12\x0c\n\x04uuid\x18\x01 \x01(\r\"U\n HostCommandGetCharacteristicInfo\x12\x1b\n\x13\x63haracteristic_uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\"<\n\x1dHostCommandStartAdvertisement\x12\x1b\n\x13\x61llow_multi_connect\x18\x01 \x01(\x08\"\x1e\n\x1cHostCommandStopAdvertisement\"\xaf\x01\n$HostCommandNotifyCharacteristicValue\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x0c\x12\x34\n\x0c\x61\x64\x64ress_type\x18\x02 \x01(\x0e\x32\x1e.protocol.BluetoothAddressType\x12\x1b\n\x13\x63haracteristic_uuid\x18\x03 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x04 \x01(\r\x12\r\n\x05value\x18\x05 \x01(\x0c\"\x1d\n\x1bHostCommandQueryConnections\"`\n\x17PluginOnConnectResponse\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x0c\x12\x34\n\x0c\x61\x64\x64ress_type\x18\x02 \x01(\x0e\x32\x1e.protocol.BluetoothAddressType\"D\n\x1bHostCommandConfigureProfile\x12%\n\x07profile\x18\x01 \x01(\x0e\x32\x14.protocol.BleProfile\"\xc7\x01\n\nPluginData\x12\x10\n\x08src_addr\x18\x01 \x01(\x0c\x12\x35\n\rsrc_addr_type\x18\x02 \x01(\x0e\x32\x1e.protocol.BluetoothAddressType\x12/\n\tsend_type\x18\x03 \x01(\x0e\x32\x1c.protocol.PluginDataSendType\x12\x1b\n\x13\x63haracteristic_uuid\x18\x04 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x05 \x01(\r\x12\x0c\n\x04\x64\x61ta\x18\x06 \x01(\x0c\"V\n\x18PluginConfigurationError\x12:\n\nerror_type\x18\x01 \x01(\x0e\x32&.protocol.PluginConfigurationErrorType\"_\n\x19PluginServiceInfoResponse\x12\x14\n\x0cservice_uuid\x18\x01 \x01(\r\x12\x1c\n\x14\x63haracteristic_uuids\x18\x02 \x03(\r\x12\x0e\n\x06\x65xists\x18\x03 \x01(\x08\"\x92\x01\n PluginCharacteristicInfoResponse\x12\x1b\n\x13\x63haracteristic_uuid\x18\x01 \x01(\r\x12\x14\n\x0cservice_uuid\x18\x02 \x01(\r\x12+\n\nproperties\x18\x03 \x03(\x0e\x32\x17.protocol.BleProperties\x12\x0e\n\x06\x65xists\x18\x04 \x01(\x08\"\x7f\n%PluginAuthenticationCompletedResponse\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x0c\x12\x34\n\x0c\x61\x64\x64ress_type\x18\x02 \x01(\x0e\x32\x1e.protocol.BluetoothAddressType\x12\x0f\n\x07success\x18\x03 \x01(\x08*\xf1\x05\n\rMessageTypeId\x12\x1c\n\x18MessageTypeIdUnspecified\x10\x00\x12&\n\"TypeHostCommandConfigurePeripheral\x10\x01\x12#\n\x1fTypeHostCommandConfigureService\x10\x02\x12*\n&TypeHostCommandConfigureCharacteristic\x10\x03\x12.\n*TypeHostCommandConfigureCharacteristicRead\x10\x04\x12!\n\x1dTypeHostCommandGetServiceInfo\x10\x05\x12(\n$TypeHostCommandGetCharacteristicInfo\x10\x06\x12%\n!TypeHostCommandStartAdvertisement\x10\x07\x12,\n(TypeHostCommandNotifyCharacteristicValue\x10\x08\x12.\n*TypeHostCommandConfigurePeripheralSecurity\x10\t\x12#\n\x1fTypeHostCommandConfigureProfile\x10\n\x12$\n TypeHostCommandStopAdvertisement\x10\x0b\x12#\n\x1fTypeHostCommandQueryConnections\x10\x0c\x12\x13\n\x0eTypePluginData\x10\x80\x01\x12!\n\x1cTypePluginConfigurationError\x10\x81\x01\x12\"\n\x1dTypePluginServiceInfoResponse\x10\x82\x01\x12)\n$TypePluginCharacteristicInfoResponse\x10\x83\x01\x12.\n)TypePluginAuthenticationCompletedResponse\x10\x84\x01\x12 \n\x1bTypePluginOnConnectResponse\x10\x85\x01*o\n\rBleProperties\x12\x1c\n\x18\x42lePropertiesUnspecified\x10\x00\x12\x08\n\x04Read\x10\x01\x12\x0c\n\x08WriteRsp\x10\x02\x12\x0e\n\nWriteNoRsp\x10\x03\x12\n\n\x06Notify\x10\x04\x12\x0c\n\x08Indicate\x10\x05*o\n\x14\x42luetoothAddressType\x12#\n\x1f\x42luetoothAddressTypeUnspecified\x10\x00\x12\n\n\x06Public\x10\x01\x12\n\n\x06Random\x10\x02\x12\x0c\n\x08PublicId\x10\x03\x12\x0c\n\x08RandomId\x10\x04*t\n\nBleProfile\x12\x19\n\x15\x42leProfileUnspecified\x10\x00\x12\n\n\x06\x43ustom\x10\x01\x12\x14\n\x10HeartRateMonitor\x10\x02\x12\x12\n\x0e\x42\x61tteryService\x10\x03\x12\x15\n\x11\x44\x65viceInformation\x10\x04*d\n\x12PluginDataSendType\x12!\n\x1dPluginDataSendTypeUnspecified\x10\x00\x12\x0e\n\nNotifyType\x10\x01\x12\x0c\n\x08ReadType\x10\x02\x12\r\n\tWriteType\x10\x03*\xc3\x02\n\x1cPluginConfigurationErrorType\x12+\n\'PluginConfigurationErrorTypeUnspecified\x10\x00\x12\x19\n\x15PeripheralNameTooLong\x10\x01\x12\x19\n\x15InvalidPeripheralUuid\x10\x02\x12\x16\n\x12InvalidServiceUuid\x10\x03\x12\x1d\n\x19InvalidCharacteristicUuid\x10\x04\x12/\n+AdvertisementWithoutPeripheralConfiguration\x10\x05\x12)\n%ServiceWithoutPeripheralConfiguration\x10\x06\x12-\n)CharacteristicWithoutServiceConfiguration\x10\x07\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'protocol_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_MESSAGETYPEID']._serialized_start=1544
-  _globals['_MESSAGETYPEID']._serialized_end=2226
-  _globals['_BLEPROPERTIES']._serialized_start=2228
-  _globals['_BLEPROPERTIES']._serialized_end=2339
-  _globals['_BLUETOOTHADDRESSTYPE']._serialized_start=2341
-  _globals['_BLUETOOTHADDRESSTYPE']._serialized_end=2452
-  _globals['_BLEPROFILE']._serialized_start=2454
-  _globals['_BLEPROFILE']._serialized_end=2570
-  _globals['_PLUGINDATASENDTYPE']._serialized_start=2572
-  _globals['_PLUGINDATASENDTYPE']._serialized_end=2672
-  _globals['_PLUGINCONFIGURATIONERRORTYPE']._serialized_start=2675
-  _globals['_PLUGINCONFIGURATIONERRORTYPE']._serialized_end=2998
+  _globals['_MESSAGETYPEID']._serialized_start=1673
+  _globals['_MESSAGETYPEID']._serialized_end=2426
+  _globals['_BLEPROPERTIES']._serialized_start=2428
+  _globals['_BLEPROPERTIES']._serialized_end=2539
+  _globals['_BLUETOOTHADDRESSTYPE']._serialized_start=2541
+  _globals['_BLUETOOTHADDRESSTYPE']._serialized_end=2652
+  _globals['_BLEPROFILE']._serialized_start=2654
+  _globals['_BLEPROFILE']._serialized_end=2770
+  _globals['_PLUGINDATASENDTYPE']._serialized_start=2772
+  _globals['_PLUGINDATASENDTYPE']._serialized_end=2872
+  _globals['_PLUGINCONFIGURATIONERRORTYPE']._serialized_start=2875
+  _globals['_PLUGINCONFIGURATIONERRORTYPE']._serialized_end=3198
   _globals['_HOSTCOMMANDCONFIGUREPERIPHERAL']._serialized_start=28
   _globals['_HOSTCOMMANDCONFIGUREPERIPHERAL']._serialized_end=88
   _globals['_HOSTCOMMANDCONFIGUREPERIPHERALSECURITY']._serialized_start=90
@@ -63,16 +63,20 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_HOSTCOMMANDSTOPADVERTISEMENT']._serialized_end=628
   _globals['_HOSTCOMMANDNOTIFYCHARACTERISTICVALUE']._serialized_start=631
   _globals['_HOSTCOMMANDNOTIFYCHARACTERISTICVALUE']._serialized_end=806
-  _globals['_HOSTCOMMANDCONFIGUREPROFILE']._serialized_start=808
-  _globals['_HOSTCOMMANDCONFIGUREPROFILE']._serialized_end=876
-  _globals['_PLUGINDATA']._serialized_start=879
-  _globals['_PLUGINDATA']._serialized_end=1078
-  _globals['_PLUGINCONFIGURATIONERROR']._serialized_start=1080
-  _globals['_PLUGINCONFIGURATIONERROR']._serialized_end=1166
-  _globals['_PLUGINSERVICEINFORESPONSE']._serialized_start=1168
-  _globals['_PLUGINSERVICEINFORESPONSE']._serialized_end=1263
-  _globals['_PLUGINCHARACTERISTICINFORESPONSE']._serialized_start=1266
-  _globals['_PLUGINCHARACTERISTICINFORESPONSE']._serialized_end=1412
-  _globals['_PLUGINAUTHENTICATIONCOMPLETEDRESPONSE']._serialized_start=1414
-  _globals['_PLUGINAUTHENTICATIONCOMPLETEDRESPONSE']._serialized_end=1541
+  _globals['_HOSTCOMMANDQUERYCONNECTIONS']._serialized_start=808
+  _globals['_HOSTCOMMANDQUERYCONNECTIONS']._serialized_end=837
+  _globals['_PLUGINONCONNECTRESPONSE']._serialized_start=839
+  _globals['_PLUGINONCONNECTRESPONSE']._serialized_end=935
+  _globals['_HOSTCOMMANDCONFIGUREPROFILE']._serialized_start=937
+  _globals['_HOSTCOMMANDCONFIGUREPROFILE']._serialized_end=1005
+  _globals['_PLUGINDATA']._serialized_start=1008
+  _globals['_PLUGINDATA']._serialized_end=1207
+  _globals['_PLUGINCONFIGURATIONERROR']._serialized_start=1209
+  _globals['_PLUGINCONFIGURATIONERROR']._serialized_end=1295
+  _globals['_PLUGINSERVICEINFORESPONSE']._serialized_start=1297
+  _globals['_PLUGINSERVICEINFORESPONSE']._serialized_end=1392
+  _globals['_PLUGINCHARACTERISTICINFORESPONSE']._serialized_start=1395
+  _globals['_PLUGINCHARACTERISTICINFORESPONSE']._serialized_end=1541
+  _globals['_PLUGINAUTHENTICATIONCOMPLETEDRESPONSE']._serialized_start=1543
+  _globals['_PLUGINAUTHENTICATIONCOMPLETEDRESPONSE']._serialized_end=1670
 # @@protoc_insertion_point(module_scope)

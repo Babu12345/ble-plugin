@@ -33,6 +33,8 @@ enum MessageTypeId {
   TypeHostCommandConfigureProfile = 0x0A;
   // Stop BLE advertising
   TypeHostCommandStopAdvertisement = 0x0B;
+  // Query bluetooth connections
+  TypeHostCommandQueryConnections = 0x0C;
   
   // Plugin Responses
   // Data forwarded from BLE client to BLE plugin
@@ -45,6 +47,8 @@ enum MessageTypeId {
   TypePluginCharacteristicInfoResponse = 0x83;
   // Authentication completed response from plugin
   TypePluginAuthenticationCompletedResponse = 0x84;
+  // Central device on connect response
+  TypePluginOnConnectResponse = 0x85;
 }
 
 // Host messages
@@ -180,6 +184,22 @@ message HostCommandNotifyCharacteristicValue {
   uint32 service_uuid = 4; // u16 in Rust
   // Value to notify
   bytes value = 5; // Max MAX_NAME_SIZE bytes
+}
+
+// Host command. Query connections
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandQueryConnections))
+message HostCommandQueryConnections {
+}
+
+// Plugin connection response.
+// @derive(serde::Deserialize, serde::Serialize)
+// @rust_macro(protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse))
+message PluginOnConnectResponse {
+  // Device Address
+  bytes address = 1; // 6 bytes
+  // Address type
+  BluetoothAddressType address_type = 2;
 }
 
 // Profile type enumeration for preconfigured BLE profiles

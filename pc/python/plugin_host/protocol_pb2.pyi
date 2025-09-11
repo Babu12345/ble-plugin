@@ -51,6 +51,8 @@ class _MessageTypeIdEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._
     """Configure BLE profile with predefined services and characteristics"""
     TypeHostCommandStopAdvertisement: _MessageTypeId.ValueType  # 11
     """Stop BLE advertising"""
+    TypeHostCommandQueryConnections: _MessageTypeId.ValueType  # 12
+    """Query bluetooth connections"""
     TypePluginData: _MessageTypeId.ValueType  # 128
     """Plugin Responses
     Data forwarded from BLE client to BLE plugin
@@ -63,6 +65,8 @@ class _MessageTypeIdEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._
     """Characteristic information response with properties"""
     TypePluginAuthenticationCompletedResponse: _MessageTypeId.ValueType  # 132
     """Authentication completed response from plugin"""
+    TypePluginOnConnectResponse: _MessageTypeId.ValueType  # 133
+    """Central device on connect response"""
 
 class MessageTypeId(_MessageTypeId, metaclass=_MessageTypeIdEnumTypeWrapper):
     """Message Type IDs for protocol dispatch. Only supports 2^16 possible values.
@@ -98,6 +102,8 @@ TypeHostCommandConfigureProfile: MessageTypeId.ValueType  # 10
 """Configure BLE profile with predefined services and characteristics"""
 TypeHostCommandStopAdvertisement: MessageTypeId.ValueType  # 11
 """Stop BLE advertising"""
+TypeHostCommandQueryConnections: MessageTypeId.ValueType  # 12
+"""Query bluetooth connections"""
 TypePluginData: MessageTypeId.ValueType  # 128
 """Plugin Responses
 Data forwarded from BLE client to BLE plugin
@@ -110,6 +116,8 @@ TypePluginCharacteristicInfoResponse: MessageTypeId.ValueType  # 131
 """Characteristic information response with properties"""
 TypePluginAuthenticationCompletedResponse: MessageTypeId.ValueType  # 132
 """Authentication completed response from plugin"""
+TypePluginOnConnectResponse: MessageTypeId.ValueType  # 133
+"""Central device on connect response"""
 global___MessageTypeId = MessageTypeId
 
 class _BleProperties:
@@ -581,6 +589,48 @@ class HostCommandNotifyCharacteristicValue(google.protobuf.message.Message):
     def ClearField(self, field_name: typing.Literal["address", b"address", "address_type", b"address_type", "characteristic_uuid", b"characteristic_uuid", "service_uuid", b"service_uuid", "value", b"value"]) -> None: ...
 
 global___HostCommandNotifyCharacteristicValue = HostCommandNotifyCharacteristicValue
+
+@typing.final
+class HostCommandQueryConnections(google.protobuf.message.Message):
+    """Host command. Query connections
+    @derive(serde::Deserialize, serde::Serialize)
+    @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandQueryConnections))
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___HostCommandQueryConnections = HostCommandQueryConnections
+
+@typing.final
+class PluginOnConnectResponse(google.protobuf.message.Message):
+    """Plugin connection response.
+    @derive(serde::Deserialize, serde::Serialize)
+    @rust_macro(protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse))
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    ADDRESS_FIELD_NUMBER: builtins.int
+    ADDRESS_TYPE_FIELD_NUMBER: builtins.int
+    address: builtins.bytes
+    """Device Address
+    6 bytes
+    """
+    address_type: global___BluetoothAddressType.ValueType
+    """Address type"""
+    def __init__(
+        self,
+        *,
+        address: builtins.bytes = ...,
+        address_type: global___BluetoothAddressType.ValueType = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["address", b"address", "address_type", b"address_type"]) -> None: ...
+
+global___PluginOnConnectResponse = PluginOnConnectResponse
 
 @typing.final
 class HostCommandConfigureProfile(google.protobuf.message.Message):
