@@ -73,6 +73,7 @@ mod common {
         /// [3-4]: Payload length (little-endian)
         /// [5+]:  Payload data
         /// ```
+        #[inline]
         pub fn extract_message_type_id(&self) -> Result<MessageTypeId> {
             let data = self.raw_bytes();
             // Check if we have enough bytes for a valid header
