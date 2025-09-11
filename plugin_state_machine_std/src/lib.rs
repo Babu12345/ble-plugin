@@ -202,6 +202,7 @@ use esp_idf_svc::nvs::EspNvsPartition;
 use esp_idf_svc::nvs::NvsPartitionId;
 use plugin_nvs::namespace;
 use plugin_nvs::namespaces::ConfigNamespace;
+use protocol::protocol::PluginOnConnectResponse;
 use protocol::protocol::{
     BleProfile, BleProperties, BluetoothAddressType, HostCommandConfigureCharacteristic,
     HostCommandConfigureCharacteristicRead, HostCommandConfigurePeripheral,
@@ -787,9 +788,18 @@ where
 
         match self.server.as_mut() {
             Some(server) => {
+                let sender = self.sender.clone();
                 server.on_connect(move |server, desc| {
                     log::info!("Client connected: {:?}", desc);
 
+                    let addr = desc.address();
+                    let response = PluginOnConnectResponse {
+                        address: addr.as_be_bytes().to_vec(),
+                        address_type: Self::ble_address_type_to_bluetooth_address_type(
+                            addr.addr_type(),
+                        ) as _,
+                    };
+                    sender.send(response).ok();
                     if cmd.allow_multi_connect
                         && server.connected_count() < (CONFIG_BT_NIMBLE_MAX_CONNECTIONS as usize)
                     {

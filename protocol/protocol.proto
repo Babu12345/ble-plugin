@@ -194,7 +194,7 @@ message HostCommandQueryConnections {
 
 // Plugin connection response.
 // @derive(serde::Deserialize, serde::Serialize)
-// @rust_macro(protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse))
+// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginOnConnectResponse))
 message PluginOnConnectResponse {
   // Device Address
   bytes address = 1; // 6 bytes

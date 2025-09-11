@@ -609,7 +609,7 @@ global___HostCommandQueryConnections = HostCommandQueryConnections
 class PluginOnConnectResponse(google.protobuf.message.Message):
     """Plugin connection response.
     @derive(serde::Deserialize, serde::Serialize)
-    @rust_macro(protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse))
+    @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginOnConnectResponse))
     """
 
     DESCRIPTOR: google.protobuf.descriptor.Descriptor

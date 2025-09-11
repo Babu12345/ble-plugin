@@ -183,9 +183,9 @@ pub struct HostCommandNotifyCharacteristicValue {
 pub struct HostCommandQueryConnections {}
 /// Plugin connection response.
 /// @derive(serde::Deserialize, serde::Serialize)
-/// @rust_macro(protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse))
+/// @rust_macro(protocol_io::PluginIO(MessageTypeId::TypePluginOnConnectResponse))
 #[derive(serde::Deserialize, serde::Serialize)]
-#[protocol_io::HostIO(MessageTypeId::TypePluginOnConnectResponse)]
+#[protocol_io::PluginIO(MessageTypeId::TypePluginOnConnectResponse)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PluginOnConnectResponse {
     /// Device Address
