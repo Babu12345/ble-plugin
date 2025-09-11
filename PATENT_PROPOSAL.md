@@ -23,18 +23,39 @@ Our framework provides a novel solution combining pre-certified hardware with pr
 ## Core Technical Innovation
 
 ### 1. Pre-Certified Hardware Module Architecture
-- ESP32-based BLE module with FCC/CE pre-certification
+- Hardware-based BLE module with FCC/CE pre-certification (e.g., ESP32, nRF52)
 - USB/UART interface to host IoT devices
 - Handles all wireless communication and compliance requirements
 - Host device avoids wireless certification by using certified module
 
-### 2. Protobuf Protocol Abstraction Layer
-- Standardized `protocol.proto` defines complete BLE interaction API
+### 2. Structured Protocol Abstraction Layer
+- Standardized interface specification defines complete BLE interaction API (e.g., Protocol Buffers, JSON schema)
 - Eliminates need for BLE GATT stack implementation
 - Simple message-based communication (host commands + plugin responses)
 - Structured message ID management:
-  - Unique host command ids
-  - Unique plugin response ids
+  - Unique host command identifiers
+  - Unique plugin response identifiers
+
+#### Illustrative Message Protocol Structure
+For patent illustration purposes, messages follow a standardized header format:
+
+```
+┌─────────────┬─────────────┬─────────────┬─────────────────┐
+│   Header    │   Type ID   │   Length    │     Payload     │
+│ (validation)│(identifier) │ (size info) │ (message data)  │
+└─────────────┴─────────────┴─────────────┴─────────────────┘
+
+Example Host Command (Illustrative):
+[Header][TypeID_Host][PayloadSize] + SerializedMessage{device_config...}
+
+Example Plugin Response (Illustrative):
+[Header][TypeID_Plugin][PayloadSize] + SerializedMessage{ble_data...}
+```
+
+- **Header**: Message validation and integrity checking
+- **Type ID**: Unique message identifier for efficient dispatch
+- **Length**: Payload size information
+- **Payload**: Structured message content using standardized serialization
 
 ### 3. Cross-Platform Code Generation
 - Automatic client library generation for multiple languages (Rust, Python, C++)
@@ -149,9 +170,9 @@ Our framework provides a novel solution combining pre-certified hardware with pr
 ## Implementation Status
 
 ### Current Development
-- Core protocol defined in `protocol/protocol.proto`
-- Rust and Python implementations functional
-- ESP32 hardware platform selected
+- Core protocol defined in standardized interface specification
+- Multiple language implementations functional (Rust, Python)
+- Reference hardware platforms evaluated (ESP32, nRF52)
 - Comprehensive test suite (41+ validation tests)
 
 ### Next Steps for Patent Filing
