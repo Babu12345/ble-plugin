@@ -53,7 +53,7 @@ Example Plugin Response (Illustrative):
 ```
 
 - **Header**: Message validation and integrity checking
-- **Type ID**: Unique message identifier for efficient dispatch
+- **Type ID**: Unique message identifier for efficient O(1) dispatch
 - **Length**: Payload size information
 - **Payload**: Structured message content using standardized serialization
 
