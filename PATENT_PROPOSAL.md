@@ -51,11 +51,11 @@ Our framework provides a novel solution combining pre-certified hardware with pr
 ## Technical Architecture
 
 ```
-IoT Device (Host) <--USB/UART--> BLE Plugin Module
-     |                               |
-     |-- Protobuf API               |-- BLE Stack
-     |-- Application Logic         |-- RF Hardware
-     |-- Non-wireless functions    |-- FCC Certified
+  IoT Device (Host)<--USB/UART-->BLE Plugin Module
+                          |
+            Protobuf API--|-- BLE Stack
+       Application Logic--|-- RF Hardware
+  Non-wireless functions--|-- FCC Certified
 ```
 
 ### Message Flow Example
