@@ -12,7 +12,7 @@ This crate provides attribute macros that automatically implement the appropriat
 
 ## Key Features
 
-- **Automatic Trait Implementation**: Generates `IO`, `HostIO`/`PluginIO`, and `MessageType` traits
+- **Automatic Trait Implementation**: Generates `IOBase`, `IO`, `HostIO`/`PluginIO`, and `MessageType` traits
 - **Consolidated API**: Single attribute combines trait implementation and message type ID
 - **Lifetime Handling**: Correctly manages lifetime parameters in generic types
 - **Zero Runtime Cost**: Pure compile-time code generation
@@ -34,7 +34,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 ### `#[HostIO(MessageTypeId)]`
 
-Implements `IO<'a>`, `HostIO<'a>`, and `MessageType` traits for message types sent from hosts to plugins. Use this for command messages that configure or control the BLE plugin device.
+Implements `IOBase<'a>`, `IO<'a>`, `HostIO<'a>`, and `MessageType` traits for message types sent from hosts to plugins. Use this for command messages that configure or control the BLE plugin device.
 
 **Syntax:**
 ```rust
@@ -49,12 +49,12 @@ struct ConfigurePeripheralCommand {
     uuid: String,
 }
 
-// Automatically implements IO<'a>, HostIO<'a>, and MessageType
+// Automatically implements IOBase<'a>, IO<'a>, HostIO<'a>, and MessageType
 ```
 
 ### `#[PluginIO(MessageTypeId)]`
 
-Implements `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits for message types sent from plugins to hosts. Use this for response messages, data forwarding, and error notifications.
+Implements `IOBase<'a>`, `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits for message types sent from plugins to hosts. Use this for response messages, data forwarding, and error notifications.
 
 **Syntax:**
 ```rust
@@ -70,7 +70,7 @@ struct ServiceInfoResponse {
     exists: bool,
 }
 
-// Automatically implements IO<'a>, PluginIO<'a>, and MessageType
+// Automatically implements IOBase<'a>, IO<'a>, PluginIO<'a>, and MessageType
 ```
 
 ## Advanced Usage
@@ -91,7 +91,7 @@ struct GenericCommand<'a> {
     name: &'a str,
 }
 
-// Correctly implements IO<'a> and HostIO<'a> with proper lifetime bounds
+// Correctly implements IOBase<'a>, IO<'a> and HostIO<'a> with proper lifetime bounds
 ```
 
 ### Multiple Lifetimes
@@ -110,7 +110,7 @@ struct MultiLifetimeResponse<'a, 'b> {
     secondary: &'b [u8],
 }
 
-// Generates: IO<'a>, PluginIO<'a>, and MessageType implementations
+// Generates: IOBase<'a>, IO<'a>, PluginIO<'a>, and MessageType implementations
 // Note: Uses 'a (first lifetime parameter) for the IO traits
 ```
 
@@ -120,6 +120,7 @@ The attribute macros generate implementations that look like this:
 
 ### For `#[HostIO(MessageTypeId::SomeCommand)]`:
 ```rust
+impl<'a> IOBase<'a> for YourType {}
 impl<'a> IO<'a> for YourType {}
 impl<'a> HostIO<'a> for YourType {}
 impl MessageType for YourType {
@@ -131,6 +132,7 @@ impl MessageType for YourType {
 
 ### For `#[PluginIO(MessageTypeId::SomeResponse)]`:
 ```rust
+impl<'a> IOBase<'a> for YourType {}
 impl<'a> IO<'a> for YourType {}
 impl<'a> PluginIO<'a> for YourType {}
 impl MessageType for YourType {
@@ -143,6 +145,7 @@ impl MessageType for YourType {
 ### With Existing Lifetimes:
 ```rust
 // For a type like: struct MyType<'a, 'b> { ... }
+impl<'a, 'b> IOBase<'a> for MyType<'a, 'b> {}
 impl<'a, 'b> IO<'a> for MyType<'a, 'b> {}
 impl<'a, 'b> HostIO<'a> for MyType<'a, 'b> {}
 impl<'a, 'b> MessageType for MyType<'a, 'b> {
@@ -151,6 +154,50 @@ impl<'a, 'b> MessageType for MyType<'a, 'b> {
     }
 }
 ```
+
+## IOBase Trait
+
+The `IOBase` trait is the foundational trait that provides the serialization constraints required for protocol I/O operations. It is automatically implemented by the attribute macros and serves as the basis for the more specialized `IO`, `HostIO`, and `PluginIO` traits.
+
+### What is IOBase?
+
+`IOBase` defines the core trait bounds that message types must satisfy to participate in the protocol:
+
+- **Serde Support**: `Serialize + Deserialize<'a>` for data serialization
+- **Message Type**: `MessageType` trait for type identification  
+- **Sizing**: `Sized` constraint for stack allocation
+- **Protocol Buffer Support**: Either `prost::Message + Default` (when using `protocol_buffer` feature) or `MessageWrite + MessageRead<'a> + Default` (when using `quick_protocol_buffer` feature)
+
+### Feature-Dependent Definitions
+
+The exact definition of `IOBase` depends on your chosen serialization backend:
+
+**With `protocol_buffer` feature (default):**
+```rust
+pub trait IOBase<'a>:
+    Serialize + Deserialize<'a> + Sized + MessageType + prost::Message + Default
+{
+}
+```
+
+**With `quick_protocol_buffer` feature:**
+```rust
+pub trait IOBase<'a>:
+    Serialize + Deserialize<'a> + Sized + MessageType + Default + MessageWrite + MessageRead<'a>
+{
+}
+```
+
+### Why IOBase Matters
+
+- **Trait Hierarchy**: `IOBase` → `IO` → `HostIO`/`PluginIO` provides a clean inheritance structure
+- **Compile-time Safety**: Ensures all required traits are implemented before any I/O operations
+- **Flexible Serialization**: Abstracts over different protocol buffer implementations
+- **Zero Runtime Cost**: All constraints are resolved at compile-time
+
+### Implementation
+
+You don't need to implement `IOBase` manually. The `#[HostIO(...)]` and `#[PluginIO(...)]` attribute macros automatically generate the implementation for you, along with all the other required traits.
 
 ## Usage Guidelines
 

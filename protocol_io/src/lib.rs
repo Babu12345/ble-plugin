@@ -20,7 +20,7 @@
 //!
 //! ## Key Features
 //!
-//! - **Automatic Trait Implementation**: Generates `IO`, `HostIO`/`PluginIO`, and `MessageType` traits
+//! - **Automatic Trait Implementation**: Generates `IOBase`, `IO`, `HostIO`/`PluginIO`, and `MessageType` traits
 //! - **Consolidated API**: Single attribute combines trait implementation and message type ID
 //! - **Lifetime Handling**: Correctly manages lifetime parameters in generic types
 //! - **Zero Runtime Cost**: Pure compile-time code generation
@@ -30,11 +30,11 @@
 //! ## Attribute Macros
 //!
 //! ### `#[HostIO(MessageTypeId)]`
-//! Implements `IO<'a>`, `HostIO<'a>`, and `MessageType` traits for message types sent from
+//! Implements `IOBase<'a>`, `IO<'a>`, `HostIO<'a>`, and `MessageType` traits for message types sent from
 //! hosts to plugins. Use this for command messages that configure or control the BLE plugin device.
 //!
 //! ### `#[PluginIO(MessageTypeId)]`
-//! Implements `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits for message types sent from
+//! Implements `IOBase<'a>`, `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits for message types sent from
 //! plugins to hosts. Use this for response messages, data forwarding, and error notifications.
 //!
 //! ## Usage Examples
@@ -53,7 +53,7 @@
 //!     uuid: String,
 //! }
 //!
-//! // Automatically implements IO<'a>, HostIO<'a>, and MessageType
+//! // Automatically implements IOBase<'a>, IO<'a>, HostIO<'a>, and MessageType
 //! ```
 //!
 //! ### Plugin Response Message
@@ -71,7 +71,7 @@
 //!     exists: bool,
 //! }
 //!
-//! // Automatically implements IO<'a>, PluginIO<'a>, and MessageType
+//! // Automatically implements IOBase<'a>, IO<'a>, PluginIO<'a>, and MessageType
 //! ```
 //!
 //! ### Types with Lifetimes
@@ -91,7 +91,7 @@
 //!     name: &'a str,
 //! }
 //!
-//! // Generates: IO<'a>, HostIO<'a>, and MessageType implementations
+//! // Generates: IOBase<'a>, IO<'a>, HostIO<'a>, and MessageType implementations
 //! ```
 //!
 //! ### Multiple Lifetimes
@@ -110,7 +110,7 @@
 //!     secondary: &'b [u8],
 //! }
 //!
-//! // Generates: IO<'a>, PluginIO<'a>, and MessageType implementations
+//! // Generates: IOBase<'a>, IO<'a>, PluginIO<'a>, and MessageType implementations
 //! // Note: Uses 'a (first lifetime parameter) for the IO traits
 //! ```
 //!
@@ -138,6 +138,7 @@
 //!
 //! ```rust,ignore
 //! // For #[HostIO(MessageTypeId::SomeCommand)]
+//! impl<'a> IOBase<'a> for YourType {}
 //! impl<'a> IO<'a> for YourType {}
 //! impl<'a> HostIO<'a> for YourType {}
 //! impl MessageType for YourType {
@@ -147,6 +148,7 @@
 //! }
 //!
 //! // For #[PluginIO(MessageTypeId::SomeResponse)]
+//! impl<'a> IOBase<'a> for YourType {}
 //! impl<'a> IO<'a> for YourType {}
 //! impl<'a> PluginIO<'a> for YourType {}
 //! impl MessageType for YourType {
@@ -161,6 +163,7 @@
 //!
 //! ```rust,ignore
 //! // For a type like: struct MyType<'a, 'b> { ... }
+//! impl<'a, 'b> IOBase<'a> for MyType<'a, 'b> {}
 //! impl<'a, 'b> IO<'a> for MyType<'a, 'b> {}
 //! impl<'a, 'b> HostIO<'a> for MyType<'a, 'b> {}
 //! impl<'a, 'b> MessageType for MyType<'a, 'b> {
@@ -232,7 +235,7 @@ use syn::{parse_macro_input, DeriveInput, Expr, GenericParam};
 
 /// Attribute macro for implementing HostIO traits
 ///
-/// This macro automatically implements `IO<'a>`, `HostIO<'a>`, and `MessageType` traits
+/// This macro automatically implements `IOBase<'a>`, `IO<'a>`, `HostIO<'a>`, and `MessageType` traits
 /// for types that represent messages sent from host devices to plugin devices.
 ///
 /// ## Usage
@@ -257,6 +260,7 @@ use syn::{parse_macro_input, DeriveInput, Expr, GenericParam};
 /// For a type `MyHostCommand`, this macro generates:
 ///
 /// ```rust,ignore
+/// impl<'a> IOBase<'a> for MyHostCommand {}
 /// impl<'a> IO<'a> for MyHostCommand {}
 /// impl<'a> HostIO<'a> for MyHostCommand {}
 /// impl MessageType for MyHostCommand {
@@ -283,7 +287,7 @@ use syn::{parse_macro_input, DeriveInput, Expr, GenericParam};
 ///     name: &'b str,
 /// }
 ///
-/// // Generates: IO<'a>, HostIO<'a>, and MessageType implementations
+/// // Generates: IOBase<'a>, IO<'a>, HostIO<'a>, and MessageType implementations
 /// // Note: Uses 'a (first lifetime) for the IO traits
 /// ```
 ///
@@ -348,7 +352,7 @@ pub fn HostIO(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// Attribute macro for implementing PluginIO traits
 ///
-/// This macro automatically implements `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits
+/// This macro automatically implements `IOBase<'a>`, `IO<'a>`, `PluginIO<'a>`, and `MessageType` traits
 /// for types that represent messages sent from plugin devices to host devices.
 ///
 /// ## Usage
@@ -371,6 +375,7 @@ pub fn HostIO(args: TokenStream, input: TokenStream) -> TokenStream {
 /// For a type `MyPluginResponse`, this macro generates:
 ///
 /// ```rust,ignore
+/// impl<'a> IOBase<'a> for MyPluginResponse {}
 /// impl<'a> IO<'a> for MyPluginResponse {}
 /// impl<'a> PluginIO<'a> for MyPluginResponse {}
 /// impl MessageType for MyPluginResponse {
