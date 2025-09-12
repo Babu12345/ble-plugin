@@ -37,6 +37,7 @@ doctest = false
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt-multi-thread"] }
 critical-section = "1.0"
+inventory = "0.3"
 
 [features]
 default = ["std", "protocol_buffer"]

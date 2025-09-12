@@ -194,6 +194,8 @@ pub use io::*;
 use lib_utils::exactly_one_feature;
 pub mod devices;
 pub mod utils;
+#[cfg(test)]
+mod validation;
 
 /// Maximum size for BLE peripheral device names
 ///
@@ -233,7 +235,6 @@ mod tests {
         },
         MessageType, DEFAULT_PACKET_SIZE, IO,
     };
-    use std::vec::Vec;
 
     #[test]
     fn test_max_transfer_size() {
@@ -357,7 +358,7 @@ mod tests {
         // Test HostCommandConfigurePeripheral serialization
         let cmd = HostCommandConfigurePeripheral {
             name: String::try_from("TestDevice").expect("Should create string"),
-            addr: Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
+            addr: std::vec::Vec::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06]),
         };
 
         let serialized: [u8; DEFAULT_PACKET_SIZE] =
@@ -398,7 +399,7 @@ mod tests {
     #[test]
     fn test_plugin_response_serialization_with_header() {
         // Test PluginServiceInfoResponse serialization
-        let mut char_uuids: Vec<u32> = Vec::new();
+        let mut char_uuids: std::vec::Vec<u32> = Vec::new();
         char_uuids.push(0);
         char_uuids.push(u32::MAX);
 

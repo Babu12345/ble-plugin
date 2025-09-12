@@ -328,11 +328,22 @@ pub fn HostIO(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    // Register MESSAGE_TYPE_ID for validation (test builds only)
+    let registration = quote! {
+        #[cfg(test)]
+        inventory::submit! {
+            crate::validation::MessageTypeIdRegistration {
+                id: #message_type_id,
+            }
+        }
+    };
+
     let expanded = quote! {
         #input
 
         #io_impl
         #message_type_impl
+        #registration
     };
 
     TokenStream::from(expanded)
@@ -412,11 +423,22 @@ pub fn PluginIO(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    // Register MESSAGE_TYPE_ID for validation (test builds only)
+    let registration = quote! {
+        #[cfg(test)]
+        inventory::submit! {
+            crate::validation::MessageTypeIdRegistration {
+                id: #message_type_id,
+            }
+        }
+    };
+
     let expanded = quote! {
         #input
 
         #io_impl
         #message_type_impl
+        #registration
     };
 
     TokenStream::from(expanded)

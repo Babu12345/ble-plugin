@@ -1,6 +1,21 @@
 use protocol_io::{HostIO, PluginIO};
 use serde::{Deserialize, Serialize};
 
+// Mock validation module for testing - prevents compilation errors from generated registration code
+#[cfg(test)]
+mod validation {
+    use super::MessageTypeId;
+    
+    #[derive(Debug)]
+    pub struct MessageTypeIdRegistration {
+        #[allow(unused)]
+        pub id: MessageTypeId,
+    }
+    
+    // Mock inventory collection - just a no-op for testing
+    inventory::collect!(MessageTypeIdRegistration);
+}
+
 // Test helper types and traits
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessageTypeId {
