@@ -202,7 +202,6 @@ use esp_idf_svc::nvs::EspNvsPartition;
 use esp_idf_svc::nvs::NvsPartitionId;
 use plugin_nvs::namespace;
 use plugin_nvs::namespaces::ConfigNamespace;
-use protocol::protocol::PluginOnConnectResponse;
 use protocol::protocol::{
     BleProfile, BleProperties, BluetoothAddressType, HostCommandConfigureCharacteristic,
     HostCommandConfigureCharacteristicRead, HostCommandConfigurePeripheral,
@@ -211,7 +210,7 @@ use protocol::protocol::{
     HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
     HostCommandStopAdvertisement, PluginAuthenticationCompletedResponse,
     PluginCharacteristicInfoResponse, PluginConfigurationError, PluginConfigurationErrorType,
-    PluginData, PluginServiceInfoResponse,
+    PluginData, PluginOnConnectResponse, PluginServiceInfoResponse,
 };
 use protocol::utils::slice_to_array;
 use threadpool::ThreadPool;
