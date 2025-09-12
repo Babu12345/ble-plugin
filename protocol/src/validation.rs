@@ -8,31 +8,20 @@
 use crate::protocol::MessageTypeId;
 use inventory;
 
-/// Registration entry for a MESSAGE_TYPE_ID
-
-#[derive(Debug)]
-pub struct MessageTypeIdRegistration {
-    /// The MESSAGE_TYPE_ID value being registered
-    #[allow(unused)]
-    pub id: MessageTypeId,
-}
-
 // Collect all MESSAGE_TYPE_ID registrations (test builds only)
-
-inventory::collect!(MessageTypeIdRegistration);
-
-// Validate that all registered MESSAGE_TYPE_IDs are unique
+inventory::collect!(MessageTypeId);
 
 #[test]
 #[cfg(feature = "std")]
+/// Validate that all registered MESSAGE_TYPE_IDs are unique
 pub fn validate_message_type_id_uniqueness() {
     use std::collections::HashMap;
 
     let mut id_counts: HashMap<u16, usize> = HashMap::new();
 
     // Count occurrences of each MESSAGE_TYPE_ID
-    for registration in inventory::iter::<MessageTypeIdRegistration> {
-        let id_value = registration.id as u16;
+    for registration in inventory::iter::<MessageTypeId> {
+        let id_value = *registration as u16;
         *id_counts.entry(id_value).or_insert(0) += 1;
     }
 

@@ -5,15 +5,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod validation {
     use super::MessageTypeId;
-    
-    #[derive(Debug)]
-    pub struct MessageTypeIdRegistration {
-        #[allow(unused)]
-        pub id: MessageTypeId,
-    }
-    
+
     // Mock inventory collection - just a no-op for testing
-    inventory::collect!(MessageTypeIdRegistration);
+    inventory::collect!(MessageTypeId);
 }
 
 // Test helper types and traits
