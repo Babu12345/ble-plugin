@@ -142,9 +142,7 @@
 //! impl<'a> IO<'a> for YourType {}
 //! impl<'a> HostIO<'a> for YourType {}
 //! impl MessageType for YourType {
-//!     fn message_type_id() -> MessageTypeId {
-//!         MessageTypeId::SomeCommand
-//!     }
+//!     const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::SomeCommand;
 //! }
 //!
 //! // For #[PluginIO(MessageTypeId::SomeResponse)]
@@ -152,9 +150,7 @@
 //! impl<'a> IO<'a> for YourType {}
 //! impl<'a> PluginIO<'a> for YourType {}
 //! impl MessageType for YourType {
-//!     fn message_type_id() -> MessageTypeId {
-//!         MessageTypeId::SomeResponse
-//!     }
+//!    const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::SomeResponse;
 //! }
 //! ```
 //!
@@ -167,9 +163,7 @@
 //! impl<'a, 'b> IO<'a> for MyType<'a, 'b> {}
 //! impl<'a, 'b> HostIO<'a> for MyType<'a, 'b> {}
 //! impl<'a, 'b> MessageType for MyType<'a, 'b> {
-//!     fn message_type_id() -> MessageTypeId {
-//!         MessageTypeId::YourVariant
-//!     }
+//!     const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::YourVariant;
 //! }
 //! ```
 //!
@@ -209,9 +203,7 @@
 //! struct MyCommand { ... }
 //!
 //! impl MessageType for MyCommand {
-//!     fn message_type_id() -> MessageTypeId {
-//!         MessageTypeId::HostCommandSomething
-//!     }
+//!     const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::HostCommandSomething;
 //! }
 //! ```
 //!
@@ -264,9 +256,7 @@ use syn::{parse_macro_input, DeriveInput, Expr, GenericParam};
 /// impl<'a> IO<'a> for MyHostCommand {}
 /// impl<'a> HostIO<'a> for MyHostCommand {}
 /// impl MessageType for MyHostCommand {
-///     fn message_type_id() -> MessageTypeId {
-///         MessageTypeId::HostCommandConfigurePeripheral
-///     }
+///     const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::HostCommandConfigurePeripheral;
 /// }
 /// ```
 ///
@@ -334,9 +324,7 @@ pub fn HostIO(args: TokenStream, input: TokenStream) -> TokenStream {
     // Always generate MessageType implementation with the provided ID
     let message_type_impl = quote! {
         impl #impl_generics MessageType for #name #ty_generics #where_clause {
-            fn message_type_id() -> MessageTypeId {
-                #message_type_id
-            }
+            const MESSAGE_TYPE_ID: MessageTypeId = #message_type_id;
         }
     };
 
@@ -379,9 +367,7 @@ pub fn HostIO(args: TokenStream, input: TokenStream) -> TokenStream {
 /// impl<'a> IO<'a> for MyPluginResponse {}
 /// impl<'a> PluginIO<'a> for MyPluginResponse {}
 /// impl MessageType for MyPluginResponse {
-///     fn message_type_id() -> MessageTypeId {
-///         MessageTypeId::PluginServiceInfoResponse
-///     }
+///     const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::PluginServiceInfoResponse;
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -422,9 +408,7 @@ pub fn PluginIO(args: TokenStream, input: TokenStream) -> TokenStream {
     // Always generate MessageType implementation with the provided ID
     let message_type_impl = quote! {
         impl #impl_generics MessageType for #name #ty_generics #where_clause {
-            fn message_type_id() -> MessageTypeId {
-                #message_type_id
-            }
+            const MESSAGE_TYPE_ID: MessageTypeId = #message_type_id;
         }
     };
 

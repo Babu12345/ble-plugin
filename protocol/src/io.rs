@@ -138,9 +138,7 @@ pub const DATA_BYTES_LENGTH_IN_BYTES: usize = 2;
 /// }
 ///
 /// impl MessageType for MyCommand {
-///     fn message_type_id() -> MessageTypeId {
-///         MessageTypeId::TypeHostCommandConfigurePeripheral
-///     }
+///     const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::TypeHostCommandConfigurePeripheral;
 /// }
 /// ```
 pub trait MessageType {
@@ -149,7 +147,7 @@ pub trait MessageType {
     /// This method returns the MessageTypeId that will be included in the
     /// message header for efficient dispatch. Each message type must return
     /// a unique identifier.
-    fn message_type_id() -> MessageTypeId;
+    const MESSAGE_TYPE_ID: MessageTypeId;
 }
 
 /// Core I/O trait for protocol message serialization and deserialization
@@ -409,7 +407,7 @@ pub trait IO<'a>: IOBase<'a> {
         payload_data.push(MESSAGE_MAGIC);
 
         // Add message type ID (2 bytes)
-        payload_data.extend_from_slice(&(Self::message_type_id() as u16).to_le_bytes());
+        payload_data.extend_from_slice(&(Self::MESSAGE_TYPE_ID as u16).to_le_bytes());
 
         // Add length bytes
         payload_data
@@ -436,7 +434,7 @@ pub trait IO<'a>: IOBase<'a> {
         let _ = header_bytes.push(MESSAGE_MAGIC);
 
         // Add message type ID (2 bytes)
-        let _ = header_bytes.extend_from_slice(&(Self::message_type_id() as u16).to_le_bytes());
+        let _ = header_bytes.extend_from_slice(&(Self::MESSAGE_TYPE_ID as u16).to_le_bytes());
 
         // Add length bytes
         for x in 0..DATA_BYTES_LENGTH_IN_BYTES {

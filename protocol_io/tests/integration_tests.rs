@@ -20,7 +20,7 @@ pub enum MessageTypeId {
 }
 
 pub trait MessageType {
-    fn message_type_id() -> MessageTypeId;
+    const MESSAGE_TYPE_ID: MessageTypeId;
 }
 
 pub trait IOBase<'a> {}
@@ -95,22 +95,22 @@ mod zero_lifetimes {
     #[test]
     fn test_message_type_id_is_correct() {
         assert_eq!(
-            SimpleHostCommand::message_type_id(),
+            SimpleHostCommand::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandConfigurePeripheral
         );
 
         assert_eq!(
-            SimplePluginResponse::message_type_id(),
+            SimplePluginResponse::MESSAGE_TYPE_ID,
             MessageTypeId::PluginData
         );
 
         assert_eq!(
-            HostCommandEnum::message_type_id(),
+            HostCommandEnum::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandConfigureService
         );
 
         assert_eq!(
-            PluginResponseEnum::message_type_id(),
+            PluginResponseEnum::MESSAGE_TYPE_ID,
             MessageTypeId::PluginConfigurationError
         );
     }
@@ -151,17 +151,17 @@ mod single_lifetime {
     #[test]
     fn test_single_lifetime_message_type_id() {
         assert_eq!(
-            SingleLifetimeHostCommand::message_type_id(),
+            SingleLifetimeHostCommand::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandConfigureCharacteristic
         );
 
         assert_eq!(
-            SingleLifetimePluginResponse::message_type_id(),
+            SingleLifetimePluginResponse::MESSAGE_TYPE_ID,
             MessageTypeId::PluginServiceInfoResponse
         );
 
         assert_eq!(
-            SingleLifetimeHostEnum::message_type_id(),
+            SingleLifetimeHostEnum::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandGetServiceInfo
         );
     }
@@ -218,17 +218,17 @@ mod multiple_lifetimes {
     #[test]
     fn test_multiple_lifetimes_message_type_id() {
         assert_eq!(
-            MultipleLifetimeHostCommand::message_type_id(),
+            MultipleLifetimeHostCommand::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandConfigureCharacteristicRead
         );
 
         assert_eq!(
-            MultipleLifetimePluginResponse::message_type_id(),
+            MultipleLifetimePluginResponse::MESSAGE_TYPE_ID,
             MessageTypeId::PluginCharacteristicInfoResponse
         );
 
         assert_eq!(
-            MultipleLifetimeEnum::message_type_id(),
+            MultipleLifetimeEnum::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandStartAdvertisement
         );
     }
@@ -291,12 +291,12 @@ mod generic_types {
     #[test]
     fn test_generic_types_message_type_id() {
         assert_eq!(
-            GenericHostCommand::message_type_id(),
+            GenericHostCommand::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandNotifyCharacteristicValue
         );
 
         assert_eq!(
-            GenericPluginResponse::message_type_id(),
+            GenericPluginResponse::MESSAGE_TYPE_ID,
             MessageTypeId::PluginAuthenticationCompletedResponse
         );
     }
@@ -341,7 +341,7 @@ mod edge_cases {
         let _cmd = FirstLifetimeUsed { data_a, data_b };
 
         assert_eq!(
-            FirstLifetimeUsed::message_type_id(),
+            FirstLifetimeUsed::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandConfigurePeripheral
         );
     }
@@ -419,10 +419,10 @@ mod compilation_tests {
         let _plugin = ComplexPlugin { data, value: 100 };
 
         assert_eq!(
-            ComplexHost::message_type_id(),
+            ComplexHost::MESSAGE_TYPE_ID,
             MessageTypeId::HostCommandConfigurePeripheral
         );
 
-        assert_eq!(ComplexPlugin::message_type_id(), MessageTypeId::PluginData);
+        assert_eq!(ComplexPlugin::MESSAGE_TYPE_ID, MessageTypeId::PluginData);
     }
 }

@@ -306,47 +306,47 @@ mod tests {
     fn test_message_type_implementations() {
         // Test that each message type has correct MessageType implementation
         assert_eq!(
-            HostCommandConfigurePeripheral::message_type_id() as u8,
+            HostCommandConfigurePeripheral::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandConfigurePeripheral as u8
         );
         assert_eq!(
-            HostCommandConfigureService::message_type_id() as u8,
+            HostCommandConfigureService::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandConfigureService as u8
         );
         assert_eq!(
-            HostCommandConfigureCharacteristic::message_type_id() as u8,
+            HostCommandConfigureCharacteristic::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandConfigureCharacteristic as u8
         );
         assert_eq!(
-            HostCommandConfigureCharacteristicRead::message_type_id() as u8,
+            HostCommandConfigureCharacteristicRead::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandConfigureCharacteristicRead as u8
         );
         assert_eq!(
-            HostCommandGetServiceInfo::message_type_id() as u8,
+            HostCommandGetServiceInfo::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandGetServiceInfo as u8
         );
         assert_eq!(
-            HostCommandGetCharacteristicInfo::message_type_id() as u8,
+            HostCommandGetCharacteristicInfo::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandGetCharacteristicInfo as u8
         );
         assert_eq!(
-            HostCommandStartAdvertisement::message_type_id() as u8,
+            HostCommandStartAdvertisement::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandStartAdvertisement as u8
         );
         assert_eq!(
-            HostCommandNotifyCharacteristicValue::message_type_id() as u8,
+            HostCommandNotifyCharacteristicValue::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypeHostCommandNotifyCharacteristicValue as u8
         );
         assert_eq!(
-            PluginConfigurationError::message_type_id() as u8,
+            PluginConfigurationError::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypePluginConfigurationError as u8
         );
         assert_eq!(
-            PluginServiceInfoResponse::message_type_id() as u8,
+            PluginServiceInfoResponse::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypePluginServiceInfoResponse as u8
         );
         assert_eq!(
-            PluginCharacteristicInfoResponse::message_type_id() as u8,
+            PluginCharacteristicInfoResponse::MESSAGE_TYPE_ID as u8,
             MessageTypeId::TypePluginCharacteristicInfoResponse as u8
         );
     }

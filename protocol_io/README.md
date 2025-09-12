@@ -124,9 +124,7 @@ impl<'a> IOBase<'a> for YourType {}
 impl<'a> IO<'a> for YourType {}
 impl<'a> HostIO<'a> for YourType {}
 impl MessageType for YourType {
-    fn message_type_id() -> MessageTypeId {
-        MessageTypeId::SomeCommand
-    }
+    const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::SomeCommand;
 }
 ```
 
@@ -136,9 +134,7 @@ impl<'a> IOBase<'a> for YourType {}
 impl<'a> IO<'a> for YourType {}
 impl<'a> PluginIO<'a> for YourType {}
 impl MessageType for YourType {
-    fn message_type_id() -> MessageTypeId {
-        MessageTypeId::SomeResponse
-    }
+    const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::SomeResponse;
 }
 ```
 
@@ -149,9 +145,7 @@ impl<'a, 'b> IOBase<'a> for MyType<'a, 'b> {}
 impl<'a, 'b> IO<'a> for MyType<'a, 'b> {}
 impl<'a, 'b> HostIO<'a> for MyType<'a, 'b> {}
 impl<'a, 'b> MessageType for MyType<'a, 'b> {
-    fn message_type_id() -> MessageTypeId {
-        MessageTypeId::YourVariant
-    }
+    const MESSAGE_TYPE_ID: MessageTypeId = MessageTypeId::YourVariant;
 }
 ```
 
