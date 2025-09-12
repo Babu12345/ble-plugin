@@ -24,7 +24,7 @@ Our framework provides a novel solution combining pre-certified hardware with pr
 
 ### 1. Pre-Certified Hardware Module Architecture
 - Hardware-based BLE module with FCC/CE pre-certification (e.g., ESP32, nRF52)
-- USB/UART interface to host IoT devices
+- Standardized physical interface to host IoT devices (USB, UART, SPI, I2C, etc.)
 - Handles all wireless communication and compliance requirements
 - Host device avoids wireless certification by using certified module
 
@@ -65,22 +65,22 @@ Example Plugin Response (Illustrative):
 
 ### 4. Plug-and-Play Integration
 - No BLE expertise required from IoT device developers
-- Standard hardware interface (USB/UART)
+- Standard hardware interface (e.g., USB, UART, SPI, I2C)
 - Comprehensive SDK with examples and documentation
 - Configuration through simple API calls
 
 ## Technical Architecture
 
 ```
-  IoT Device (Host)<--USB/UART-->BLE Plugin Module
-                          |
+  IoT Device (Host)<--Interface-->BLE Plugin Module
+                    (USB/UART/SPI)
             Protobuf API--|-- BLE Stack
        Application Logic--|-- RF Hardware
   Non-wireless functions--|-- FCC Certified
 ```
 
 ### Message Flow Example
-1. Host sends `HostCommandConfigurePeripheral` via USB
+1. Host sends `HostCommandConfigurePeripheral` via standardized interface
 2. Plugin configures BLE peripheral and responds
 3. Host sends `HostCommandStartAdvertisement`
 4. Plugin handles BLE advertising automatically
@@ -121,7 +121,7 @@ Example Plugin Response (Illustrative):
 3. **Certification Bypass Architecture**: System enabling IoT devices to achieve BLE connectivity without FCC certification by:
    - Utilizing pre-certified plugin module for all wireless functions
    - Maintaining non-wireless host device classification
-   - Standardized non-wireless interface (USB/UART) between components
+   - Standardized non-wireless interface (USB, UART, SPI, I2C, etc.) between components
 
 ### Secondary Claims
 
@@ -210,7 +210,11 @@ message PluginData {
 ```
 
 ### Hardware Interface
-- **Connection**: USB 2.0 or UART serial interface
+- **Connection**: Multiple interface options supported:
+  - USB 2.0 for high-speed applications
+  - UART serial for simple embedded systems
+  - SPI for high-performance real-time applications
+  - I2C for multi-device bus architectures
 - **Power**: 5V supply from host device
 - **Form Factor**: Standard module sizes (20x30mm, 25x35mm options)
 - **Antenna**: Integrated PCB antenna or external connector
