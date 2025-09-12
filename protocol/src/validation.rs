@@ -42,7 +42,7 @@ pub fn validate_message_type_id_uniqueness() {
         if *count > 1 {
             conflicts_found = true;
             eprintln!(
-                "❌ MESSAGE_TYPE_ID conflict: 0x{:04X} used by {} structs",
+                "❌ MESSAGE_TYPE_ID conflict: 0x{:04X} used by {} IO structs",
                 id_value, count
             );
         }
