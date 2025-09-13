@@ -823,6 +823,16 @@ class BLEConfigurationGUI:
                         f"   Characteristic: {char_uuid}\n"
                         f"   Payload: {data_display}"
                     )
+                elif isinstance(deserialized, protocol_pb2.PluginOnConnectResponse):
+                    # Format PluginOnConnectResponse fields
+                    device_addr = ':'.join([f'{b:02X}' for b in deserialized.address])
+                    addr_type = str(deserialized.address_type).split('.')[-1] if hasattr(deserialized.address_type, 'split') else str(deserialized.address_type)
+                    
+                    return (
+                        f"🔗 Device Connection Response:\n"
+                        f"   Device Address: {device_addr}\n"
+                        f"   Address Type: {addr_type}"
+                    )
                 else:
                     # For other message types, show basic info
                     return f"📦 {type(deserialized).__name__}"

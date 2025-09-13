@@ -69,12 +69,14 @@ PROTOBUF_TO_TYPE_ID = {
     protocol_pb2.HostCommandStopAdvertisement: protocol_pb2.MessageTypeId.TypeHostCommandStopAdvertisement,
     protocol_pb2.HostCommandNotifyCharacteristicValue: protocol_pb2.MessageTypeId.TypeHostCommandNotifyCharacteristicValue,
     protocol_pb2.HostCommandConfigureProfile: protocol_pb2.MessageTypeId.TypeHostCommandConfigureProfile,
+    protocol_pb2.HostCommandQueryConnections: protocol_pb2.MessageTypeId.TypeHostCommandQueryConnections,
     # Responses (sent FROM the device, included for testing purposes)
     protocol_pb2.PluginData: protocol_pb2.MessageTypeId.TypePluginData,
     protocol_pb2.PluginConfigurationError: protocol_pb2.MessageTypeId.TypePluginConfigurationError,
     protocol_pb2.PluginServiceInfoResponse: protocol_pb2.MessageTypeId.TypePluginServiceInfoResponse,
     protocol_pb2.PluginCharacteristicInfoResponse: protocol_pb2.MessageTypeId.TypePluginCharacteristicInfoResponse,
     protocol_pb2.PluginAuthenticationCompletedResponse: protocol_pb2.MessageTypeId.TypePluginAuthenticationCompletedResponse,
+    protocol_pb2.PluginOnConnectResponse: protocol_pb2.MessageTypeId.TypePluginOnConnectResponse,
 }
 
 # Generate reverse mapping using dictionary comprehension
