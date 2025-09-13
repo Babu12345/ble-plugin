@@ -316,6 +316,7 @@ class HostCommandConfigurePeripheral(google.protobuf.message.Message):
     - Static Random: MSB bits = 11 (0xC0-0xFF), remaining 46 bits must have at least one 0 and one 1
     - Non-Resolvable Private: MSB bits = 00 (0x00-0x3F), remaining 46 bits must have at least one 0 and one 1
     Invalid pattern like 0xa1a1a1a1a1a1 has MSB bits = 10 (not allowed)
+
     @derive(serde::Deserialize, serde::Serialize)
     @rust_macro(protocol_io::HostIO(MessageTypeId::TypeHostCommandConfigurePeripheral))
     """
