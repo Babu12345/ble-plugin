@@ -37,7 +37,7 @@ The library uses **Protocol Buffers (protobuf)** exclusively for message seriali
 
 - **Message Format**: `[1-byte magic][2-byte type_id][2-byte length][protobuf data][padding]`
 - **Magic Number**: `0xDE` for message integrity validation
-- **Packet Size**: Fixed 64-byte USB packets
+- **Packet Size**: Fixed by DEFAULT_PACKET_SIZE which depends on what the plugin sends
 - **Constants**: Centralized in `plugin_host.constants` module
 
 ### Key Modules
