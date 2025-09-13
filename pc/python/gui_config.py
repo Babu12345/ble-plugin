@@ -222,6 +222,43 @@ class BLEConfigurationGUI:
         
         ttk.Button(frame, text="Configure Characteristic", command=self.configure_characteristic).grid(row=3, column=0, columnspan=2, pady=10)
         
+        # Notify Characteristic section
+        notify_frame = ttk.LabelFrame(frame, text="Notify Characteristic Value", padding=10)
+        notify_frame.grid(row=4, column=0, columnspan=2, sticky="ew", pady=10)
+        
+        ttk.Label(notify_frame, text="Device Address (6 hex bytes):").grid(row=0, column=0, sticky="w", pady=5)
+        notify_mac_frame = ttk.Frame(notify_frame)
+        notify_mac_frame.grid(row=0, column=1, pady=5)
+        
+        self.notify_mac_vars = []
+        for i in range(6):
+            var = tk.StringVar(value=f"{0x01}")
+            self.notify_mac_vars.append(var)
+            entry = ttk.Entry(notify_mac_frame, textvariable=var, width=4)
+            entry.pack(side="left", padx=2)
+            if i < 5:
+                ttk.Label(notify_mac_frame, text=":").pack(side="left")
+        
+        ttk.Label(notify_frame, text="Address Type:").grid(row=1, column=0, sticky="w", pady=5)
+        self.notify_addr_type_var = tk.StringVar(value="Public")
+        addr_type_combo = ttk.Combobox(notify_frame, textvariable=self.notify_addr_type_var, width=20)
+        addr_type_combo['values'] = ["Public", "Random", "PublicId", "RandomId"]
+        addr_type_combo.grid(row=1, column=1, pady=5)
+        
+        ttk.Label(notify_frame, text="Characteristic UUID (16-bit hex):").grid(row=2, column=0, sticky="w", pady=5)
+        self.notify_char_uuid_var = tk.StringVar(value="0xabcd")
+        ttk.Entry(notify_frame, textvariable=self.notify_char_uuid_var, width=20).grid(row=2, column=1, pady=5)
+        
+        ttk.Label(notify_frame, text="Service UUID (16-bit hex):").grid(row=3, column=0, sticky="w", pady=5)
+        self.notify_service_uuid_var = tk.StringVar(value="0x8765")
+        ttk.Entry(notify_frame, textvariable=self.notify_service_uuid_var, width=20).grid(row=3, column=1, pady=5)
+        
+        ttk.Label(notify_frame, text="Value (hex bytes, max 32):").grid(row=4, column=0, sticky="w", pady=5)
+        self.notify_value_var = tk.StringVar(value="01 02 03 04")
+        ttk.Entry(notify_frame, textvariable=self.notify_value_var, width=30).grid(row=4, column=1, pady=5)
+        
+        ttk.Button(notify_frame, text="Send Notification", command=self.notify_characteristic).grid(row=5, column=0, columnspan=2, pady=10)
+        
     def setup_profile_tab(self):
         frame = ttk.LabelFrame(self.profile_frame, text="Profile & Advertisement", padding=10)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -491,6 +528,62 @@ class BLEConfigurationGUI:
         except Exception as e:
             self.log(f"Failed to configure characteristic: {e}", "ERROR")
             messagebox.showerror("Characteristic Error", str(e))
+            
+    def notify_characteristic(self):
+        if not self.is_connected:
+            messagebox.showwarning("Not Connected", "Please connect to device first")
+            return
+            
+        try:
+            # Parse device address
+            address_bytes = []
+            for var in self.notify_mac_vars:
+                address_bytes.append(int(var.get(), 16))
+            
+            # Parse address type
+            addr_type_str = self.notify_addr_type_var.get()
+            addr_type = getattr(protocol_pb2.BluetoothAddressType, addr_type_str)
+            
+            # Parse UUIDs
+            char_uuid_str = self.notify_char_uuid_var.get()
+            service_uuid_str = self.notify_service_uuid_var.get()
+            
+            # Parse value as hex bytes
+            value_str = self.notify_value_var.get().strip()
+            try:
+                # Remove any separators and parse hex bytes
+                hex_parts = value_str.replace(" ", "").replace(":", "").replace("-", "")
+                if len(hex_parts) % 2 != 0:
+                    raise ValueError("Hex string must have even number of characters")
+                
+                value_bytes = bytes.fromhex(hex_parts)
+                if len(value_bytes) > 32:
+                    messagebox.showerror("Value Too Long", "Value cannot exceed 32 bytes")
+                    return
+                    
+            except ValueError as e:
+                messagebox.showerror("Invalid Value", f"Invalid hex value: {e}")
+                return
+            
+            device_addr_str = ':'.join([f'{b:02X}' for b in address_bytes])
+            self.log(f"Sending characteristic notification to {device_addr_str}")
+            self.log(f"  Characteristic: {char_uuid_str}, Service: {service_uuid_str}")
+            self.log(f"  Value: {' '.join([f'{b:02X}' for b in value_bytes])} ({len(value_bytes)} bytes)")
+            
+            with self.pause_listener():
+                self.host.notify_characteristic_value(
+                    address=bytes(address_bytes),
+                    address_type=addr_type,
+                    characteristic_uuid=char_uuid_str,
+                    service_uuid=service_uuid_str,
+                    value=value_bytes
+                )
+                
+            self.log("✓ Characteristic notification sent successfully", "SUCCESS")
+            
+        except Exception as e:
+            self.log(f"Failed to send characteristic notification: {e}", "ERROR")
+            messagebox.showerror("Notification Error", str(e))
             
     def configure_profile(self):
         if not self.is_connected:
