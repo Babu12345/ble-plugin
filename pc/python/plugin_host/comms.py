@@ -159,14 +159,21 @@ class USBCommunicationError(Exception):
     pass
 
 class USBDevice:
-    """Handles USB communication with the plugin device"""
-    
-    def __init__(self, vendor_id: int = USB_VENDOR_ID, product_id: int = USB_PRODUCT_ID):
+    """Handles USB communication with the plugin device with internal buffering"""
+
+    def __init__(self, vendor_id: int = USB_VENDOR_ID, product_id: int = USB_PRODUCT_ID, enable_buffering: bool = True):
         self.vendor_id = vendor_id
         self.product_id = product_id
         self.device = None
         self.endpoint_out = USB_ENDPOINT_OUT
         self.endpoint_in = USB_ENDPOINT_IN
+
+        # Internal buffering for high-speed data
+        self.enable_buffering = enable_buffering
+        self.receive_buffer = queue.Queue(maxsize=2000)  # Buffer for 2000 packets (~128KB)
+        self.buffer_thread = None
+        self.buffer_running = False
+        self._buffer_lock = threading.Lock()
         
     def connect(self) -> bool:
         """Connect to the USB device"""
@@ -174,15 +181,24 @@ class USBDevice:
             self.device = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
             if self.device is None:
                 raise USBCommunicationError(f"Device not found (VID: 0x{self.vendor_id:04x}, PID: 0x{self.product_id:04x})")
-            
+
             # Set the active configuration
             self.device.set_configuration()
+
+            # Start buffering thread if enabled
+            if self.enable_buffering:
+                self.start_buffering()
+
             return True
         except Exception as e:
             raise USBCommunicationError(f"Failed to connect to USB device: {e}")
     
     def disconnect(self):
         """Disconnect from the USB device"""
+        # Stop buffering first
+        if self.enable_buffering:
+            self.stop_buffering()
+
         if self.device:
             usb.util.dispose_resources(self.device)
             self.device = None
@@ -231,6 +247,9 @@ class USBDevice:
     
     def receive_data(self, size: int = DEFAULT_PACKET_SIZE, timeout: int = USB_TIMEOUT_MS) -> bytes:
         """Receive raw bytes from the USB device with retry logic for I/O errors"""
+        # Use buffered receive if available
+        if self.enable_buffering and self.buffer_running:
+            return self.receive_data_buffered(size, timeout)
         if not self.device:
             raise USBCommunicationError("Device not connected")
         
@@ -271,6 +290,97 @@ class USBDevice:
         
         # This should not be reached, but just in case
         raise USBCommunicationError("Unexpected error in receive_data retry logic")
+
+    def start_buffering(self):
+        """Start background thread for continuous USB reading and buffering"""
+        if self.buffer_running or not self.device:
+            return
+
+        with self._buffer_lock:
+            self.buffer_running = True
+            # Clear any old data
+            while not self.receive_buffer.empty():
+                try:
+                    self.receive_buffer.get_nowait()
+                except queue.Empty:
+                    break
+
+        # Start background buffering thread
+        self.buffer_thread = threading.Thread(target=self._buffer_loop, daemon=True)
+        self.buffer_thread.start()
+
+    def stop_buffering(self):
+        """Stop the background buffering thread"""
+        with self._buffer_lock:
+            self.buffer_running = False
+
+        if self.buffer_thread and self.buffer_thread.is_alive():
+            self.buffer_thread.join(timeout=1.0)
+            self.buffer_thread = None
+
+    def _buffer_loop(self):
+        """Background thread that continuously reads USB and buffers data"""
+        consecutive_errors = 0
+        max_consecutive_errors = 10
+
+        while self.buffer_running and self.device:
+            try:
+                # Fast, non-blocking reads with short timeout
+                data = self.device.read(self.endpoint_in, DEFAULT_PACKET_SIZE, timeout=1)  # 1ms timeout
+                if data and len(data) > 0:
+                    consecutive_errors = 0  # Reset error count on success
+                    try:
+                        # Add to buffer, drop oldest if full
+                        self.receive_buffer.put_nowait(bytes(data))
+                    except queue.Full:
+                        # Buffer full - drop oldest packet and add new one
+                        try:
+                            self.receive_buffer.get_nowait()  # Remove oldest
+                            self.receive_buffer.put_nowait(bytes(data))  # Add new
+                        except queue.Empty:
+                            pass  # Buffer was emptied by another thread
+
+            except usb.core.USBTimeoutError:
+                # Timeout is normal when no data - don't count as error
+                time.sleep(0.001)  # Small delay to prevent busy waiting
+                continue
+            except Exception as e:
+                consecutive_errors += 1
+                error_str = str(e).lower()
+
+                # Handle different error types
+                if 'errno 19' in error_str or 'no such device' in error_str:
+                    # Device disconnected
+                    break
+                elif consecutive_errors >= max_consecutive_errors:
+                    # Too many consecutive errors
+                    break
+                else:
+                    # Temporary error - wait and retry
+                    time.sleep(0.01)
+
+        # Cleanup
+        with self._buffer_lock:
+            self.buffer_running = False
+
+    def receive_data_buffered(self, size: int = DEFAULT_PACKET_SIZE, timeout: int = USB_TIMEOUT_MS) -> bytes:
+        """Receive data from internal buffer (much faster than direct USB reads)"""
+        if not self.enable_buffering:
+            # Fall back to direct USB read
+            return self.receive_data(size, timeout)
+
+        if not self.device:
+            raise USBCommunicationError("Device not connected")
+
+        # Calculate timeout in seconds
+        timeout_seconds = timeout / 1000.0 if timeout else None
+
+        try:
+            # Get data from buffer
+            data = self.receive_buffer.get(timeout=timeout_seconds)
+            return data
+        except queue.Empty:
+            raise USBCommunicationError("Timeout waiting for buffered data")
 
 
 def serialize_command(command: Any) -> bytes:
@@ -475,7 +585,7 @@ class USBHostDevice:
     plugin responses with automatic protocol handling.
     """
     
-    def __init__(self, vendor_id: int = USB_VENDOR_ID, product_id: int = USB_PRODUCT_ID, default_command_delay: float = DEFAULT_COMMAND_DELAY):
+    def __init__(self, vendor_id: int = USB_VENDOR_ID, product_id: int = USB_PRODUCT_ID, default_command_delay: float = DEFAULT_COMMAND_DELAY, enable_buffering: bool = True):
         """
         Initialize the USB Host Device
         
@@ -484,7 +594,7 @@ class USBHostDevice:
             product_id: USB product ID of the plugin device
             default_command_delay: Default delay in seconds between commands (default: DEFAULT_COMMAND_DELAY)
         """
-        self.usb_device = USBDevice(vendor_id, product_id)
+        self.usb_device = USBDevice(vendor_id, product_id, enable_buffering)
         self._connected = False
         set_command_delay(default_command_delay)  # Set default command delay
     
