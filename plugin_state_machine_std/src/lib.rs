@@ -1143,7 +1143,9 @@ where
             }
         }
 
-        match nimble_properties.contains(NimbleProperties::WRITE) {
+        match nimble_properties.contains(NimbleProperties::WRITE)
+            | nimble_properties.contains(NimbleProperties::WRITE_NO_RSP)
+        {
             true => {
                 let char_uuid_write = cmd.uuid;
                 let service_uuid_write = cmd.service_uuid;
@@ -1176,7 +1178,7 @@ where
             }
             false => {
                 log::warn!(
-                    "Characteristic {} does not support WRITE property",
+                    "Characteristic {} does not support WRITE or WRITE_NO_RSP property",
                     cmd.uuid
                 );
             }
