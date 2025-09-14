@@ -219,6 +219,7 @@ use throttle::Throttle;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
+use std::thread;
 use std::time::Duration;
 
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
@@ -241,10 +242,13 @@ use std::sync::Arc;
 ///
 /// This structure maintains the current state and configuration of the BLE plugin,
 /// including device name, service-characteristic relationships, and connection information.
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct PluginStateMachineMetadata {
     /// Optional BLE device name for advertising
     ble_name: Option<String<MAX_NAME_SIZE>>,
+    /// The maximum size of the data that we can send via the plugin data type
+    /// If the size is greater than `max_plugin_data_send_size` then we perform automatic chunking
+    max_plugin_data_send_size: u16,
 
     /// Mapping from service UUIDs to their characteristic UUIDs and properties
     ///
@@ -255,6 +259,20 @@ struct PluginStateMachineMetadata {
 }
 
 impl PluginStateMachineMetadata {
+    /// Set the maximum plugin data send size
+    fn set_max_plugin_data_send_size(&mut self, max_size: u16) {
+        self.max_plugin_data_send_size = max_size;
+    }
+
+    /// Get the maximum plugin data send size
+    fn get_max_plugin_data_send_size(&self) -> u16 {
+        if self.max_plugin_data_send_size == 0 {
+            32
+        } else {
+            self.max_plugin_data_send_size
+        }
+    }
+
     /// Set the local BLE device name
     /// Does not persist to NVS
     fn set_name_local(&mut self, name: String<MAX_NAME_SIZE>) {
@@ -712,6 +730,7 @@ where
         let name: heapless::String<30> = heapless::String::try_from(cmd.name.as_str())
             .map_err(|_| StateMachineError::InvalidBleConfiguration)?;
         self.metadata.set_name(&mut self.ns, name);
+        self.metadata.set_max_plugin_data_send_size(32u16);
         self.server = Some(
             self.ble_device
                 .get_server()
@@ -1129,6 +1148,7 @@ where
                 let char_uuid_write = cmd.uuid;
                 let service_uuid_write = cmd.service_uuid;
                 let sender = self.sender.clone();
+                let max_plugin_data_send_size = self.metadata.get_max_plugin_data_send_size();
                 characteristic.lock().on_write(move |args| {
                     log::info!(
                         "BLE write received for characteristic {} in service {}: {:?} bytes",
@@ -1136,19 +1156,22 @@ where
                         service_uuid_write,
                         args.recv_data()
                     );
-                    sender
-                        .send(PluginData {
-                            src_addr: args.desc().address().as_be_bytes().as_ref().to_vec(),
-                            src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
-                                args.desc().address().addr_type(),
-                            ) as _,
-                            send_type: protocol::protocol::PluginDataSendType::WriteType as _,
-                            characteristic_uuid: char_uuid_write,
-                            service_uuid: service_uuid_write,
-                            data: args.recv_data().to_vec(),
-                        })
-                        .map_err(|_| StateMachineError::UsbSendError)
-                        .ok();
+                    let plugin_data = PluginData {
+                        src_addr: args.desc().address().as_be_bytes().as_ref().to_vec(),
+                        src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
+                            args.desc().address().addr_type(),
+                        ) as _,
+                        send_type: protocol::protocol::PluginDataSendType::WriteType as _,
+                        characteristic_uuid: char_uuid_write,
+                        service_uuid: service_uuid_write,
+                        data: args.recv_data().to_vec(),
+                    };
+                    Self::send_plugin_data_chunked(
+                        sender.clone(),
+                        plugin_data,
+                        max_plugin_data_send_size as _,
+                    )
+                    .ok();
                 });
             }
             false => {
@@ -1162,6 +1185,7 @@ where
         match nimble_properties.contains(NimbleProperties::READ) {
             true => {
                 let sender = self.sender.clone();
+                let max_plugin_data_send_size = self.metadata.get_max_plugin_data_send_size();
                 characteristic.lock().on_read(move |_, desc| {
                     log::info!(
                         "BLE read requested for characteristic {} in service {}",
@@ -1169,19 +1193,22 @@ where
                         cmd.service_uuid
                     );
 
-                    sender
-                        .send(PluginData {
-                            src_addr: desc.address().as_be_bytes().as_ref().to_vec(),
-                            src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
-                                desc.address().addr_type(),
-                            ) as _,
-                            send_type: protocol::protocol::PluginDataSendType::ReadType as _,
-                            characteristic_uuid: cmd.uuid,
-                            service_uuid: cmd.service_uuid,
-                            data: Vec::new(),
-                        })
-                        .map_err(|_| StateMachineError::UsbSendError)
-                        .ok();
+                    let plugin_data = PluginData {
+                        src_addr: desc.address().as_be_bytes().as_ref().to_vec(),
+                        src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
+                            desc.address().addr_type(),
+                        ) as _,
+                        send_type: protocol::protocol::PluginDataSendType::ReadType as _,
+                        characteristic_uuid: cmd.uuid,
+                        service_uuid: cmd.service_uuid,
+                        data: Vec::new(),
+                    };
+                    Self::send_plugin_data_chunked(
+                        sender.clone(),
+                        plugin_data,
+                        max_plugin_data_send_size as _,
+                    )
+                    .ok();
                 });
             }
             false => {
@@ -1376,6 +1403,45 @@ where
             })?;
 
         log::info!("Successfully stopped BLE advertisement");
+        Ok(())
+    }
+
+    /// Send plugin data with automatic chunking if data exceeds max_plugin_data_send limit
+    fn send_plugin_data_chunked(
+        sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
+        plugin_data: PluginData,
+        max_plugin_data_send_size: usize,
+    ) -> Result<()> {
+        let plugin_data_length = plugin_data.data.len();
+        if plugin_data_length <= max_plugin_data_send_size {
+            // Data fits in a single message, send as-is
+            sender.send(plugin_data).map_err(|_| {
+                log::error!("Failed to send plugin data");
+                StateMachineError::UsbSendError
+            })?;
+            return Ok(());
+        }
+        // Data needs to be chunked
+        let total_chunks = plugin_data_length.div_ceil(max_plugin_data_send_size);
+
+        for (chunk_index, chunk) in plugin_data
+            .data
+            .chunks(max_plugin_data_send_size)
+            .enumerate()
+        {
+            let mut chunk_data = plugin_data.clone();
+            chunk_data.data = chunk.to_vec();
+
+            sender.send(chunk_data).map_err(|_| {
+                log::error!(
+                    "Failed to send plugin data chunk {}/{}",
+                    chunk_index + 1,
+                    total_chunks
+                );
+                StateMachineError::UsbSendError
+            })?;
+            thread::sleep(Duration::from_millis(10));
+        }
         Ok(())
     }
 }
