@@ -14,14 +14,14 @@ use embassy_sync::signal::Signal;
 use esp_idf_svc::hal::task::block_on;
 
 use esp_idf_sys::cherry_device::{
-    CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER,
-    USB_DEVICE_CLASS_MISC, usb_descriptor, usbd_add_endpoint, usbd_add_interface,
-    usbd_cdc_acm_init_intf, usbd_cdc_acm_set_dtr, usbd_desc_register, usbd_endpoint,
-    usbd_ep_start_read, usbd_ep_start_write, usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP,
-    usbd_event_type_USBD_EVENT_CONFIGURED, usbd_event_type_USBD_EVENT_CONNECTED,
-    usbd_event_type_USBD_EVENT_DISCONNECTED, usbd_event_type_USBD_EVENT_RESET,
-    usbd_event_type_USBD_EVENT_RESUME, usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP,
-    usbd_event_type_USBD_EVENT_SUSPEND, usbd_get_ep_mps, usbd_initialize, usbd_interface,
+    CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DEVICE_CLASS_MISC, usb_descriptor,
+    usbd_add_endpoint, usbd_add_interface, usbd_cdc_acm_init_intf, usbd_cdc_acm_set_dtr,
+    usbd_desc_register, usbd_endpoint, usbd_ep_start_read, usbd_ep_start_write,
+    usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP, usbd_event_type_USBD_EVENT_CONFIGURED,
+    usbd_event_type_USBD_EVENT_CONNECTED, usbd_event_type_USBD_EVENT_DISCONNECTED,
+    usbd_event_type_USBD_EVENT_RESET, usbd_event_type_USBD_EVENT_RESUME,
+    usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP, usbd_event_type_USBD_EVENT_SUSPEND,
+    usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::devices::host::HostProcessor;
@@ -31,9 +31,11 @@ use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use throttle::Throttle;
 
 use crate::utils::{
-    CDC_MAX_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
+    CDC_BULK_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
 };
-use crate::{AlignedBuffer, concat_n_arrays};
+use crate::{
+    AlignedBuffer, concat_n_arrays, device_quality_descriptor_init, other_speed_config_descriptor,
+};
 use crate::{Error, Result};
 use lib_utils::{MatchSliceLengths, mk_static};
 
@@ -88,24 +90,36 @@ static CONFIG_DESCRIPTOR: LazyLock<[u8; 75]> = LazyLock::new(|| {
             CDC_INT_EP as u32,
             CDC_OUT_EP as u32,
             CDC_IN_EP as u32,
-            CDC_MAX_MPS,
+            CDC_BULK_MPS,
             0x02,
         )
     )
 });
 
-static DEVICE_QUALITY_DESCRIPTOR: [u8; 10] = [
-    0x0a,                                       // bLength
-    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER as u8, // bDescriptorType (Device Qualifier)
-    0x00,
-    0x02, // bcdUSB
-    0x00, // bDeviceClass
-    0x00, // bDeviceSubClass
-    0x00, // bDeviceProtocol
-    0x40, // bMaxPacketSize0
-    0x00, // bNumConfigurations
-    0x00, // bReserved
-];
+static DEVICE_QUALITY_DESCRIPTOR: LazyLock<[u8; 10]> = LazyLock::new(|| {
+    device_quality_descriptor_init(USB_2_0, USB_DEVICE_CLASS_MISC, 0x02, 0x01, 0x01)
+});
+
+// https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L44
+static DEVICE_OTHER_SPEED_CONFIG_DESCRIPTOR: LazyLock<[u8; 10]> = LazyLock::new(|| {
+    concat_n_arrays!(
+        other_speed_config_descriptor(
+            USB_CONFIG_SIZE,
+            0x02,
+            0x01,
+            USB_CONFIG_BUS_POWERED,
+            USBD_MAX_POWER,
+        ),
+        cdc_acm_descriptor_init(
+            0x00,
+            CDC_INT_EP as u32,
+            CDC_OUT_EP as u32,
+            CDC_IN_EP as u32,
+            CDC_BULK_MPS,
+            0x02,
+        )
+    )
+});
 
 static STRING_MANUFACTURER: &[u8] = b"Wanyeki Technologies LLC\0";
 static STRING_PRODUCT: &[u8] = b"BLE Plugin\0";
@@ -115,7 +129,7 @@ static STRING_LANGID: &[u8] = b"\x09\x04\0";
 // https://github.com/orangecms/RV-Debugger-BL702/blob/05739699b50a9235f8906bd80b4b8f7dd0c37e62/components/usb_stack/common/usb_def.h#L473
 #[unsafe(no_mangle)]
 unsafe extern "C" fn device_descriptor_callback(_speed: u8) -> *const u8 {
-    DEVICE_DESCRIPTOR.as_ptr() as *const u8
+    DEVICE_DESCRIPTOR.as_ptr()
 }
 
 // https://github.com/hpmicro/zephyr_sdk_glue/blob/2a17ddea9f43eac3b7f57a0058ce49023d5fd06f/samples/cherryusb/device/cdc_acm/cdc_acm_vcom/src/cdc_acm.c#L72
@@ -127,6 +141,11 @@ unsafe extern "C" fn device_quality_descriptor_callback(_speed: u8) -> *const u8
 #[unsafe(no_mangle)]
 unsafe extern "C" fn config_descriptor_callback(_speed: u8) -> *const u8 {
     CONFIG_DESCRIPTOR.as_ptr()
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn other_speed_config_descriptor_callback(_speed: u8) -> *const u8 {
+    DEVICE_OTHER_SPEED_CONFIG_DESCRIPTOR.as_ptr()
 }
 
 #[unsafe(no_mangle)]
@@ -327,6 +346,7 @@ impl CdcAcmDevice<PREINIT> {
                 config_descriptor_callback: Some(config_descriptor_callback),
                 device_quality_descriptor_callback: Some(device_quality_descriptor_callback),
                 string_descriptor_callback: Some(string_descriptor_callback),
+                other_speed_descriptor_callback: Some(other_speed_config_descriptor_callback),
                 ..Default::default()
             }
         );

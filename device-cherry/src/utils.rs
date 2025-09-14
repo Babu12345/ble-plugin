@@ -5,13 +5,17 @@ use esp_idf_sys::cherry_device::{
     CDC_DATA_INTERFACE_CLASS, CDC_FUNC_DESC_ABSTRACT_CONTROL_MANAGEMENT,
     CDC_FUNC_DESC_CALL_MANAGEMENT, CDC_FUNC_DESC_HEADER, CDC_FUNC_DESC_UNION, CDC_V1_10,
     USB_DESCRIPTOR_TYPE_CONFIGURATION, USB_DESCRIPTOR_TYPE_DEVICE, USB_DESCRIPTOR_TYPE_ENDPOINT,
-    USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION, USB_DEVICE_CLASS_CDC,
-    USB_STRING_MFC_INDEX, USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
+    USB_DESCRIPTOR_TYPE_INTERFACE, USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION,
+    USB_DESCRIPTOR_TYPE_OTHER_SPEED, USB_DEVICE_CLASS_CDC, USB_STRING_MFC_INDEX,
+    USB_STRING_PRODUCT_INDEX, USB_STRING_SERIAL_INDEX,
 };
 use protocol::DEFAULT_PACKET_SIZE;
 
-/// Max size for the CDC - increased for higher throughput
-pub const CDC_MAX_MPS: u32 = DEFAULT_PACKET_SIZE as _;
+/// Max packet size for bulk endpoints
+pub const CDC_BULK_MPS: u32 = DEFAULT_PACKET_SIZE as _;
+
+/// Max packet size for control endpoint (always 64 bytes for USB 2.0)
+pub const CDC_CONTROL_MPS: u32 = 64;
 
 // https://github.com/bekencorp/bk_idk/blob/650e754e12fe1e43c37ce2316a973668b033fd48/components/bk_usb/CherryUSB/common/usb_def.h#L628
 /// Device descriptor
@@ -33,7 +37,7 @@ pub fn device_descriptor_init(
         b_device_class,             /* bDeviceClass */
         b_device_sub_class,         /* bDeviceSubClass */
         b_device_protocol,          /* bDeviceProtocol */
-        CDC_MAX_MPS,                /* bMaxPacketSize */
+        CDC_CONTROL_MPS,            /* bMaxPacketSize */
         id_vendor & 0xff,           /* idVendor */
         (id_vendor >> 8) & 0xFF,    /* idVendor */
         id_product & 0xff,          /* idProduct */
@@ -67,6 +71,30 @@ pub fn config_descriptor_init(
         0x00,                              /* iConfiguration */
         bm_attributes,                     /* bmAttributes */
         b_max_power / 2,                   /* bMaxPower */
+    ]
+    .map(|x| x as u8)
+}
+
+// https://github.com/MiSTle-Dev/bouffalo_sdk/blob/14f95db1a1c2cfc2e48e9a4c631d99bcbeeeafaa/components/usb/cherryusb/common/usb_def.h#L667
+/// Device quality descriptor
+pub fn device_quality_descriptor_init(
+    bcd_usb: u32,
+    b_device_class: u32,
+    b_device_sub_class: u32,
+    b_device_protocol: u32,
+    b_num_configurations: u32,
+) -> [u8; 10] {
+    [
+        0x0A,                              /* bLength */
+        USB_DESCRIPTOR_TYPE_CONFIGURATION, /* bDescriptorType */
+        bcd_usb & 0xff,                    /* bcdUSB */
+        (bcd_usb >> 8) & 0xFF,             /* bcdUSB */
+        b_device_class,                    /* bDeviceClass */
+        b_device_sub_class,                /* bDeviceSubClass */
+        b_device_protocol,                 /* bDeviceProtocol */
+        CDC_CONTROL_MPS,                   /* bmAttributes */
+        b_num_configurations,              /* bNumConfigurations */
+        0x00,                              /* bReserved */
     ]
     .map(|x| x as u8)
 }
@@ -148,6 +176,29 @@ pub fn cdc_acm_descriptor_init(
         w_max_packet_size & 0xff,        /* wMaxPacketSize */
         (w_max_packet_size >> 8) & 0xFF, /* wMaxPacketSize */
         0x00,
+    ]
+    .map(|x| x as u8)
+}
+
+// https://github.com/MiSTle-Dev/bouffalo_sdk/blob/14f95db1a1c2cfc2e48e9a4c631d99bcbeeeafaa/components/usb/cherryusb/common/usb_def.h#L667
+/// Device other speed config descriptor
+pub fn other_speed_config_descriptor(
+    w_total_length: u32,
+    b_num_interfaces: u32,
+    b_configuration_value: u32,
+    bm_attributes: u32,
+    b_max_power: u32,
+) -> [u8; 9] {
+    [
+        0x09,                            /* bLength */
+        USB_DESCRIPTOR_TYPE_OTHER_SPEED, /* bDescriptorType */
+        w_total_length & 0xff,           /* wTotalLength */
+        (w_total_length >> 8) & 0xFF,    /* wTotalLength */
+        b_num_interfaces,                /* bNumInterfaces */
+        b_configuration_value,           /* bConfigurationValue */
+        0x00,                            /* iConfiguration */
+        bm_attributes,                   /* bmAttributes */
+        b_max_power / 2,                 /* bMaxPower */
     ]
     .map(|x| x as u8)
 }
