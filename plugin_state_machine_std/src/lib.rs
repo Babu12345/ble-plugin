@@ -1442,7 +1442,7 @@ where
                 );
                 StateMachineError::UsbSendError
             })?;
-            thread::sleep(Duration::from_millis(10));
+            thread::sleep(Duration::from_millis(15));
         }
         Ok(())
     }
