@@ -1421,10 +1421,17 @@ where
                 log::error!("Failed to send plugin data");
                 StateMachineError::UsbSendError
             })?;
+            log::debug!("Sent plugin data: {} bytes", plugin_data_length);
             return Ok(());
         }
         // Data needs to be chunked
         let total_chunks = plugin_data_length.div_ceil(max_plugin_data_send_size);
+        log::info!(
+            "Chunking plugin data: {} bytes into {} chunks of max {} bytes each",
+            plugin_data_length,
+            total_chunks,
+            max_plugin_data_send_size
+        );
 
         for (chunk_index, chunk) in plugin_data
             .data
@@ -1433,6 +1440,13 @@ where
         {
             let mut chunk_data = plugin_data.clone();
             chunk_data.data = chunk.to_vec();
+
+            log::debug!(
+                "Sending chunk {}/{}: {} bytes",
+                chunk_index + 1,
+                total_chunks,
+                chunk_data.data.len()
+            );
 
             sender.send(chunk_data).map_err(|_| {
                 log::error!(
@@ -1444,6 +1458,8 @@ where
             })?;
             thread::sleep(Duration::from_millis(15));
         }
+
+        log::info!("Successfully sent {} chunks of plugin data", total_chunks);
         Ok(())
     }
 }
