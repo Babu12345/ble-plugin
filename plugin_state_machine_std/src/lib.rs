@@ -1456,7 +1456,6 @@ where
                 );
                 StateMachineError::UsbSendError
             })?;
-            thread::sleep(Duration::from_millis(5));
         }
 
         log::info!("Successfully sent {} chunks of plugin data", total_chunks);

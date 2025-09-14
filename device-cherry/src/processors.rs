@@ -595,6 +595,7 @@ fn processor_common<'a, 'b>(
                 }
                 Err(e) => ::log::error!("Unable to recieve data: {e}"),
             }
+            std::thread::sleep(Duration::from_millis(5));
         }
     });
 
