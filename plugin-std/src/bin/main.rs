@@ -40,7 +40,7 @@ fn main() -> Result<()> {
         .sleep(Duration::from_millis(500));
     std::thread::scope(|scope| {
         let processors = usb_device
-            .processors(scope, 20, (Duration::from_millis(10), 10))
+            .processors(scope, 100, (Duration::from_millis(10), 10))
             .unwrap();
         scope.spawn(
             PluginStateMachine::new(processors.0, processors.1, indicator, nvs_default_partition)
