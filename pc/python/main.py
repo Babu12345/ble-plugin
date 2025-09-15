@@ -6,9 +6,7 @@ def main():
     
     # Method 1: Manual connection management
     print("1. Manual Connection Management:")
-    host = USBHostDevice(
-        default_command_delay=0.05,  # Default delay for commands
-    )
+    host = USBHostDevice() # Default delay of 0 for commands
     
     try:
         # Connect to device
