@@ -88,7 +88,7 @@ impl HostProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHost<POSTINIT> {
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
         _read_throttle_info: ReadThrottleInfo,
-        _write_throttle_info: WriteThrottleInfo,
+        write_throttle_info: WriteThrottleInfo,
     ) -> Result<
         (
             HostSender<DEFAULT_PACKET_SIZE>,
@@ -99,7 +99,7 @@ impl HostProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHost<POSTINIT> {
         let to_usb = sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
-        scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
+        scope.spawn(move || unsafe { send_usb_data(to_usb.1, write_throttle_info) });
         scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
 
         Ok((HostSender::new(to_usb.0), HostReceiver::new(from_usb.1)))
@@ -155,7 +155,7 @@ impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
         _read_throttle_info: ReadThrottleInfo,
-        _write_throttle_info: WriteThrottleInfo,
+        write_throttle_info: WriteThrottleInfo,
     ) -> Result<
         (
             PluginSender<DEFAULT_PACKET_SIZE>,
@@ -166,7 +166,7 @@ impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
         let to_usb = sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
-        scope.spawn(move || unsafe { send_usb_data(to_usb.1) });
+        scope.spawn(move || unsafe { send_usb_data(to_usb.1, write_throttle_info) });
         scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
 
         Ok((PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1)))

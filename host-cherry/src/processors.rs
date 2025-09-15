@@ -9,7 +9,7 @@ use std::{
 use esp_idf_sys::cherry_host::{
     usbh_cdc_acm, usbh_cdc_acm_bulk_in_transfer, usbh_cdc_acm_bulk_out_transfer,
 };
-use protocol::DEFAULT_PACKET_SIZE;
+use protocol::{DEFAULT_PACKET_SIZE, devices::WriteThrottleInfo};
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
 pub type T = [u8; DEFAULT_PACKET_SIZE];
@@ -78,7 +78,7 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
     }
 }
 
-pub unsafe fn send_usb_data(receiver: Receiver<T>) {
+pub unsafe fn send_usb_data(receiver: Receiver<T>, write_throttle_info: WriteThrottleInfo) {
     loop {
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
@@ -113,5 +113,6 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>) {
         };
 
         log::debug!("Data transmitted: {:?}", data);
+        std::thread::sleep(write_throttle_info.delay);
     }
 }
