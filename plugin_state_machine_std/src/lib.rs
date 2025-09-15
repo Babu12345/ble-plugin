@@ -219,7 +219,6 @@ use throttle::Throttle;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
-use std::thread;
 use std::time::Duration;
 
 use esp32_nimble::enums::{AuthReq, SecurityIOCap};
@@ -242,20 +241,32 @@ use std::sync::Arc;
 ///
 /// This structure maintains the current state and configuration of the BLE plugin,
 /// including device name, service-characteristic relationships, and connection information.
-#[derive(Default, Clone)]
+#[derive(Clone)]
 struct PluginStateMachineMetadata {
     /// Optional BLE device name for advertising
     ble_name: Option<String<MAX_NAME_SIZE>>,
     /// The maximum size of the data that we can send via the plugin data type
     /// If the size is greater than `max_plugin_data_send_size` then we perform automatic chunking
     max_plugin_data_send_size: u16,
-
+    /// Processing delay for the state machine
+    processing_delay: Duration,
     /// Mapping from service UUIDs to their characteristic UUIDs and properties
     ///
     /// This enables efficient lookup of characteristics within services and
     /// provides quick access to characteristic properties for validation.
     service_to_characteristic_uuids:
         HashMap<u16, heapless::Vec<(u16, Vec<i32>), MAX_CHARACTERISTICS_PER_SERVICE>>, // (UUID, properties)
+}
+
+impl Default for PluginStateMachineMetadata {
+    fn default() -> Self {
+        Self {
+            ble_name: Default::default(),
+            max_plugin_data_send_size: Default::default(),
+            processing_delay: Duration::from_millis(1),
+            service_to_characteristic_uuids: Default::default(),
+        }
+    }
 }
 
 impl PluginStateMachineMetadata {
@@ -499,6 +510,7 @@ where
     fn runner(&mut self) {
         log::info!("Starting USB-BLE bridge runner");
         loop {
+            std::thread::sleep(self.metadata.processing_delay);
             match self.receiver.receive() {
                 Ok(data) => {
                     log::debug!("Received USB data of length : {} bytes", data.size());

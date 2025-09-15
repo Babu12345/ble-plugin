@@ -10,7 +10,7 @@ mod processors;
 mod utils;
 use processors::*;
 use protocol::{
-    devices::{host::HostProcessor, plugin::PluginProcessor},
+    devices::{ReadThrottleInfo, WriteThrottleInfo, host::HostProcessor, plugin::PluginProcessor},
     host::{HostReceiver, HostSender},
     plugin::plugin::{PluginReceiver, PluginSender},
 };
@@ -87,7 +87,8 @@ impl HostProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHost<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-        _throttle_info: (Duration, usize),
+        _read_throttle_info: ReadThrottleInfo,
+        _write_throttle_info: WriteThrottleInfo,
     ) -> Result<
         (
             HostSender<DEFAULT_PACKET_SIZE>,
@@ -153,7 +154,8 @@ impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-        _throttle_info: (Duration, usize),
+        _read_throttle_info: ReadThrottleInfo,
+        _write_throttle_info: WriteThrottleInfo,
     ) -> Result<
         (
             PluginSender<DEFAULT_PACKET_SIZE>,

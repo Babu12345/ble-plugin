@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
 
     std::thread::scope(|scope| {
         let _processors = device
-            .processors(scope, 20, (Duration::from_millis(10), 10))
+            .processors(scope, 20, Default::default(), Default::default())
             .unwrap();
     });
 

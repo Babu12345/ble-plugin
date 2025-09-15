@@ -26,6 +26,7 @@ use esp_idf_sys::cherry_device::{
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::devices::host::HostProcessor;
 use protocol::devices::plugin::PluginProcessor;
+use protocol::devices::{ReadThrottleInfo, WriteThrottleInfo};
 use protocol::host::{HostReceiver, HostSender};
 use protocol::plugin::plugin::{PluginReceiver, PluginSender};
 use throttle::Throttle;
@@ -422,12 +423,18 @@ impl PluginProcessor<SIZE, crate::errors::Error> for CdcAcmDevice<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-        throttle_info: (Duration, usize),
+        read_throttle_info: ReadThrottleInfo,
+        write_throttle_info: WriteThrottleInfo,
     ) -> Result<(PluginSender<SIZE>, PluginReceiver<SIZE>)> {
         let busid = self.busid.ok_or(Error::BusidUndefined)?;
 
-        let (sender, receiver) =
-            processor_common(scope, channel_buffer_size, throttle_info, busid)?;
+        let (sender, receiver) = processor_common(
+            scope,
+            channel_buffer_size,
+            read_throttle_info,
+            write_throttle_info,
+            busid,
+        )?;
 
         Ok((PluginSender::new(sender), PluginReceiver::new(receiver)))
     }
@@ -537,12 +544,18 @@ impl HostProcessor<SIZE, crate::errors::Error> for CdcAcmDeviceHost<POSTINIT> {
         self,
         scope: &'a Scope<'a, 'b>,
         channel_buffer_size: usize,
-        throttle_info: (Duration, usize),
+        read_throttle_info: ReadThrottleInfo,
+        write_throttle_info: WriteThrottleInfo,
     ) -> Result<(HostSender<SIZE>, HostReceiver<SIZE>)> {
         let busid = self.busid.ok_or(Error::BusidUndefined)?;
 
-        let (sender, receiver) =
-            processor_common(scope, channel_buffer_size, throttle_info, busid)?;
+        let (sender, receiver) = processor_common(
+            scope,
+            channel_buffer_size,
+            read_throttle_info,
+            write_throttle_info,
+            busid,
+        )?;
 
         Ok((HostSender::new(sender), HostReceiver::new(receiver)))
     }
@@ -569,7 +582,8 @@ impl CdcAcmDeviceHost<POSTINIT> {
 fn processor_common<'a, 'b>(
     scope: &'a Scope<'a, 'b>,
     channel_buffer_size: usize,
-    throttle_info: (Duration, usize),
+    read_throttle_info: ReadThrottleInfo,
+    write_throttle_info: WriteThrottleInfo,
     busid: u8,
 ) -> Result<(SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>)> {
     let to_usb: (SyncSender<TSendAndReceive>, Receiver<TSendAndReceive>) =
@@ -595,13 +609,17 @@ fn processor_common<'a, 'b>(
                 }
                 Err(e) => ::log::error!("Unable to recieve data: {e}"),
             }
-            std::thread::sleep(Duration::from_millis(5));
+            std::thread::sleep(write_throttle_info.delay);
         }
     });
 
     // Reading from USB endpoint - optimized for high-speed burst handling
     scope.spawn(move || {
-        let mut throttle = Throttle::new(throttle_info.0, throttle_info.1);
+        let ReadThrottleInfo {
+            timeout,
+            threshold_for_timeout,
+        } = read_throttle_info;
+        let mut throttle = Throttle::new(timeout, threshold_for_timeout);
         let mut packet_count = 0u64;
 
         // Sliding window for dropped packet tracking

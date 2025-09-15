@@ -37,7 +37,7 @@ fn main() -> Result<()> {
         .sleep(Duration::from_millis(500));
     std::thread::scope(|scope| {
         let processors = device
-            .processors(scope, 200, (Duration::from_millis(10), 10))
+            .processors(scope, 200, Default::default(), Default::default())
             .unwrap();
 
         scope.spawn(
