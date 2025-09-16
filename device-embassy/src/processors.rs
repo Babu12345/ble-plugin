@@ -108,6 +108,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
             let to_usb_fn = async {
                 'conn: loop {
                     sender.wait_connection().await;
+                    log::info!("Sender connection established");
                     'process: loop {
                         let data = to.1.receive().await;
                         match sender.write_packet(&data).await {
@@ -127,6 +128,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
             let from_usb_fn = async {
                 'conn: loop {
                     receiver.wait_connection().await;
+                    log::info!("Receiver connection established");
                     let mut buf = [0; BUFFER_SIZE];
                     'process: loop {
                         match receiver.read_packet(&mut buf).await {
