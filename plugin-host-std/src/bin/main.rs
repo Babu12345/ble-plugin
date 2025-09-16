@@ -34,7 +34,7 @@ fn main() -> Result<()> {
     let device = CdcAcmHostDevice::new()
         .init(0, ESP_USBH_BASE)
         .unwrap()
-        .sleep(Duration::from_millis(5000));
+        .sleep(Duration::from_secs(1));
     std::thread::scope(|scope| {
         let processors = device
             .processors(scope, 200, Default::default(), Default::default())
