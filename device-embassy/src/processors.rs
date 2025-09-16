@@ -3,11 +3,9 @@
 use core::future::Future;
 
 use embassy_sync::{
-    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex, RawMutex},
+    blocking_mutex::raw::RawMutex,
     channel::{Receiver, Sender},
-    mutex::Mutex,
 };
-use embassy_time::{Duration, WithTimeout};
 use esp_hal::otg_fs::asynch::Driver;
 use protocol::{
     devices::host::AsyncHostProcessor,
@@ -102,21 +100,17 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
         AsyncHostSender<'ch, M, BUFFER_SIZE, CH_SIZE>,
         AsyncHostReceiver<'ch, M, BUFFER_SIZE, CH_SIZE>,
     )> {
-        let class_mutex: Mutex<NoopRawMutex, CdcAcmClass<'a, Driver<'a>>> = Mutex::new(self.class);
+        let (mut sender, mut receiver) = self.class.split();
 
         let processor_runner = async move {
             let usb_runner = self.usb_device.run();
 
             let to_usb_fn = async {
                 'conn: loop {
-                    {
-                        let mut class = class_mutex.lock().await;
-                        class.wait_connection().await;
-                    }
+                    sender.wait_connection().await;
                     'process: loop {
                         let data = to.1.receive().await;
-                        let mut class = class_mutex.lock().await;
-                        match class.write_packet(&data).await {
+                        match sender.write_packet(&data).await {
                             Ok(_) => {}
                             Err(e) => match e {
                                 EndpointError::BufferOverflow => continue 'process,
@@ -132,32 +126,18 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
 
             let from_usb_fn = async {
                 'conn: loop {
-                    {
-                        let mut class = class_mutex.lock().await;
-                        class.wait_connection().await;
-                    }
+                    receiver.wait_connection().await;
                     let mut buf = [0; BUFFER_SIZE];
                     'process: loop {
-                        let mut class = class_mutex.lock().await;
-                        match class
-                            .read_packet(&mut buf)
-                            .with_timeout(Duration::from_millis(1))
-                            .await
-                        {
-                            Ok(res) => match res {
-                                Ok(_) => {}
-                                Err(e) => match e {
-                                    EndpointError::BufferOverflow => continue 'process,
-                                    EndpointError::Disabled => {
-                                        log::warn!("USB Disconnected. Retrying");
-                                        continue 'conn;
-                                    }
-                                },
+                        match receiver.read_packet(&mut buf).await {
+                            Ok(_) => {}
+                            Err(e) => match e {
+                                EndpointError::BufferOverflow => continue 'process,
+                                EndpointError::Disabled => {
+                                    log::warn!("USB Disconnected. Retrying");
+                                    continue 'conn;
+                                }
                             },
-                            Err(e) => {
-                                log::error!("Timeout error: {:?}", e);
-                                continue 'process;
-                            }
                         }
 
                         from.0.send(buf).await;
