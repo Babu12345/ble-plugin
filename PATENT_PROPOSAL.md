@@ -58,7 +58,7 @@ Example Plugin Response (Illustrative):
 - **Payload**: Structured message content using standardized serialization
 
 ### 3. Cross-Platform Code Generation
-- Automatic client library generation for multiple languages (Rust, Python, C++)
+- Automatic client library generation for multiple languages (Rust, Python, C++, PHP, Objective C, etc.)
 - Ensures protocol consistency across all implementations
 - Prevents version compatibility issues
 - Reduces integration time from months to days
