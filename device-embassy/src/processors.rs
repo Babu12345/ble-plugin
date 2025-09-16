@@ -141,6 +141,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                         }
 
                         from.0.send(buf).await;
+                        buf = [0; BUFFER_SIZE];
                     }
                 }
             };
