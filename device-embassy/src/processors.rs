@@ -5,6 +5,7 @@ use core::future::Future;
 use embassy_sync::{
     blocking_mutex::raw::RawMutex,
     channel::{Receiver, Sender},
+    signal::Signal,
 };
 use esp_hal::otg_fs::asynch::Driver;
 use protocol::{
@@ -24,13 +25,15 @@ use esp_hal::otg_fs::{asynch::Config, Usb};
 const BUFFER_SIZE: usize = 64;
 
 /// Cdc acm device that implements a AsyncHostProcessor. Pre init.
-pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize> {
+pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex> {
     usb_device: UsbDevice<'a, Driver<'a>>,
     class: CdcAcmClass<'a, Driver<'a>>,
+    sender_connected: Option<Signal<M, bool>>,
+    receiver_connected: Option<Signal<M, bool>>,
 }
 
-impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
-    CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE>
+impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
+    CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE, M>
 {
     /// Initializes and creates a new instance of the device
     pub fn new(
@@ -75,13 +78,30 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
         // Build the builder.
         let usb_device = builder.build();
 
-        Self { usb_device, class }
+        Self {
+            usb_device,
+            class,
+            sender_connected: None,
+            receiver_connected: None,
+        }
+    }
+
+    /// Add a signal for sender connection
+    pub fn add_sender_connection_signal(mut self, signal: Signal<M, bool>) -> Self {
+        self.sender_connected = Some(signal);
+        self
+    }
+
+    /// Add a signal for receiver connection
+    pub fn add_receiver_connection_signal(mut self, signal: Signal<M, bool>) -> Self {
+        self.receiver_connected = Some(signal);
+        self
     }
 }
 
 impl<'a, const CH_SIZE: usize, M: RawMutex>
     AsyncHostProcessor<CH_SIZE, BUFFER_SIZE, M, crate::errors::Error>
-    for CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE>
+    for CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE, M>
 {
     type T<'ch>
         = (
@@ -109,6 +129,9 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                 'conn: loop {
                     sender.wait_connection().await;
                     log::info!("Sender connection established");
+                    if let Some(signal) = &self.sender_connected {
+                        signal.signal(true);
+                    }
                     'process: loop {
                         let data = to.1.receive().await;
                         match sender.write_packet(&data).await {
@@ -117,6 +140,9 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                                 EndpointError::BufferOverflow => continue 'process,
                                 EndpointError::Disabled => {
                                     log::warn!("USB Disconnected. Retrying");
+                                    if let Some(signal) = &self.sender_connected {
+                                        signal.signal(false);
+                                    }
                                     continue 'conn;
                                 }
                             },
@@ -129,6 +155,9 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                 'conn: loop {
                     receiver.wait_connection().await;
                     log::info!("Receiver connection established");
+                    if let Some(signal) = &self.receiver_connected {
+                        signal.signal(true);
+                    }
                     let mut buf = [0; BUFFER_SIZE];
                     'process: loop {
                         match receiver.read_packet(&mut buf).await {
@@ -137,6 +166,9 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                                 EndpointError::BufferOverflow => continue 'process,
                                 EndpointError::Disabled => {
                                     log::warn!("USB Disconnected. Retrying");
+                                    if let Some(signal) = &self.receiver_connected {
+                                        signal.signal(false);
+                                    }
                                     continue 'conn;
                                 }
                             },

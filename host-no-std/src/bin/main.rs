@@ -34,14 +34,15 @@ async fn main(_spawner: Spawner) {
     let mut control_buf = [0; 64];
     let mut state = State::new();
 
-    let device_host: CdcAcmDeviceHost<'_, 20, DEFAULT_PACKET_SIZE> = CdcAcmDeviceHost::new(
-        usb,
-        &mut ep_out_buffer,
-        &mut config_descriptor,
-        &mut bos_descriptor,
-        &mut control_buf,
-        &mut state,
-    );
+    let device_host: CdcAcmDeviceHost<'_, 20, DEFAULT_PACKET_SIZE, NoopRawMutex> =
+        CdcAcmDeviceHost::new(
+            usb,
+            &mut ep_out_buffer,
+            &mut config_descriptor,
+            &mut bos_descriptor,
+            &mut control_buf,
+            &mut state,
+        );
 
     let to = Channel::<NoopRawMutex, _, 20>::new();
     let from = Channel::<NoopRawMutex, _, 20>::new();
