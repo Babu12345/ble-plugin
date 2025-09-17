@@ -29,7 +29,7 @@ pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, 
     usb_device: UsbDevice<'a, Driver<'a>>,
     class: CdcAcmClass<'a, Driver<'a>>,
     sender_connected: Option<&'a Signal<M, bool>>,
-    receiver_connected: Option<Signal<M, bool>>,
+    receiver_connected: Option<&'a Signal<M, bool>>,
 }
 
 impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
@@ -93,7 +93,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
     }
 
     /// Add a signal for receiver connection
-    pub fn add_receiver_connection_signal(mut self, signal: Signal<M, bool>) -> Self {
+    pub fn add_receiver_connection_signal(mut self, signal: &'a Signal<M, bool>) -> Self {
         self.receiver_connected = Some(signal);
         self
     }
