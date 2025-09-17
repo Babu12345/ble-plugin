@@ -27,6 +27,8 @@ const BUFFER_SIZE: usize = 64;
 pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize> {
     usb_device: UsbDevice<'a, Driver<'a>>,
     class: CdcAcmClass<'a, Driver<'a>>,
+    is_sender_connected: bool,
+    is_receiver_connected: bool,
 }
 
 impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
@@ -75,7 +77,22 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize>
         // Build the builder.
         let usb_device = builder.build();
 
-        Self { usb_device, class }
+        Self {
+            usb_device,
+            class,
+            is_sender_connected: false,
+            is_receiver_connected: false,
+        }
+    }
+
+    /// Returns true if the sender (device -> host) is connected
+    pub fn is_sender_connected(&self) -> bool {
+        self.is_sender_connected
+    }
+
+    /// Returns true if the receiver (host -> device) is connected
+    pub fn is_receiver_connected(&self) -> bool {
+        self.is_receiver_connected
     }
 }
 
@@ -108,6 +125,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
             let to_usb_fn = async {
                 'conn: loop {
                     sender.wait_connection().await;
+                    self.is_sender_connected = true;
                     log::info!("Sender connection established");
                     'process: loop {
                         let data = to.1.receive().await;
@@ -117,6 +135,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                                 EndpointError::BufferOverflow => continue 'process,
                                 EndpointError::Disabled => {
                                     log::warn!("USB Disconnected. Retrying");
+                                    self.is_sender_connected = false;
                                     continue 'conn;
                                 }
                             },
@@ -128,6 +147,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
             let from_usb_fn = async {
                 'conn: loop {
                     receiver.wait_connection().await;
+                    self.is_receiver_connected = true;
                     log::info!("Receiver connection established");
                     let mut buf = [0; BUFFER_SIZE];
                     'process: loop {
@@ -137,6 +157,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                                 EndpointError::BufferOverflow => continue 'process,
                                 EndpointError::Disabled => {
                                     log::warn!("USB Disconnected. Retrying");
+                                    self.is_receiver_connected = false;
                                     continue 'conn;
                                 }
                             },
