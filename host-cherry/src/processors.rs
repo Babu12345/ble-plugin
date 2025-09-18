@@ -80,6 +80,7 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
 
 pub unsafe fn send_usb_data(receiver: Receiver<T>, write_throttle_info: WriteThrottleInfo) {
     loop {
+        // Avoid logging on the write hot path
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
             None => {
@@ -112,7 +113,6 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>, write_throttle_info: WriteThr
             _ => {}
         };
 
-        log::debug!("Data transmitted: {:?}", data);
         std::thread::sleep(write_throttle_info.delay);
     }
 }

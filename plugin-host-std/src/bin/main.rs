@@ -12,7 +12,7 @@ use host_cherry::CdcAcmHostDevice;
 use plugin_host_std::errors::{PluginHostError, Result};
 use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
-use protocol::devices::plugin::PluginProcessor;
+use protocol::devices::{plugin::PluginProcessor, WriteThrottleInfo};
 fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
@@ -37,7 +37,12 @@ fn main() -> Result<()> {
         .sleep(Duration::from_secs(1));
     std::thread::scope(|scope| {
         let processors = device
-            .processors(scope, 200, Default::default(), Default::default())
+            .processors(
+                scope,
+                300,
+                Default::default(),
+                WriteThrottleInfo::default().set_delay(Duration::from_micros(500)),
+            )
             .unwrap();
 
         scope.spawn(

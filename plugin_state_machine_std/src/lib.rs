@@ -1164,12 +1164,7 @@ where
                 let sender = self.sender.clone();
                 let max_plugin_data_send_size = self.metadata.get_max_plugin_data_send_size();
                 characteristic.lock().on_write(move |args| {
-                    log::info!(
-                        "BLE write received for characteristic {} in service {}: {:?} bytes",
-                        char_uuid_write,
-                        service_uuid_write,
-                        args.recv_data()
-                    );
+                    // Avoid logging on the write hot path
                     let plugin_data = PluginData {
                         src_addr: args.desc().address().as_be_bytes().as_ref().to_vec(),
                         src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
@@ -1433,17 +1428,11 @@ where
                 log::error!("Failed to send plugin data");
                 StateMachineError::UsbSendError
             })?;
-            log::debug!("Sent plugin data: {} bytes", plugin_data_length);
+            log::error!("Sent plugin data: {} bytes", plugin_data_length);
             return Ok(());
         }
         // Data needs to be chunked
         let total_chunks = plugin_data_length.div_ceil(max_plugin_data_send_size);
-        log::info!(
-            "Chunking plugin data: {} bytes into {} chunks of max {} bytes each",
-            plugin_data_length,
-            total_chunks,
-            max_plugin_data_send_size
-        );
 
         for (chunk_index, chunk) in plugin_data
             .data
@@ -1452,13 +1441,6 @@ where
         {
             let mut chunk_data = plugin_data.clone();
             chunk_data.data = chunk.to_vec();
-
-            log::debug!(
-                "Sending chunk {}/{}: {} bytes",
-                chunk_index + 1,
-                total_chunks,
-                chunk_data.data.len()
-            );
 
             sender.send(chunk_data).map_err(|_| {
                 log::error!(
@@ -1469,8 +1451,6 @@ where
                 StateMachineError::UsbSendError
             })?;
         }
-
-        log::info!("Successfully sent {} chunks of plugin data", total_chunks);
         Ok(())
     }
 }
