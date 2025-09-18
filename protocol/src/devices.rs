@@ -14,6 +14,14 @@ pub struct WriteThrottleInfo {
     pub delay: core::time::Duration,
 }
 
+impl WriteThrottleInfo {
+    /// Set the the write delay
+    pub fn set_delay(mut self, delay: core::time::Duration) -> Self {
+        self.delay = delay;
+        self
+    }
+}
+
 impl Default for ReadThrottleInfo {
     fn default() -> Self {
         Self {
