@@ -1,0 +1,29 @@
+[package]
+name = "plugin-hostordevice-std"
+version = "0.1.0"
+authors = ["Babu-Abel Wanyeki <bwanyeki12@gmail.com>"]
+edition = "2021"
+resolver = "2"
+rust-version = "1.77"
+
+[dependencies]
+# Local crates
+device-cherry = { path = "../device-cherry" }
+host-cherry = { path = "../host-cherry" }
+plugin_state_machine_std = { path = "../plugin_state_machine_std" }
+plugin-nvs = { path = "../plugin-nvs" }
+protocol = { path = "../protocol", default-features = false, features = [
+    "std",
+    "protocol_buffer",
+] }
+## Crates
+esp-idf-sys = { version = "0.36.1", default-features = false }
+esp-println = { version = "0.13.1", features = ["esp32s3", "log"] }
+esp-idf-svc = { version = "0.51", features = [
+    "alloc",
+    "binstart",
+    "embassy-time-driver",
+    "embassy-sync",
+], default-features = false }
+[build-dependencies]
+embuild = "0.33"

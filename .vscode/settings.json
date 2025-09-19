@@ -22,6 +22,7 @@
           "./host-no-std/Cargo.toml",
           "./device-cherry/Cargo.toml",
           "./host-cherry/Cargo.toml",
-          "./device-embassy/Cargo.toml"
+          "./device-embassy/Cargo.toml",
+          "./plugin-hostordevice-std/Cargo.toml"          
     ]
 }

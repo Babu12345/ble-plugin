@@ -18,6 +18,7 @@ exclude = [
     "plugin-host-std",
     "host-no-std",
     "plugin-std-nrf",
+    "plugin-hostordevice-std",
 ]
 resolver = "2"
 
