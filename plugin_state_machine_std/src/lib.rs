@@ -788,6 +788,9 @@ where
         match self.metadata.get_or_init_name(&mut self.ns).as_ref() {
             Some(name) => {
                 let mut adv_data_base = esp32_nimble::BLEAdvertisementData::new();
+                // Update the device name right before advertising to make sure that they're consistent
+                // TODO: Investigate what happens if the clearing of the services doesn't happen before this.
+                Self::set_device_name(name.as_str());
                 let adv_data = adv_data_base.name(name.as_str());
 
                 // Get all service UUIDs to include in advertisement
@@ -1452,5 +1455,9 @@ where
             })?;
         }
         Ok(())
+    }
+
+    fn set_device_name(name: &str) {
+        BLEDevice::set_device_name(name).ok();
     }
 }
