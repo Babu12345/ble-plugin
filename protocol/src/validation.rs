@@ -6,7 +6,6 @@
 //! This module uses the inventory crate to collect MESSAGE_TYPE_ID registrations
 //! from all structs that use the protocol_io macros, ensuring uniqueness. Only to be used in tests
 use crate::protocol::MessageTypeId;
-use inventory;
 
 // Collect all MESSAGE_TYPE_ID registrations (test builds only)
 inventory::collect!(MessageTypeId);
