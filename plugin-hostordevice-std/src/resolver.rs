@@ -1,6 +1,7 @@
 //! Contains information about which usb type. Device or host we should select
 
 /// Contains the usb type we should use
+#[derive(Debug)]
 pub enum USBTypeResolver {
     /// Usb host implementation
     UsbHost,

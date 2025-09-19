@@ -40,8 +40,7 @@ fn main() -> Result<()> {
         let processors = match USB_TYPE {
             USBTypeResolver::UsbHost => CdcAcmHostDevice::new()
                 .init(0, ESP_USBH_BASE)
-                .map_err(|_| PluginError::UsbDeviceInitError("Failed to initialize USB host"))
-                .unwrap()
+                .map_err(|_| PluginError::UsbInitError(USBTypeResolver::UsbHost))?
                 .sleep(Duration::from_secs(1))
                 .processors(
                     scope,
@@ -49,11 +48,10 @@ fn main() -> Result<()> {
                     Default::default(),
                     WriteThrottleInfo::default().set_delay(Duration::from_micros(500)),
                 )
-                .unwrap(),
+                .map_err(|_| PluginError::ProcessorInitError(USBTypeResolver::UsbHost)),
             USBTypeResolver::UsbDevice => CdcAcmDevice::new()
                 .init(0, ESP_USBD_BASE)
-                .map_err(|_| PluginError::UsbDeviceInitError("Failed to initialize USB device"))
-                .unwrap()
+                .map_err(|_| PluginError::UsbInitError(USBTypeResolver::UsbDevice))?
                 .set_dtr(0, false)
                 .sleep(Duration::from_millis(500))
                 .processors(
@@ -62,15 +60,17 @@ fn main() -> Result<()> {
                     Default::default(),
                     WriteThrottleInfo::default().set_delay(Duration::from_micros(500)),
                 )
-                .unwrap(),
-        };
+                .map_err(|_| PluginError::ProcessorInitError(USBTypeResolver::UsbHost)),
+        }?;
 
         scope.spawn(
             PluginStateMachine::new(processors.0, processors.1, indicator, nvs_default_partition)
                 .unwrap()
                 .runner_fn(),
         );
-    });
+
+        return Ok::<(), PluginError>(());
+    })?;
 
     Ok(())
 }

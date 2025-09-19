@@ -1,5 +1,7 @@
 //! Crate error and result types
 
+use crate::resolver::USBTypeResolver;
+
 #[derive(Debug)]
 /// Error type for the plugin device
 pub enum PluginError {
@@ -9,8 +11,10 @@ pub enum PluginError {
     GpioInitError(&'static str),
     /// Error indicating a GPIO operation failed
     GpioOperationError(&'static str),
-    /// Error indicating that the USB device could not be initialized
-    UsbDeviceInitError(&'static str),
+    /// Error indicating that the USB host or device could not be initialized
+    UsbInitError(USBTypeResolver),
+    /// Proccessor initialization error
+    ProcessorInitError(USBTypeResolver),
 }
 
 /// Result type for the plugin, using the PluginError type
