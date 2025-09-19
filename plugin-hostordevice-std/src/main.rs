@@ -69,7 +69,7 @@ fn main() -> Result<()> {
                 .runner_fn(),
         );
 
-        return Ok::<(), PluginError>(());
+        return Ok(());
     })?;
 
     Ok(())
