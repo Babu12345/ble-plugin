@@ -16,14 +16,18 @@ use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
 use protocol::devices::{plugin::PluginProcessor, WriteThrottleInfo};
 
-const USB_TYPE: USBTypeResolver = USBTypeResolver::UsbHost;
-
 fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
     let nvs_default_partition = EspNvsDefaultPartition::take().unwrap();
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
+
+    let mut input_pin = PinDriver::input(peripherals.pins.gpio9)
+        .map_err(|_| PluginError::GpioInitError("GPIO9"))?;
+    input_pin
+        .set_pull(esp_idf_svc::hal::gpio::Pull::Down)
+        .map_err(|_| PluginError::GpioOperationError("Failed to pull GPIO9 down"))?;
 
     let indicator = Arc::new(Mutex::new(
         PinDriver::output(peripherals.pins.gpio21.downgrade_output())
@@ -32,12 +36,12 @@ fn main() -> Result<()> {
 
     indicator
         .lock()
-        .map_err(|_| PluginError::GpioOperationError("Failed to lock GPIO"))?
+        .map_err(|_| PluginError::GpioOperationError("Failed to lock GPIO21"))?
         .set_high()
-        .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO high"))?;
+        .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO21 high"))?;
 
     std::thread::scope(|scope| {
-        let processors = match USB_TYPE {
+        let processors = match input_pin.get_level().into() {
             USBTypeResolver::UsbHost => CdcAcmHostDevice::new()
                 .init(0, ESP_USBH_BASE)
                 .map_err(|_| PluginError::UsbInitError(USBTypeResolver::UsbHost))?

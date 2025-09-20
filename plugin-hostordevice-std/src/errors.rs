@@ -7,6 +7,7 @@ use crate::resolver::USBTypeResolver;
 pub enum PluginError {
     /// Error indicating that the peripherals could not be taken
     PeripheralsUnavailable,
+    // GPIO errors
     /// Error indicating that a GPIO pin could not be initialized
     GpioInitError(&'static str),
     /// Error indicating a GPIO operation failed
