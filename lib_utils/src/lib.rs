@@ -2,6 +2,8 @@
 #![deny(missing_docs)]
 //! Common utilities for the workspace
 
+pub mod types;
+
 /// Custom slice trait for trimming or extending slices
 pub trait MatchSliceLengths<const N: usize> {
     /// Match size of the output

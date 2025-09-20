@@ -23,6 +23,7 @@
           "./device-cherry/Cargo.toml",
           "./host-cherry/Cargo.toml",
           "./device-embassy/Cargo.toml",
-          "./plugin-hostordevice-std/Cargo.toml"          
+          "./plugin-hostordevice-std/Cargo.toml",          
+          "./lib_utils/Cargo.toml"      
     ]
 }

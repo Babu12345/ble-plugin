@@ -23,7 +23,7 @@ impl<const N: usize> AlignedBuffer<N> {
     }
 }
 
-impl<const N: usize> std::ops::Index<usize> for AlignedBuffer<N> {
+impl<const N: usize> core::ops::Index<usize> for AlignedBuffer<N> {
     type Output = u8;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -31,22 +31,22 @@ impl<const N: usize> std::ops::Index<usize> for AlignedBuffer<N> {
     }
 }
 
-impl<const N: usize> std::ops::IndexMut<usize> for AlignedBuffer<N> {
+impl<const N: usize> core::ops::IndexMut<usize> for AlignedBuffer<N> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.data[index]
     }
 }
 
-impl<const N: usize> std::ops::Index<std::ops::Range<usize>> for AlignedBuffer<N> {
+impl<const N: usize> core::ops::Index<core::ops::Range<usize>> for AlignedBuffer<N> {
     type Output = [u8];
 
-    fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
+    fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
         &self.data[index]
     }
 }
 
-impl<const N: usize> std::ops::IndexMut<std::ops::Range<usize>> for AlignedBuffer<N> {
-    fn index_mut(&mut self, index: std::ops::Range<usize>) -> &mut Self::Output {
+impl<const N: usize> core::ops::IndexMut<core::ops::Range<usize>> for AlignedBuffer<N> {
+    fn index_mut(&mut self, index: core::ops::Range<usize>) -> &mut Self::Output {
         &mut self.data[index]
     }
 }

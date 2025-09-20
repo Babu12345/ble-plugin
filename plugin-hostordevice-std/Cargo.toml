@@ -6,6 +6,14 @@ edition = "2021"
 resolver = "2"
 rust-version = "1.77"
 
+[profile.release]
+# THIS MUST BE ADDED in order to ensure proper host buffer 4 byte alignment
+opt-level = "s"
+
+[profile.dev]
+debug = true    # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
+
 [dependencies]
 # Local crates
 device-cherry = { path = "../device-cherry" }

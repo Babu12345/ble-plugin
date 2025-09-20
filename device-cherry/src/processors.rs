@@ -23,6 +23,7 @@ use esp_idf_sys::cherry_device::{
     usbd_event_type_USBD_EVENT_SET_REMOTE_WAKEUP, usbd_event_type_USBD_EVENT_SUSPEND,
     usbd_get_ep_mps, usbd_initialize, usbd_interface,
 };
+use lib_utils::types::AlignedBuffer;
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::devices::host::HostProcessor;
 use protocol::devices::plugin::PluginProcessor;
@@ -34,10 +35,8 @@ use throttle::Throttle;
 use crate::utils::{
     CDC_BULK_MPS, cdc_acm_descriptor_init, config_descriptor_init, device_descriptor_init,
 };
-use crate::{
-    AlignedBuffer, concat_n_arrays, device_quality_descriptor_init, other_speed_config_descriptor,
-};
 use crate::{Error, Result};
+use crate::{concat_n_arrays, device_quality_descriptor_init, other_speed_config_descriptor};
 use lib_utils::{MatchSliceLengths, mk_static};
 
 use std::ptr;

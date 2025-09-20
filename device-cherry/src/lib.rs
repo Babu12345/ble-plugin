@@ -4,12 +4,10 @@
 mod constants;
 mod errors;
 mod processors;
-mod types;
 mod utils;
 
 pub use errors::*;
 pub use processors::*;
-pub use types::*;
 pub use utils::*;
 // Initialization - host
 // https://github.com/zleihao/CherryUSB-CDC-MSC/blob/50095e0b63bbdf6f2d5597e71edfa45dd8be6c1d/cdc_msc/middlewares/CherryUSB-1.4.0/class/cdc/usbh_cdc_acm.c#L170
