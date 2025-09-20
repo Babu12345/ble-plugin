@@ -16,7 +16,7 @@ use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
 use protocol::devices::{plugin::PluginProcessor, WriteThrottleInfo};
 
-const USB_TYPE: USBTypeResolver = USBTypeResolver::UsbDevice;
+const USB_TYPE: USBTypeResolver = USBTypeResolver::UsbHost;
 
 fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
