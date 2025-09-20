@@ -54,12 +54,7 @@ fn main() -> Result<()> {
                 .map_err(|_| PluginError::UsbInitError(USBTypeResolver::UsbDevice))?
                 .set_dtr(0, false)
                 .sleep(Duration::from_millis(500))
-                .processors(
-                    scope,
-                    300,
-                    Default::default(),
-                    WriteThrottleInfo::default().set_delay(Duration::from_micros(500)),
-                )
+                .processors(scope, 300, Default::default(), Default::default())
                 .map_err(|_| PluginError::ProcessorInitError(USBTypeResolver::UsbHost)),
         }?;
 
