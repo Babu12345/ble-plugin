@@ -1363,8 +1363,7 @@ where
     }
 
     fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<()> {
-        // Update the device name right before advertising to make sure that they're consistent
-        // TODO: Investigate what happens if the clearing of the services doesn't happen before this.
+        // Update the device name during the profile configuration.
         if let Some(name) = self.metadata.get_or_init_name(&mut self.ns) {
             Self::set_device_name(name.as_str());
             log::info!("Configured device name")
