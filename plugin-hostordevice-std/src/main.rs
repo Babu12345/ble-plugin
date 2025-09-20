@@ -25,14 +25,15 @@ fn main() -> Result<()> {
 
     let mut input_pin = PinDriver::input(peripherals.pins.gpio9)
         .map_err(|_| PluginError::GpioInitError("GPIO9"))?;
-    input_pin
-        .set_pull(esp_idf_svc::hal::gpio::Pull::Down)
-        .map_err(|_| PluginError::GpioOperationError("Failed to pull GPIO9 down"))?;
 
     let indicator = Arc::new(Mutex::new(
         PinDriver::output(peripherals.pins.gpio21.downgrade_output())
             .map_err(|_| PluginError::GpioInitError("GPIO21"))?,
     ));
+
+    input_pin
+        .set_pull(esp_idf_svc::hal::gpio::Pull::Down)
+        .map_err(|_| PluginError::GpioOperationError("Failed to pull GPIO9 down"))?;
 
     indicator
         .lock()
