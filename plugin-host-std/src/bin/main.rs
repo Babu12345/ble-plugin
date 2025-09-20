@@ -29,7 +29,7 @@ fn main() -> Result<()> {
         .lock()
         .map_err(|_| PluginHostError::GpioOperationError("Failed to lock GPIO"))?
         .set_high()
-        .map_err(|_| PluginHostError::GpioOperationError("Failed to set GPIO low"))?;
+        .map_err(|_| PluginHostError::GpioOperationError("Failed to set GPIO high"))?;
 
     let device = CdcAcmHostDevice::new()
         .init(0, ESP_USBH_BASE)

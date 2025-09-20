@@ -34,7 +34,7 @@ fn main() -> Result<()> {
         .lock()
         .map_err(|_| PluginError::GpioOperationError("Failed to lock GPIO"))?
         .set_high()
-        .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO low"))?;
+        .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO high"))?;
 
     std::thread::scope(|scope| {
         let processors = match USB_TYPE {

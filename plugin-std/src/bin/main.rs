@@ -31,7 +31,7 @@ fn main() -> Result<()> {
         .lock()
         .map_err(|_| PluginError::GpioOperationError("Failed to lock GPIO"))?
         .set_high()
-        .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO low"))?;
+        .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO high"))?;
 
     let usb_device = CdcAcmDevice::new()
         .init(0, ESP_USBD_BASE)
