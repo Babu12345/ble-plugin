@@ -7,7 +7,6 @@ resolver = "2"
 rust-version = "1.77"
 
 [profile.release]
-# THIS MUST BE ADDED in order to ensure proper host buffer 4 byte alignment
 opt-level = "s"
 
 [profile.dev]

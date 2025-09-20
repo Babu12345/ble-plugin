@@ -9,6 +9,7 @@ use std::{
 use esp_idf_sys::cherry_host::{
     usbh_cdc_acm, usbh_cdc_acm_bulk_in_transfer, usbh_cdc_acm_bulk_out_transfer,
 };
+use lib_utils::types::AlignedBuffer;
 use protocol::{DEFAULT_PACKET_SIZE, devices::WriteThrottleInfo};
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
@@ -39,7 +40,7 @@ pub extern "C" fn usbh_cdc_acm_stop(cdc_acm_class: *mut usbh_cdc_acm) {
 }
 
 pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
-    let mut buffer = [0; size_of::<T>()];
+    let mut aligned_buffer = AlignedBuffer::<{ size_of::<T>() }>::new();
     loop {
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
@@ -52,8 +53,8 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
         match unsafe {
             usbh_cdc_acm_bulk_in_transfer(
                 cdc_acm_class,
-                buffer.as_mut_ptr(),
-                buffer.len() as u32,
+                aligned_buffer.as_mut_ptr(),
+                aligned_buffer.len() as u32,
                 u32::MAX,
             )
         } {
@@ -64,7 +65,7 @@ pub unsafe fn receive_usb_data(sender: SyncSender<T>) {
             _ => {}
         };
 
-        match sender.try_send(buffer) {
+        match sender.try_send(aligned_buffer.get_data()) {
             Ok(_) => {}
             Err(std::sync::mpsc::TrySendError::Full(_)) => {
                 log::warn!(
@@ -91,7 +92,7 @@ pub unsafe fn send_usb_data(receiver: Receiver<T>, write_throttle_info: WriteThr
         .0;
 
         let mut data = match receiver.recv() {
-            Ok(data) => data,
+            Ok(data) => AlignedBuffer::from(data),
             Err(e) => {
                 log::error!("Error occurred {e}");
                 continue;

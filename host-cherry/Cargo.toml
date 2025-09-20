@@ -8,6 +8,7 @@ edition = "2024"
 protocol = { path = "../protocol", default-features = false, features = [
     "std",
 ] }
+lib_utils = { path = "../lib_utils" }
 
 # Crates
 log = "0.4"
