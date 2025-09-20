@@ -17,6 +17,11 @@ impl<const N: usize> AlignedBuffer<N> {
         self.data.as_mut_ptr()
     }
 
+    /// Covert to a pointer
+    pub fn as_ptr(&self) -> *const u8 {
+        self.data.as_ptr()
+    }
+
     /// Get the raw data
     pub fn get_data(&self) -> [u8; N] {
         self.data
@@ -75,7 +80,7 @@ mod tests {
     #[test]
     fn test_aligned_buffer_alignment() {
         let buffer = AlignedBuffer::<64>::new();
-        let ptr = &buffer as *const _ as usize;
+        let ptr = buffer.as_ptr() as usize;
         assert_eq!(ptr % 4, 0, "AlignedBuffer should be 4-byte aligned");
     }
 
@@ -86,7 +91,7 @@ mod tests {
         assert_eq!(buffer.get_data(), data);
 
         // Test that buffer created from data is also 4-byte aligned
-        let ptr = &buffer as *const _ as usize;
+        let ptr = buffer.as_ptr() as usize;
         assert_eq!(
             ptr % 4,
             0,
