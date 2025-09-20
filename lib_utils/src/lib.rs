@@ -1,5 +1,5 @@
-#![no_std]
 #![deny(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
 //! Common utilities for the workspace
 
 pub mod types;
