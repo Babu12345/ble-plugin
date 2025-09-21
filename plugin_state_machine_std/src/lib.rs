@@ -193,7 +193,7 @@ use errors::Result;
 use errors::StateMachineError;
 use esp32_nimble::enums::OwnAddrType;
 use esp32_nimble::BLEAddress;
-use esp32_nimble::BLEAddressType;
+mod utils;
 use esp_idf_svc::hal::gpio::AnyOutputPin;
 use esp_idf_svc::hal::gpio::Output;
 use esp_idf_svc::hal::gpio::PinDriver;
@@ -215,6 +215,7 @@ use protocol::protocol::{
 use protocol::utils::slice_to_array;
 use threadpool::ThreadPool;
 use throttle::Throttle;
+use utils::*;
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
@@ -825,9 +826,8 @@ where
                     let addr = desc.address();
                     let response = PluginOnConnectResponse {
                         address: addr.as_be_bytes().to_vec(),
-                        address_type: Self::ble_address_type_to_bluetooth_address_type(
-                            addr.addr_type(),
-                        ) as _,
+                        address_type: ble_address_type_to_bluetooth_address_type(addr.addr_type())
+                            as _,
                     };
                     sender.send(response).ok();
                     if cmd.allow_multi_connect
@@ -853,7 +853,7 @@ where
                     let addr = desc.address().as_be_bytes();
                     let response = PluginAuthenticationCompletedResponse {
                         address: addr.to_vec(),
-                        address_type: Self::ble_address_type_to_bluetooth_address_type(
+                        address_type: ble_address_type_to_bluetooth_address_type(
                             desc.address().addr_type(),
                         ) as _,
                         success: status.is_ok(),
@@ -986,7 +986,7 @@ where
                                 return desc.address()
                                     == BLEAddress::from_be_bytes(
                                         val,
-                                        Self::bluetooth_address_type_to_ble_address_type(addr_type),
+                                        bluetooth_address_type_to_ble_address_type(addr_type),
                                     );
                             }
                         }
@@ -1167,7 +1167,7 @@ where
                     // Avoid logging on the write hot path
                     let plugin_data = PluginData {
                         src_addr: args.desc().address().as_be_bytes().as_ref().to_vec(),
-                        src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
+                        src_addr_type: ble_address_type_to_bluetooth_address_type(
                             args.desc().address().addr_type(),
                         ) as _,
                         send_type: protocol::protocol::PluginDataSendType::WriteType as _,
@@ -1204,7 +1204,7 @@ where
 
                     let plugin_data = PluginData {
                         src_addr: desc.address().as_be_bytes().as_ref().to_vec(),
-                        src_addr_type: Self::ble_address_type_to_bluetooth_address_type(
+                        src_addr_type: ble_address_type_to_bluetooth_address_type(
                             desc.address().addr_type(),
                         ) as _,
                         send_type: protocol::protocol::PluginDataSendType::ReadType as _,
@@ -1326,29 +1326,6 @@ where
             cmd.service_uuid
         );
         Ok(())
-    }
-
-    fn bluetooth_address_type_to_ble_address_type(
-        address_type: protocol::protocol::BluetoothAddressType,
-    ) -> BLEAddressType {
-        match address_type {
-            protocol::protocol::BluetoothAddressType::Public => BLEAddressType::Public,
-            protocol::protocol::BluetoothAddressType::Random => BLEAddressType::Random,
-            protocol::protocol::BluetoothAddressType::PublicId => BLEAddressType::PublicID,
-            protocol::protocol::BluetoothAddressType::RandomId => BLEAddressType::RandomID,
-            _ => unreachable!(),
-        }
-    }
-
-    fn ble_address_type_to_bluetooth_address_type(
-        address_type: BLEAddressType,
-    ) -> protocol::protocol::BluetoothAddressType {
-        match address_type {
-            BLEAddressType::Public => protocol::protocol::BluetoothAddressType::Public,
-            BLEAddressType::Random => protocol::protocol::BluetoothAddressType::Random,
-            BLEAddressType::PublicID => protocol::protocol::BluetoothAddressType::PublicId,
-            BLEAddressType::RandomID => protocol::protocol::BluetoothAddressType::RandomId,
-        }
     }
 
     /// Helper function to clear all services and associated metadata atomically
