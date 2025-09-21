@@ -535,6 +535,7 @@ mod tests {
     fn test_configure_profile_serialization() {
         let cmd = HostCommandConfigureProfile {
             profile: BleProfile::Custom as _,
+            save_on_disconnect: false,
         };
 
         // Test serialization

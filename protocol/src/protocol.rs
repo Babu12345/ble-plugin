@@ -208,6 +208,9 @@ pub struct HostCommandConfigureProfile {
     /// Profile type to configure
     #[prost(enumeration = "BleProfile", tag = "1")]
     pub profile: i32,
+    /// Save the profile configuration on disconnect
+    #[prost(bool, tag = "2")]
+    pub save_on_disconnect: bool,
 }
 /// Plugin data
 /// @derive(serde::Deserialize, serde::Serialize)

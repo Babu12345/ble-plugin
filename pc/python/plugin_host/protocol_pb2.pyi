@@ -643,14 +643,18 @@ class HostCommandConfigureProfile(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     PROFILE_FIELD_NUMBER: builtins.int
+    SAVE_ON_DISCONNECT_FIELD_NUMBER: builtins.int
     profile: global___BleProfile.ValueType
     """Profile type to configure"""
+    save_on_disconnect: builtins.bool
+    """Save the profile configuration on disconnect"""
     def __init__(
         self,
         *,
         profile: global___BleProfile.ValueType = ...,
+        save_on_disconnect: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["profile", b"profile"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["profile", b"profile", "save_on_disconnect", b"save_on_disconnect"]) -> None: ...
 
 global___HostCommandConfigureProfile = HostCommandConfigureProfile
 

@@ -223,6 +223,8 @@ enum BleProfile {
 message HostCommandConfigureProfile {
   // Profile type to configure
   BleProfile profile = 1;
+  // Save the profile configuration on disconnect
+  bool save_on_disconnect = 2;
 }
 
 // Plugin messages
