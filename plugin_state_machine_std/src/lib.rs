@@ -1175,7 +1175,7 @@ where
                         service_uuid: service_uuid_write,
                         data: args.recv_data().to_vec(),
                     };
-                    Self::send_plugin_data_chunked(
+                    send_plugin_data_chunked(
                         sender.clone(),
                         plugin_data,
                         max_plugin_data_send_size as _,
@@ -1212,7 +1212,7 @@ where
                         service_uuid: cmd.service_uuid,
                         data: Vec::new(),
                     };
-                    Self::send_plugin_data_chunked(
+                    send_plugin_data_chunked(
                         sender.clone(),
                         plugin_data,
                         max_plugin_data_send_size as _,
@@ -1342,7 +1342,7 @@ where
     fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<()> {
         // Update the device name during the profile configuration.
         if let Some(name) = self.metadata.get_or_init_name(&mut self.ns) {
-            Self::set_device_name(name.as_str());
+            set_device_name(name.as_str());
             log::info!("Configured device name")
         }
 
@@ -1396,48 +1396,5 @@ where
 
         log::info!("Successfully stopped BLE advertisement");
         Ok(())
-    }
-
-    /// Send plugin data with automatic chunking if data exceeds max_plugin_data_send limit
-    fn send_plugin_data_chunked(
-        sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
-        plugin_data: PluginData,
-        max_plugin_data_send_size: usize,
-    ) -> Result<()> {
-        let plugin_data_length = plugin_data.data.len();
-        if plugin_data_length <= max_plugin_data_send_size {
-            // Data fits in a single message, send as-is
-            sender.send(plugin_data).map_err(|_| {
-                log::error!("Failed to send plugin data");
-                StateMachineError::UsbSendError
-            })?;
-            log::error!("Sent plugin data: {} bytes", plugin_data_length);
-            return Ok(());
-        }
-        // Data needs to be chunked
-        let total_chunks = plugin_data_length.div_ceil(max_plugin_data_send_size);
-
-        for (chunk_index, chunk) in plugin_data
-            .data
-            .chunks(max_plugin_data_send_size)
-            .enumerate()
-        {
-            let mut chunk_data = plugin_data.clone();
-            chunk_data.data = chunk.to_vec();
-
-            sender.send(chunk_data).map_err(|_| {
-                log::error!(
-                    "Failed to send plugin data chunk {}/{}",
-                    chunk_index + 1,
-                    total_chunks
-                );
-                StateMachineError::UsbSendError
-            })?;
-        }
-        Ok(())
-    }
-
-    fn set_device_name(name: &str) {
-        BLEDevice::set_device_name(name).ok();
     }
 }
