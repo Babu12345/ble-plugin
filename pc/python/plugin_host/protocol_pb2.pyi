@@ -69,7 +69,7 @@ class _MessageTypeIdEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._
     """Central device on connect response"""
 
 class MessageTypeId(_MessageTypeId, metaclass=_MessageTypeIdEnumTypeWrapper):
-    """Message Type IDs for protocol dispatch. Only supports 2^16 possible values.
+    """Message Type IDs for protocol dispatch. Supports up to 2^16 possible values.
     Note: Each message type is identified by its corresponding MessageTypeId enum value
     when serialized. The protocol uses the MessageTypeId in the message header to
     determine which specific message type to deserialize.
