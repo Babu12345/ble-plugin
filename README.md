@@ -8,7 +8,7 @@ A comprehensive BLE (Bluetooth Low Energy) plugin framework supporting bidirecti
 - **Cross-Platform Compatibility**: Standard library (`std`) and embedded (`no_std`) implementations
 - **Protocol Consistency**: Automated code generation maintains synchronization between Rust and Python implementations
 - **Comprehensive Testing**: Extensive test coverage with 41+ validation tests for protocol integrity
-- **Message Type Management**: Structured message ID ranges (host: 0x01-0x7F, plugin: 0x80-0xFF)
+- **Message Type Management**: Unique message type IDs for efficient dispatch
 - **ESP32 Integration**: Ready-to-use templates and utilities for ESP-IDF based hardware
 
 ### Architecture
@@ -44,7 +44,7 @@ This project uses **Protocol Buffers (protobuf)** exclusively for all communicat
 
 Key protocol features:
 - Uses Protocol Buffers for reliable, cross-platform serialization
-- Ensures MessageTypeId ranges are consistent (host: 0x01-0x7F, plugin: 0x80-0xFF)
+- Ensures MessageTypeId types are unique
 - Type-safe message definitions with automatic code generation
 - Comprehensive test validation
 

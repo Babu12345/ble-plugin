@@ -75,7 +75,7 @@
 //!
 //! ## Message Categories
 //!
-//! ### Host Commands (0x01-0x0F)
+//! ### Host Commands
 //! Commands sent from host devices to configure and control the BLE plugin:
 //!
 //! - **Peripheral Management**: Configure device name, address, advertising
@@ -84,7 +84,7 @@
 //! - **Data Operations**: Read/write/notify characteristic values
 //! - **Query Commands**: Get service and characteristic information
 //!
-//! ### Plugin Responses (0x80+)  
+//! ### Plugin Responses
 //! Responses and data sent from plugin devices back to hosts:
 //!
 //! - **Configuration Responses**: Success/error status for commands
@@ -507,27 +507,6 @@ mod tests {
             result.is_err(),
             "Should reject message with invalid length field"
         );
-    }
-
-    #[test]
-    fn test_message_type_id_ranges() {
-        // Verify host commands are in 0x01-0x7F range
-        assert!((MessageTypeId::TypeHostCommandConfigurePeripheral as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandConfigureService as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandConfigureCharacteristic as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandConfigureCharacteristicRead as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandGetServiceInfo as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandGetCharacteristicInfo as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandStartAdvertisement as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandNotifyCharacteristicValue as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandConfigurePeripheralSecurity as u8) < 0x80);
-        assert!((MessageTypeId::TypeHostCommandConfigureProfile as u8) < 0x80);
-
-        // Verify plugin responses are in 0x80+ range
-        assert!((MessageTypeId::TypePluginData as u8) >= 0x80);
-        assert!((MessageTypeId::TypePluginConfigurationError as u8) >= 0x80);
-        assert!((MessageTypeId::TypePluginServiceInfoResponse as u8) >= 0x80);
-        assert!((MessageTypeId::TypePluginCharacteristicInfoResponse as u8) >= 0x80);
     }
 
     #[test]

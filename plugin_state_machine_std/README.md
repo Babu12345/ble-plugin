@@ -103,7 +103,7 @@ The state machine uses a 5-byte message header format:
 ```
 
 - **Magic Number**: 0xDE for message integrity validation
-- **Type ID**: Efficient command routing (0x01-0x7F for host commands, 0x80-0xFF for plugin responses)
+- **Type ID**: Efficient command routing using message type ids
 - **Length**: Payload size for proper deserialization
 - **Payload**: Serialized command/response data using Protocol Buffers
 
