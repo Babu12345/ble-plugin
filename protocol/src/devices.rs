@@ -133,7 +133,7 @@ pub mod host {
         type T<'ch>
         where
             R: 'ch;
-        // type T<'ch, A, B, const C: usize>;
+
         /// Handles the generation of the processors for receiving and sending data
         fn processors<'ch>(
             self,
