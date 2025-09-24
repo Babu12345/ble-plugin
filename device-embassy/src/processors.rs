@@ -7,7 +7,6 @@ use embassy_sync::{
     channel::{Receiver, Sender},
     signal::Signal,
 };
-use embassy_time::{Duration, WithTimeout};
 use esp_hal::otg_fs::asynch::Driver;
 use protocol::{
     devices::host::AsyncHostProcessor,
@@ -24,8 +23,6 @@ use embassy_usb::{
 use esp_hal::otg_fs::{asynch::Config, Usb};
 
 const BUFFER_SIZE: usize = 64;
-const CONNECTION_CHECK_READ_TIMEOUT_DURATION: Duration = Duration::from_secs(1);
-const CONNECTION_CHECK_TIMEOUT_DURATION: Duration = Duration::from_millis(30);
 
 /// Cdc acm device that implements a AsyncHostProcessor. Pre init.
 pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex> {
@@ -149,43 +146,18 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                     }
                     let mut buf = [0; BUFFER_SIZE];
                     'process: loop {
-                        match receiver
-                            .read_packet(&mut buf)
-                            .with_timeout(CONNECTION_CHECK_READ_TIMEOUT_DURATION)
-                            .await
-                        {
-                            Ok(res) => match res {
-                                Ok(_) => {}
-                                Err(e) => match e {
-                                    EndpointError::BufferOverflow => continue 'process,
-                                    EndpointError::Disabled => {
-                                        log::warn!("USB Disconnected. Retrying");
-                                        if let Some(signal) = &self.receiver_connected {
-                                            signal.signal(false);
-                                        }
-                                        continue 'conn;
+                        match receiver.read_packet(&mut buf).await {
+                            Ok(_) => {}
+                            Err(e) => match e {
+                                EndpointError::BufferOverflow => continue 'process,
+                                EndpointError::Disabled => {
+                                    log::warn!("USB Disconnected. Retrying");
+                                    if let Some(signal) = &self.receiver_connected {
+                                        signal.signal(false);
                                     }
-                                },
-                            },
-                            Err(_) => {
-                                match receiver
-                                    .wait_connection()
-                                    .with_timeout(CONNECTION_CHECK_TIMEOUT_DURATION)
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        log::warn!("USB Disconnected. Retrying 1");
-                                        continue 'process;
-                                    }
-                                    Err(_) => {
-                                        log::warn!("USB Disconnected. Retrying");
-                                        if let Some(signal) = &self.receiver_connected {
-                                            signal.signal(false);
-                                        }
-                                        continue 'conn;
-                                    }
+                                    continue 'conn;
                                 }
-                            }
+                            },
                         }
 
                         from.0.send(buf).await;
