@@ -173,7 +173,10 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                                     .with_timeout(CONNECTION_CHECK_TIMEOUT_DURATION)
                                     .await
                                 {
-                                    Ok(_) => continue 'process,
+                                    Ok(_) => {
+                                        log::warn!("USB Disconnected. Retrying 1");
+                                        continue 'process;
+                                    }
                                     Err(_) => {
                                         log::warn!("USB Disconnected. Retrying");
                                         if let Some(signal) = &self.receiver_connected {
