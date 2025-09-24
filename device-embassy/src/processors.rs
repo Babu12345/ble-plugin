@@ -24,7 +24,7 @@ use embassy_usb::{
 use esp_hal::otg_fs::{asynch::Config, Usb};
 
 const BUFFER_SIZE: usize = 64;
-const CONNECTION_CHECK_READ_TIMEOUT_DURATION: Duration = Duration::from_millis(100);
+const CONNECTION_CHECK_READ_TIMEOUT_DURATION: Duration = Duration::from_secs(1);
 const CONNECTION_CHECK_TIMEOUT_DURATION: Duration = Duration::from_millis(5);
 
 /// Cdc acm device that implements a AsyncHostProcessor. Pre init.
