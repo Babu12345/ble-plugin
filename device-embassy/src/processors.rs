@@ -114,18 +114,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
     )> {
         let (mut sender, mut receiver) = self.class.split();
         let processor_runner = async move {
-            let usb_runner = async {
-                self.usb_device.run_until_suspend().await;
-                if let Some(signal) = &self.receiver_connected {
-                    signal.signal(false);
-                }
-                log::info!("Suspended");
-                self.usb_device.wait_resume().await;
-                if let Some(signal) = &self.receiver_connected {
-                    signal.signal(true);
-                }
-                log::info!("Resume");
-            };
+            let usb_runner = self.usb_device.run();
 
             let to_usb_fn = async {
                 'conn: loop {
