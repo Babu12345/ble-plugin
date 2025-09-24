@@ -99,7 +99,7 @@ Example Plugin Response (Illustrative):
 | **Architecture** | Software-only PC solution | Dedicated hardware module |
 | **Implementation** | Application-level Bluetooth stack | Pre-certified embedded firmware |
 | **Target Market** | Consumer PC users | IoT manufacturers |
-| **Certification** | Uses existing certified adapters | Provides pre-certification |
+| **Certification** | Requires certification for both hardware Bluetooth adapter AND application software implementing the Bluetooth stack | Provides complete pre-certification: hardware module is pre-certified and contains all Bluetooth stack implementation |
 | **Platform** | Windows/Mac/Linux PCs | Embedded IoT devices |
 
 **Non-Infringing**: Our invention operates in completely different technical domain with distinct hardware architecture and business application.
