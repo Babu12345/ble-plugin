@@ -25,7 +25,7 @@ use esp_hal::otg_fs::{asynch::Config, Usb};
 
 const BUFFER_SIZE: usize = 64;
 const CONNECTION_CHECK_READ_TIMEOUT_DURATION: Duration = Duration::from_secs(1);
-const CONNECTION_CHECK_TIMEOUT_DURATION: Duration = Duration::from_millis(5);
+const CONNECTION_CHECK_TIMEOUT_DURATION: Duration = Duration::from_millis(30);
 
 /// Cdc acm device that implements a AsyncHostProcessor. Pre init.
 pub struct CdcAcmDeviceHost<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex> {
