@@ -8,6 +8,7 @@ use std::{
 
 use esp_idf_sys::cherry_host::{
     usbh_cdc_acm, usbh_cdc_acm_bulk_in_transfer, usbh_cdc_acm_bulk_out_transfer,
+    usbh_cdc_acm_set_line_state,
 };
 use lib_utils::types::AlignedBuffer;
 use protocol::{DEFAULT_PACKET_SIZE, devices::WriteThrottleInfo};
@@ -30,6 +31,7 @@ unsafe impl Sync for ThreadSafeCDCWrapper {}
 #[unsafe(no_mangle)]
 pub extern "C" fn usbh_cdc_acm_run(cdc_acm_class: *mut usbh_cdc_acm) {
     *CDC_LOCKER.write().unwrap() = Some(ThreadSafeCDCWrapper(cdc_acm_class));
+    unsafe { usbh_cdc_acm_set_line_state(cdc_acm_class, true, false) };
 }
 
 /// Strong reference to the cdc acm stopper defined in C
