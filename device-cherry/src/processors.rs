@@ -15,8 +15,8 @@ use esp_idf_svc::hal::task::block_on;
 
 use esp_idf_sys::cherry_device::{
     CDC_ACM_DESCRIPTOR_LEN, USB_2_0, USB_CONFIG_BUS_POWERED, USB_DEVICE_CLASS_MISC, usb_descriptor,
-    usbd_add_endpoint, usbd_add_interface, usbd_cdc_acm_init_intf, usbd_cdc_acm_set_dtr,
-    usbd_desc_register, usbd_endpoint, usbd_ep_start_read, usbd_ep_start_write,
+    usbd_add_endpoint, usbd_add_interface, usbd_cdc_acm_init_intf, usbd_desc_register,
+    usbd_endpoint, usbd_ep_start_read, usbd_ep_start_write,
     usbd_event_type_USBD_EVENT_CLR_REMOTE_WAKEUP, usbd_event_type_USBD_EVENT_CONFIGURED,
     usbd_event_type_USBD_EVENT_CONNECTED, usbd_event_type_USBD_EVENT_DISCONNECTED,
     usbd_event_type_USBD_EVENT_RESET, usbd_event_type_USBD_EVENT_RESUME,
@@ -440,16 +440,6 @@ impl PluginProcessor<SIZE, crate::errors::Error> for CdcAcmDevice<POSTINIT> {
 }
 
 impl CdcAcmDevice<POSTINIT> {
-    /// Set the dtr of the usb cdc device
-    pub fn set_dtr(self, intf: u8, dtr: bool) -> Self {
-        let busid = self.busid.unwrap();
-        unsafe {
-            usbd_cdc_acm_set_dtr(busid, intf, dtr);
-        }
-
-        self
-    }
-
     /// Sleep for a specified duration
     pub fn sleep(self, duration: Duration) -> Self {
         std::thread::sleep(duration);
@@ -561,16 +551,6 @@ impl HostProcessor<SIZE, crate::errors::Error> for CdcAcmDeviceHost<POSTINIT> {
 }
 
 impl CdcAcmDeviceHost<POSTINIT> {
-    /// Set the dtr of the usb cdc device
-    pub fn set_dtr(self, intf: u8, dtr: bool) -> Self {
-        let busid = self.busid.unwrap();
-        unsafe {
-            usbd_cdc_acm_set_dtr(busid, intf, dtr);
-        }
-
-        self
-    }
-
     /// Sleep for a specified duration
     pub fn sleep(self, duration: Duration) -> Self {
         std::thread::sleep(duration);

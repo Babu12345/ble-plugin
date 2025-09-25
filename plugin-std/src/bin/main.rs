@@ -36,7 +36,6 @@ fn main() -> Result<()> {
     let usb_device = CdcAcmDevice::new()
         .init(0, ESP_USBD_BASE)
         .map_err(|_| PluginError::UsbDeviceInitError("Failed to initialize USB device"))?
-        .set_dtr(0, false)
         .sleep(Duration::from_millis(500));
     std::thread::scope(|scope| {
         let processors = usb_device
