@@ -169,7 +169,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
                                 },
                             },
                             Err(_) => {
-                                if !receiver.rts() {
+                                if !receiver.dtr() {
                                     log::warn!("USB Disconnected. Retrying");
                                     if let Some(signal) = &self.receiver_connected {
                                         signal.signal(false);
