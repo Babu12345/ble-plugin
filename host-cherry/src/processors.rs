@@ -31,6 +31,8 @@ unsafe impl Sync for ThreadSafeCDCWrapper {}
 #[unsafe(no_mangle)]
 pub extern "C" fn usbh_cdc_acm_run(cdc_acm_class: *mut usbh_cdc_acm) {
     *CDC_LOCKER.write().unwrap() = Some(ThreadSafeCDCWrapper(cdc_acm_class));
+    // TODO: Investigate if setting the line state here causes any issues epecially during the
+    // connection setup stage
     unsafe { usbh_cdc_acm_set_line_state(cdc_acm_class, true, false) };
 }
 
