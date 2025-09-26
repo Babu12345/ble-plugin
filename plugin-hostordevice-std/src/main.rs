@@ -46,7 +46,7 @@ fn main() -> Result<()> {
             USBTypeResolver::UsbHost => CdcAcmHostDevice::new()
                 .init(0, ESP_USBH_BASE)
                 .map_err(|_| PluginError::UsbInitError(USBTypeResolver::UsbHost))?
-                .sleep(Duration::from_millis(500))
+                .sleep(Duration::from_secs(1))
                 .processors(
                     scope,
                     300,
