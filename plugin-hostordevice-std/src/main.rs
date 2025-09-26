@@ -23,7 +23,7 @@ fn main() -> Result<()> {
     let nvs_default_partition = EspNvsDefaultPartition::take().unwrap();
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
 
-    let mut input_pin = PinDriver::input(peripherals.pins.gpio9)
+    let mut input_pin = PinDriver::input(peripherals.pins.gpio7)
         .map_err(|_| PluginError::GpioInitError("GPIO9"))?;
 
     let indicator = Arc::new(Mutex::new(
