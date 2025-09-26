@@ -40,7 +40,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         ep_out_buffer: &'a mut [u8; 1024],
         config_descriptor: &'a mut [u8; 256],
         bos_descriptor: &'a mut [u8; 256],
-        control_buf: &'a mut [u8; 64],
+        control_buf: &'a mut [u8; 128],
         state: &'a mut State<'a>,
     ) -> Self {
         let config = Config::default();

@@ -31,7 +31,7 @@ async fn main(_spawner: Spawner) {
     let mut ep_out_buffer = [0; 1024];
     let mut config_descriptor = [0; 256];
     let mut bos_descriptor = [0; 256];
-    let mut control_buf = [0; 64];
+    let mut control_buf = [0; 128];
     let mut state = State::new();
 
     let device_host: CdcAcmDeviceHost<'_, 20, DEFAULT_PACKET_SIZE, NoopRawMutex> =
