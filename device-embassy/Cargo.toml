@@ -12,7 +12,7 @@ protocol = { git = "ssh://git@github.com/Babu12345/ble-plugin.git", default-feat
 ] }
 
 ## External crates
-esp-hal = { version = "0.23.0" }
+esp-hal = { version = "1.0.0-rc.0" }
 log = { version = "0.4.21" }
 embassy-time = { version = "^0.4", features = ["generic-queue-8"] }
 embassy-usb = "0.4.0"
