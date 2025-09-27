@@ -41,6 +41,8 @@ fn main() -> Result<()> {
         .set_high()
         .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO21 high"))?;
 
+    std::thread::sleep(Duration::from_millis(100));
+
     std::thread::scope(|scope| {
         let processors = match input_pin.get_level().into() {
             USBTypeResolver::UsbHost => CdcAcmHostDevice::new()
