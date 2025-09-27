@@ -125,16 +125,12 @@ class BLEConfigurationGUI:
         frame = ttk.LabelFrame(self.connection_frame, text="USB Connection", padding=10)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        ttk.Label(frame, text="Command Delay (seconds):").grid(row=0, column=0, sticky="w", pady=5)
-        self.delay_var = tk.StringVar(value="0.1")
-        ttk.Entry(frame, textvariable=self.delay_var, width=20).grid(row=0, column=1, pady=5)
-        
-        ttk.Label(frame, text="Connection Sleep Time (seconds):").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(frame, text="Connection Sleep Time (seconds):").grid(row=0, column=0, sticky="w", pady=5)
         self.sleep_var = tk.StringVar(value="0.5")
-        ttk.Entry(frame, textvariable=self.sleep_var, width=20).grid(row=1, column=1, pady=5)
+        ttk.Entry(frame, textvariable=self.sleep_var, width=20).grid(row=0, column=1, pady=5)
         
         button_frame = ttk.Frame(frame)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=2, column=0, columnspan=2, pady=20)
         
         self.connect_btn = ttk.Button(button_frame, text="Connect", command=self.connect_device)
         self.connect_btn.pack(side="left", padx=5)
@@ -355,10 +351,9 @@ class BLEConfigurationGUI:
         
     def connect_device(self):
         try:
-            delay = float(self.delay_var.get())
             sleep_time = float(self.sleep_var.get())
-            
-            self.host = USBHostDevice(default_command_delay=delay)
+
+            self.host = USBHostDevice()
             self.log("Connecting to USB device...")
             
             if self.host.connect(sleep_time=sleep_time):
