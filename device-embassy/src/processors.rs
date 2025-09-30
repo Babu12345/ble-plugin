@@ -42,13 +42,14 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         bos_descriptor: &'a mut [u8; 256],
         control_buf: &'a mut [u8; 64],
         state: &'a mut State<'a>,
+        is_self_powered: bool,
     ) -> Self {
         let config = Config::default();
         let driver = Driver::new(usb, ep_out_buffer, config);
 
         // Create embassy-usb Config
         let mut config = embassy_usb::Config::new(0x303A, 0x3001);
-        config.manufacturer = Some("Espressif");
+        config.manufacturer = Some("Wanyeki Technologies LLC");
         config.product = Some("USB-serial example");
         config.serial_number = Some("12345678");
 
@@ -58,6 +59,10 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         config.device_sub_class = 0x02;
         config.device_protocol = 0x01;
         config.composite_with_iads = true;
+        if is_self_powered {
+            config.max_power = 0;
+            config.self_powered = true;
+        }
 
         // Create embassy-usb DeviceBuilder using the driver and config.
         // It needs some buffers for building the descriptors.
