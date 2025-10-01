@@ -48,7 +48,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         let driver = Driver::new(usb, ep_out_buffer, config);
 
         // Create embassy-usb Config
-        let mut config = embassy_usb::Config::new(0x303A, 0x3001);
+        let mut config = embassy_usb::Config::new(0xFFFF, 0xFFFF);
         config.manufacturer = Some("Wanyeki Technologies LLC");
         config.product = Some("USB-serial example");
         config.serial_number = Some("12345678");
@@ -59,8 +59,10 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         config.device_sub_class = 0x02;
         config.device_protocol = 0x01;
         config.composite_with_iads = true;
+        config.device_release = 0x0100;
+
         if is_self_powered {
-            config.max_power = 0;
+            config.max_power = 1;
             config.self_powered = true;
         }
 
