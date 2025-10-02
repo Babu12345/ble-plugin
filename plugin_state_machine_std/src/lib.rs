@@ -1184,7 +1184,7 @@ where
                 });
             }
             false => {
-                log::warn!(
+                log::trace!(
                     "Characteristic {} does not support WRITE or WRITE_NO_RSP property",
                     cmd.uuid
                 );
@@ -1221,7 +1221,7 @@ where
                 });
             }
             false => {
-                log::warn!("Characteristic {} does not support READ property", cmd.uuid);
+                log::trace!("Characteristic {} does not support READ property", cmd.uuid);
             }
         };
 
