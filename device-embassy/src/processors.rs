@@ -7,6 +7,7 @@ use embassy_sync::{
     channel::{Receiver, Sender},
     signal::Signal,
 };
+use embassy_time::Timer;
 use esp_hal::otg_fs::asynch::Driver;
 use protocol::{
     devices::host::AsyncHostProcessor,
@@ -127,6 +128,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
             let to_usb_fn = async {
                 'conn: loop {
                     sender.wait_connection().await;
+                    Timer::after_millis(100).await;
                     log::info!("Sender connection established");
                     'process: loop {
                         let data = to.1.receive().await;
@@ -147,6 +149,7 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
             let from_usb_fn = async {
                 'conn: loop {
                     receiver.wait_connection().await;
+                    Timer::after_millis(100).await;
                     log::info!("Receiver connection established");
                     if let Some(signal) = &self.receiver_connected {
                         signal.signal(true);
