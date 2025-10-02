@@ -8,12 +8,21 @@
     "files.associations": {
         "usbd_cdc_acm.h": "c"
     },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.c": true,
+        "**/.h": true
+    },
     "cmake.sourceDirectory": "/Users/babuwanyeki/Documents/Rusty/ble-plugin/device-cherry/components/cherryusb",
     "rust-analyzer.checkOnSave": true,
     "rust-analyzer.cargo.features": [],
     "idf.pythonInstallPath": "/usr/bin/python3",
     "rust-analyzer.linkedProjects": [
-          "./Cargo.toml",
+        //   "./Cargo.toml",
           "./plugin-std/Cargo.toml",
           "./plugin_state_machine_std/Cargo.toml",
           "./plugin-echo-example/Cargo.toml",
