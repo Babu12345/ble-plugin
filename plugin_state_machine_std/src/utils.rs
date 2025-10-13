@@ -44,7 +44,7 @@ pub fn send_plugin_data_chunked(
             log::error!("Failed to send plugin data");
             StateMachineError::UsbSendError
         })?;
-        log::error!("Sent plugin data: {} bytes", plugin_data_length);
+        log::trace!("Sent plugin data: {} bytes", plugin_data_length);
         return Ok(());
     }
     // Data needs to be chunked
