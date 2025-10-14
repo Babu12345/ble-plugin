@@ -1,5 +1,6 @@
 from plugin_host.comms import USBHostDevice, USBCommunicationError
 import plugin_host.protocol_pb2 as protocol_pb2
+from time import perf_counter
 def main():
     """Main example function"""
     print("=== USB Host Device Example ===\n")
@@ -11,6 +12,7 @@ def main():
     try:
         # Connect to device
         print("Connecting to USB device...")
+        start_time = perf_counter()
         if host.connect(sleep_time=0.5):
             print("✓ Connected successfully")
             
@@ -63,6 +65,8 @@ def main():
             print("Starting advertisement...")
             host.start_advertisement(allow_multi_connect=True)
             print("✓ Advertisement started")
+            elapsed_time = perf_counter() - start_time
+            print(f"Peripheral configuration and transmission duration: {elapsed_time: .4f} seconds")
             
         else:
             print("✗ Failed to connect")
