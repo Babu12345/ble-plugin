@@ -7,6 +7,7 @@ members = [
     "host-cherry",
     "device-embassy",
     "device-embassy-jtag",
+    "plugin_config",
 ]
 exclude = [
     "plugin-nvs",
@@ -19,6 +20,7 @@ exclude = [
     "host-no-std",
     "plugin-std-nrf",
     "plugin-hostordevice-std",
+    "plugin_config",
 ]
 resolver = "2"
 

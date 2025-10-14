@@ -17,6 +17,7 @@ protocol = { path = "../protocol", default-features = false, features = [
     "std",
 ] }
 plugin-nvs = { path = "../plugin-nvs" }
+plugin_config = { path = "../plugin_config" }
 
 esp32-nimble = { git = "ssh://git@github.com/Babu12345/esp32-nimble.git", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [
     "no_std",

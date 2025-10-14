@@ -1147,6 +1147,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "plugin_config"
+version = "0.0.1"
+
+[[package]]
 name = "plugin_state_machine_std"
 version = "0.1.0"
 dependencies = [
@@ -1155,6 +1159,7 @@ dependencies = [
  "heapless",
  "log",
  "plugin-nvs",
+ "plugin_config",
  "protocol",
  "thiserror-no-std",
  "threadpool",
