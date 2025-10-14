@@ -154,12 +154,6 @@ Example Plugin Response (Illustrative):
 - Target customers: IoT startups, medical device manufacturers, industrial IoT companies
 - Addresses $3B BLE module segment with certification pain points
 
-### Revenue Potential
-- Hardware module sales: $15-45 per unit
-- Software licensing: $500-20K per project
-- Support services: $2K-50K annual contracts
-- Estimated Year 3 revenue: $8M
-
 ### Competitive Advantages
 - **Time-to-Market**: Days vs months for BLE integration
 - **Cost Reduction**: Eliminates $50K-200K certification costs
@@ -191,12 +185,6 @@ Example Plugin Response (Illustrative):
 - Reference hardware platforms evaluated (ESP32, nRF52)
 - Comprehensive test suite (41+ validation tests)
 
-### Next Steps for Patent Filing
-1. Complete FCC certification of reference hardware
-2. Document detailed technical specifications
-3. Prepare patent application with claims analysis
-4. File provisional patent application
-5. Conduct prior art search with patent attorney
 
 ## Technical Specifications
 
