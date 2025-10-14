@@ -1149,6 +1149,9 @@ dependencies = [
 [[package]]
 name = "plugin_config"
 version = "0.0.1"
+dependencies = [
+ "protocol",
+]
 
 [[package]]
 name = "plugin_state_machine_std"
