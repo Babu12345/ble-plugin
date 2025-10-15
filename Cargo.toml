@@ -8,6 +8,7 @@ members = [
     "device-embassy",
     "device-embassy-jtag",
     "plugin_config",
+    "esp_nimble_plugin_config",
 ]
 exclude = [
     "plugin-nvs",
@@ -21,6 +22,7 @@ exclude = [
     "plugin-std-nrf",
     "plugin-hostordevice-std",
     "plugin_config",
+    "esp_nimble_plugin_config",
 ]
 resolver = "2"
 

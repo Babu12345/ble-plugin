@@ -23,6 +23,7 @@ protocol = { path = "../protocol", default-features = false, features = [
     "std",
     "protocol_buffer",
 ] }
+esp_nimble_plugin_config = { path = "../esp_nimble_plugin_config" }
 ## Crates
 esp-idf-sys = { version = "0.36.1", default-features = false }
 esp-println = { version = "0.13.1", features = ["esp32s3", "log"] }

@@ -1,0 +1,20 @@
+[package]
+name = "esp_nimble_plugin_config"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Custom
+plugin_config = { path = "../plugin_config" }
+esp32-nimble = { git = "ssh://git@github.com/Babu12345/esp32-nimble.git", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [
+    "no_std",
+] }
+
+
+# Crates
+# Logging framework for debugging and monitoring
+log = "0.4"
+heapless = "0.9.1"
