@@ -4,9 +4,8 @@
 use protocol::protocol::{
     HostCommandConfigureCharacteristic, HostCommandConfigureCharacteristicRead,
     HostCommandConfigurePeripheral, HostCommandConfigurePeripheralSecurity,
-    HostCommandConfigureProfile, HostCommandConfigureService,
-    HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
-    HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
+    HostCommandConfigureProfile, HostCommandConfigureService, HostCommandGetCharacteristicInfo,
+    HostCommandGetServiceInfo, HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
     HostCommandStopAdvertisement,
 };
 
