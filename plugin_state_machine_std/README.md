@@ -20,6 +20,143 @@ The state machine operates as a bridge between two communication domains:
 USB Host ←→ Plugin State Machine ←→ BLE Peripheral/Central
 ```
 
+### State Machine Diagram
+
+```
+                    ┌─────────────────────────────────────────────────────────┐
+                    │                   INITIALIZATION                        │
+                    │                                                         │
+                    │  - BLEDevice::take()                                    │
+                    │  - Initialize NVS partition                             │
+                    │  - Create USB channels (sender/receiver)                │
+                    │  - Start runner thread                                  │
+                    └────────────────────┬────────────────────────────────────┘
+                                         │
+                                         ▼
+                    ┌─────────────────────────────────────────────────────────┐
+                    │               UNCONFIGURED STATE                        │
+                    │                                                         │
+                    │  - No BLE server initialized                            │
+                    │  - No peripheral name set                               │
+                    │  - Waiting for ConfigurePeripheral command              │
+                    └────────────────────┬────────────────────────────────────┘
+                                         │
+                                         │ HostCommandConfigurePeripheral
+                                         │ (name, address)
+                                         │
+                                         ▼
+                    ┌─────────────────────────────────────────────────────────┐
+                    │              PERIPHERAL CONFIGURED                      │
+                    │                                                         │
+                    │  - BLE server created                                   │
+                    │  - Device name persisted to NVS                         │
+                    │  - Random address set                                   │
+                    │  - Ready for service/profile configuration              │
+                    └───┬─────────────────────────────────┬───────────────────┘
+                        │                                 │
+                        │ ConfigureService                │ ConfigureProfile
+                        │                                 │
+                        ▼                                 ▼
+         ┌──────────────────────────────┐    ┌──────────────────────────────┐
+         │    MANUAL CONFIGURATION      │    │    PROFILE CONFIGURATION     │
+         │                              │    │                              │
+         │  - ConfigureService          │    │  - ConfigureProfile          │
+         │  - ConfigureCharacteristic   │    │  - Auto-loads predefined     │
+         │  - ConfigureCharRead         │    │    services/characteristics  │
+         │  - GetServiceInfo            │    │  - Server restart            │
+         │  - GetCharacteristicInfo     │    │                              │
+         └──────────────┬───────────────┘    └──────────┬───────────────────┘
+                        │                               │
+                        │                               │
+                        └───────────┬───────────────────┘
+                                    │
+                                    │ HostCommandStartAdvertisement
+                                    │ (allow_multi_connect)
+                                    │
+                                    ▼
+                    ┌─────────────────────────────────────────────────────────┐
+                    │                  ADVERTISING                            │
+                    │                                                         │
+                    │  - Broadcasting device name                             │
+                    │  - Advertising service UUIDs                            │
+                    │  - Waiting for client connections                       │
+                    │  - on_connect callback registered                       │
+                    │  - on_disconnect callback registered                    │
+                    │  - on_authentication_complete callback registered       │
+                    └────────────────────┬────────────────────────────────────┘
+                                         │
+                                         │ BLE Client Connects
+                                         │
+                                         ▼
+                    ┌─────────────────────────────────────────────────────────┐
+                    │                CONNECTED STATE                          │
+                    │                                                         │
+                    │  - Send PluginOnConnectResponse to USB                  │
+                    │  - Handle characteristic operations                     │
+                    │  - Process security/authentication                      │
+                    │  - Re-advertise if multi-connect enabled                │
+                    └─────┬──────────────────────────┬────────────────────────┘
+                          │                          │
+                          │ BLE Operations           │ Client Disconnects
+                          │                          │
+                          ▼                          ▼
+         ┌────────────────────────────────────┐   ┌──────────────────────┐
+         │    BIDIRECTIONAL DATA FLOW         │   │  DISCONNECT HANDLER  │
+         │                                    │   │                      │
+         │  USB → BLE:                        │   │  - Log disconnect    │
+         │   - NotifyCharacteristicValue      │   │  - Cleanup state     │
+         │   - ConfigureCharacteristicRead    │   │  - Return to         │
+         │                                    │   │    ADVERTISING       │
+         │  BLE → USB:                        │   │    (if enabled)      │
+         │   - PluginData (Write events)      │   │                      │
+         │   - PluginData (Read requests)     │   └──────────────────────┘
+         │   - Authentication events          │
+         │                                    │
+         │  Security:                         │
+         │   - ConfigurePeripheralSecurity    │
+         │   - Passkey validation             │
+         │   - Authentication callbacks       │
+         └────────────────────────────────────┘
+
+         ┌─────────────────────────────────────────────────────────────────┐
+         │                    COMMAND PROCESSING LOOP                      │
+         │                                                                 │
+         │  1. Receive USB data (with throttling)                          │
+         │  2. Extract message type ID (O(1) dispatch)                     │
+         │  3. Deserialize command using protobuf                          │
+         │  4. Execute handler for message type                            │
+         │  5. Send response/error to USB                                  │
+         │  6. Blink LED indicator (success/failure)                       │
+         │  7. Sleep for processing_delay                                  │
+         │  8. Repeat                                                      │
+         └─────────────────────────────────────────────────────────────────┘
+
+         ┌─────────────────────────────────────────────────────────────────┐
+         │                       ERROR HANDLING                            │
+         │                                                                 │
+         │  - InvalidMessageFormat → Log + Blink(Failure)                  │
+         │  - UnknownMessageType → Log + Blink(Failure)                    │
+         │  - ServerNotInitialized → Send PluginConfigurationError         │
+         │  - InvalidBleConfiguration → Send PluginConfigurationError      │
+         │  - UsbSendError → Log error                                     │
+         │  - NvsWriteError → Log error, continue operation                │
+         └─────────────────────────────────────────────────────────────────┘
+
+         ┌─────────────────────────────────────────────────────────────────┐
+         │                  SUPPORTED STATE TRANSITIONS                    │
+         │                                                                 │
+         │  UNCONFIGURED → PERIPHERAL_CONFIGURED                           │
+         │  PERIPHERAL_CONFIGURED → MANUAL_CONFIG                          │
+         │  PERIPHERAL_CONFIGURED → PROFILE_CONFIG                         │
+         │  MANUAL_CONFIG → ADVERTISING                                    │
+         │  PROFILE_CONFIG → ADVERTISING                                   │
+         │  ADVERTISING → CONNECTED                                        │
+         │  CONNECTED → ADVERTISING (on disconnect)                        │
+         │  ADVERTISING → UNCONFIGURED (StopAdvertisement)                 │
+         │  PERIPHERAL_CONFIGURED → UNCONFIGURED (reconfigure)             │
+         └─────────────────────────────────────────────────────────────────┘
+```
+
 ### Core Components
 
 1. **PluginStateMachine**: Main state machine handling USB-BLE bridging
