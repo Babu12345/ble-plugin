@@ -7,4 +7,9 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+heapless = "0.9.1"
 protocol = { path = "../protocol", default-features = false }
+
+[features]
+default = ["std"]
+std = ["protocol/std"]

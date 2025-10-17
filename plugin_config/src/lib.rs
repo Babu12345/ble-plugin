@@ -1,14 +1,10 @@
 #![deny(missing_docs)]
 //! Library that contains hardware agnostic methods for the plugin hardware to be used in the state machine
 
-use protocol::protocol::{
-    HostCommandConfigureCharacteristic, HostCommandConfigureCharacteristicRead,
-    HostCommandConfigurePeripheral, HostCommandConfigurePeripheralSecurity,
-    HostCommandConfigureProfile, HostCommandConfigureService, HostCommandGetCharacteristicInfo,
-    HostCommandGetServiceInfo, HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
-    HostCommandStopAdvertisement,
-};
-
+pub use protocol::plugin::*;
+pub use protocol::protocol::*;
+pub use protocol::utils::*;
+pub use protocol::DEFAULT_PACKET_SIZE;
 /// Hardware agnostic plugin configurator
 pub trait PluginConfig<ERROR> {
     /// Handle peripheral configuration

@@ -428,7 +428,7 @@ dependencies = [
  "embedded-io-async",
  "futures-sink",
  "futures-util",
- "heapless",
+ "heapless 0.8.0",
 ]
 
 [[package]]
@@ -500,7 +500,7 @@ dependencies = [
  "embedded-io",
  "embedded-io-async",
  "enumset",
- "heapless",
+ "heapless 0.8.0",
  "serde",
 ]
 
@@ -607,7 +607,7 @@ dependencies = [
  "embuild",
  "enumset",
  "esp-idf-sys",
- "heapless",
+ "heapless 0.8.0",
  "log",
  "nb 1.1.0",
  "num_enum",
@@ -625,7 +625,7 @@ dependencies = [
  "embuild",
  "enumset",
  "esp-idf-hal",
- "heapless",
+ "heapless 0.8.0",
  "log",
  "num_enum",
  "uncased",
@@ -663,7 +663,7 @@ dependencies = [
  "embassy-sync",
  "embuild",
  "esp-idf-svc",
- "heapless",
+ "heapless 0.8.0",
  "log",
  "num_enum",
  "once_cell",
@@ -808,6 +808,16 @@ name = "heapless"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad"
+dependencies = [
+ "hash32",
+ "stable_deref_trait",
+]
+
+[[package]]
+name = "heapless"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1edcd5a338e64688fbdcb7531a846cfd3476a54784dcb918a0844682bc7ada5"
 dependencies = [
  "hash32",
  "stable_deref_trait",
@@ -1150,6 +1160,7 @@ dependencies = [
 name = "plugin_config"
 version = "0.0.1"
 dependencies = [
+ "heapless 0.9.1",
  "protocol",
 ]
 
@@ -1159,7 +1170,7 @@ version = "0.1.0"
 dependencies = [
  "esp-idf-svc",
  "esp32-nimble",
- "heapless",
+ "heapless 0.8.0",
  "log",
  "plugin-nvs",
  "plugin_config",
@@ -1242,7 +1253,7 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac6c3320f9abac597dcbc668774ef006702672474aad53c6d596b62e487b40b1"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "itertools",
  "log",
  "multimap",
@@ -1295,7 +1306,7 @@ name = "protocol"
 version = "0.1.0"
 dependencies = [
  "embassy-sync",
- "heapless",
+ "heapless 0.8.0",
  "lib_utils",
  "log",
  "pb-rs",

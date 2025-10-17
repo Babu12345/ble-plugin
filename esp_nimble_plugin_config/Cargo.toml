@@ -8,13 +8,15 @@ rust-version.workspace = true
 
 [dependencies]
 # Custom
-plugin_config = { path = "../plugin_config" }
+plugin_config = { path = "../plugin_config", features = ["std"] }
 esp32-nimble = { git = "ssh://git@github.com/Babu12345/esp32-nimble.git", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [
     "no_std",
 ] }
-
+plugin-nvs = { path = "../plugin-nvs" }
 
 # Crates
 # Logging framework for debugging and monitoring
 log = "0.4"
 heapless = "0.9.1"
+# ESP-IDF system services for task management and hardware interaction
+esp-idf-svc = { version = "0.51", default-features = false }
