@@ -1,11 +1,8 @@
 # Patent Proposal: BLE Plugin Framework for IoT Devices
 
-## Executive Summary
-
 **Invention Title**: "Pre-Certified Bluetooth Low Energy Plugin Module System for IoT Device Integration"
 
 **Inventor**: Babuabel Wanyeki  
-**Company**: Wanyeki Technologies LLC  
 **Date**: September 11, 2025
 
 ## Problem Statement
@@ -122,26 +119,10 @@ Example Plugin Response (Illustrative):
 5. BLE client connections generate `PluginData` messages to host
 6. Host processes data and sends responses via `HostCommandNotifyCharacteristicValue`
 
-## Prior Art Analysis
 
-### Existing Patent: US20170366923A1
-**Title**: "Method to make personal computer to be Bluetooth accessory device"
+## Some Key Claims
 
-**Key Differences**:
-| Aspect | Prior Patent | Our Invention |
-|--------|--------------|---------------|
-| **Purpose** | PC peripheral sharing | IoT device connectivity |
-| **Architecture** | Software-only PC solution | Dedicated hardware module |
-| **Implementation** | Application-level Bluetooth stack | Pre-certified embedded firmware |
-| **Target Market** | Consumer PC users | IoT manufacturers |
-| **Certification** | Requires certification for both hardware Bluetooth adapter AND application software implementing the Bluetooth stack | Provides complete pre-certification: hardware module is pre-certified and contains all Bluetooth stack implementation |
-| **Platform** | Windows/Mac/Linux PCs | Embedded IoT devices |
-
-**Non-Infringing**: Our invention operates in completely different technical domain with distinct hardware architecture and business application.
-
-## Key Patentable Claims
-
-### Primary Claims
+### Claims
 
 1. **System Architecture**: A pre-certified BLE communication module system comprising:
    - Certified wireless communication module
@@ -158,7 +139,7 @@ Example Plugin Response (Illustrative):
    - Maintaining non-wireless host device classification
    - Standardized non-wireless interface (USB, UART, SPI, I2C, etc.) between components
 
-### Secondary Claims
+### Other Claims
 
 4. **Cross-Platform Code Generation**: Automated system generating consistent protocol implementations across multiple programming languages from single protocol definition
 
@@ -168,33 +149,11 @@ Example Plugin Response (Illustrative):
 
 ## Commercial Value
 
-### Market Opportunity
-- $15B BLE IoT market in 2025, growing to $40B+ by 2033
-- Target customers: IoT startups, medical device manufacturers, industrial IoT companies
-- Addresses $3B BLE module segment with certification pain points
-
 ### Competitive Advantages
 - **Time-to-Market**: Days vs months for BLE integration
 - **Cost Reduction**: Eliminates $50K-200K certification costs
 - **Expertise Barrier**: No BLE knowledge required
 - **Risk Mitigation**: Pre-certified compliance assurance
-
-## Patent Strategy
-
-### Defensive Protection
-- Prevents competitors from copying exact technical approach
-- Protects key differentiators in growing IoT connectivity market
-- Establishes prior art for future innovations
-
-### Licensing Opportunities
-- License framework to larger hardware manufacturers
-- Create partnership ecosystem around certified modules
-- Generate additional revenue streams beyond direct sales
-
-### Investment Value
-- Strengthens IP portfolio for funding rounds
-- Demonstrates technical innovation to investors
-- Increases company valuation and acquisition potential
 
 ## Implementation Status
 
@@ -253,8 +212,3 @@ message PluginData {
 ## Conclusion
 
 The BLE Plugin Framework represents a significant innovation in IoT connectivity, addressing real market pain points with a novel technical approach. The combination of pre-certified hardware, protocol abstraction, and cross-platform code generation creates a defensible patent position with substantial commercial value.
-
-**Recommendation**: Proceed with provisional patent application to establish priority date while continuing development and market validation.
-
----
-*This document contains confidential and proprietary information of Wanyeki Technologies LLC. Distribution is restricted to authorized parties and patent counsel only.*
