@@ -9,6 +9,8 @@ pub enum Error {
     ServerNotInitialized,
     /// Invalid configuration
     InvalidBleConfiguration,
+    /// Characteristic Uuid saving storage error
+    CharacteristicUuidStorageError,
     // USB
     /// Usb send error
     UsbSendError,

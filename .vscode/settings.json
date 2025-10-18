@@ -20,6 +20,9 @@
     "cmake.sourceDirectory": "/Users/babuwanyeki/Documents/Rusty/ble-plugin/device-cherry/components/cherryusb",
     "rust-analyzer.checkOnSave": true,
     "rust-analyzer.cargo.features": [],
+    "rust-analyzer.cargo.extraEnv": {
+        "PROTOC": "/opt/homebrew/bin/protoc"
+    },
     "idf.pythonInstallPath": "/usr/bin/python3",
     "rust-analyzer.linkedProjects": [
         //   "./Cargo.toml",
