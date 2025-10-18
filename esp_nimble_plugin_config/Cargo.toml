@@ -17,3 +17,5 @@ log = "0.4"
 heapless = "0.9.1"
 # ESP-IDF system services for task management and hardware interaction
 esp-idf-svc = { version = "0.51", default-features = false }
+# Error library for displaying errors
+thiserror-no-std = "2.0.2"

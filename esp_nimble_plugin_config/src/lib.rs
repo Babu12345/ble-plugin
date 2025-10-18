@@ -5,21 +5,33 @@ pub mod errors;
 use std::{collections::HashMap, sync::Arc};
 
 use esp32_nimble::{
-    enums::OwnAddrType, utilities::BleUuid, BLEDevice, BLEServer, BLEService, NimbleProperties,
+    enums::{AuthReq, OwnAddrType, SecurityIOCap},
+    utilities::BleUuid,
+    BLEAddress, BLEDevice, BLEServer, BLEService, NimbleProperties,
 };
-use esp_idf_svc::{hal::task::block_on, nvs::EspNvsPartition};
+use esp_idf_svc::{
+    hal::task::block_on, nvs::EspNvsPartition, sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS,
+};
 use plugin_config::{
     plugin::{PluginReceiver, PluginSender},
-    slice_to_array, BleProperties, HostCommandConfigureCharacteristic,
-    HostCommandConfigurePeripheral, HostCommandConfigureService, PluginConfig,
-    PluginConfigurationError, PluginConfigurationErrorType, PluginData, PluginDataSendType,
-    DEFAULT_PACKET_SIZE,
+    slice_to_array, BleProfile, BleProperties, BluetoothAddressType,
+    HostCommandConfigureCharacteristic, HostCommandConfigureCharacteristicRead,
+    HostCommandConfigurePeripheral, HostCommandConfigurePeripheralSecurity,
+    HostCommandConfigureProfile, HostCommandConfigureService, HostCommandGetCharacteristicInfo,
+    HostCommandGetServiceInfo, HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
+    HostCommandStopAdvertisement, PluginAuthenticationCompletedResponse,
+    PluginCharacteristicInfoResponse, PluginConfig, PluginConfigurationError,
+    PluginConfigurationErrorType, PluginData, PluginDataSendType, PluginOnConnectResponse,
+    PluginServiceInfoResponse, DEFAULT_PACKET_SIZE,
 };
 use plugin_nvs::{namespace, namespaces::ConfigNamespace};
 mod utils;
 use crate::{
     errors::{Error, Result},
-    utils::{ble_address_type_to_bluetooth_address_type, send_plugin_data_chunked},
+    utils::{
+        ble_address_type_to_bluetooth_address_type, bluetooth_address_type_to_ble_address_type,
+        send_plugin_data_chunked, set_device_name,
+    },
 };
 use esp_idf_svc::nvs::NvsPartitionId;
 
@@ -77,6 +89,40 @@ impl Metadata {
             self.max_plugin_data_send_size
         }
     }
+
+    /// Get the BLE device name, initializing from NVS if not already set
+    fn get_or_init_name<T>(
+        &mut self,
+        ns: &mut ConfigNamespace<T>,
+    ) -> Option<heapless::String<MAX_STRING_SIZE>>
+    where
+        T: NvsPartitionId,
+    {
+        if let Some(name) = &self.ble_name {
+            return Some(name.clone());
+        }
+
+        let mut buffer = [0u8; MAX_STRING_SIZE];
+        match ns.name_config_key().read(&mut buffer) {
+            Ok(data) => {
+                if data?.len() > MAX_STRING_SIZE {
+                    log::error!(
+                        "Stored name in NVS exceeds maximum length of {} bytes",
+                        MAX_STRING_SIZE
+                    );
+                    return None;
+                }
+                let mut name: heapless::String<MAX_STRING_SIZE> = heapless::String::new();
+                name.push_str(core::str::from_utf8(&data?).ok()?).ok()?;
+                self.set_name_local(name.clone());
+                return Some(name);
+            }
+            Err(e) => {
+                log::error!("Failed to read name from NVS: {:?}", e);
+                None
+            }
+        }
+    }
 }
 
 /// Nimble struct
@@ -119,7 +165,7 @@ where
             metadata: Default::default(),
             server: None,
             ns: namespace::<T, ConfigNamespace<T>>(nvs_partition)
-                .map_err(|_| Error::FailedToResolveNvsNamespace)?,
+                .map_err(|_| Error::FailedToResolveNvsNamespace())?,
         })
     }
     /// Initialize the struct
@@ -147,6 +193,15 @@ where
             Some(server) => block_on(server.get_service(BleUuid::from_uuid16(service_uuid))),
             None => None,
         }
+    }
+
+    /// Get all configured service UUIDs
+    pub fn get_service_uuids(&self) -> heapless::Vec<u16, 16> {
+        self.metadata
+            .service_to_characteristic_uuids
+            .keys()
+            .cloned()
+            .collect()
     }
 }
 
@@ -384,6 +439,418 @@ where
             cmd.service_uuid
         );
 
+        Ok(())
+    }
+
+    fn handle_configure_characteristic_read(
+        &mut self,
+        cmd: HostCommandConfigureCharacteristicRead,
+    ) -> Result<()> {
+        log::info!(
+            "Configuring BLE characteristic with UUID: {} for service: {} with read value: {:?}",
+            cmd.uuid,
+            cmd.service_uuid,
+            cmd.value
+        );
+
+        // Get the service that this characteristic belongs to
+        let service = self
+            .get_service(cmd.service_uuid as u16)
+            .ok_or_else(|| {
+                log::error!(
+                    "Service with UUID {} not found - service must be configured first",
+                    cmd.service_uuid
+                );
+                self.sender
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
+                                as _,
+                    })
+                    .ok();
+                Error::InvalidBleConfiguration
+            })?
+            .lock();
+
+        let characteristic = block_on(service.get_characteristic(BleUuid::Uuid16(cmd.uuid as u16)))
+            .ok_or_else(|| Error::InvalidBleConfiguration)?;
+
+        characteristic.lock().set_value(cmd.value.as_slice());
+        Ok(())
+    }
+
+    fn handle_notify_characteristic_value(
+        &mut self,
+        cmd: HostCommandNotifyCharacteristicValue,
+    ) -> Result<()> {
+        log::info!(
+            "Notifying characteristic {} in service {} with {} bytes",
+            cmd.characteristic_uuid,
+            cmd.service_uuid,
+            cmd.value.len()
+        );
+
+        // Get the service that this characteristic belongs to
+        let service = self
+            .get_service(cmd.service_uuid as u16)
+            .ok_or_else(|| {
+                log::error!(
+                    "Service with UUID {} not found - service must be configured first",
+                    cmd.service_uuid
+                );
+                self.sender
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::CharacteristicWithoutServiceConfiguration
+                                as _,
+                    })
+                    .ok();
+                Error::InvalidBleConfiguration
+            })?
+            .lock();
+
+        // Get the characteristic
+        let characteristic =
+            block_on(service.get_characteristic(BleUuid::Uuid16(cmd.characteristic_uuid as u16)))
+                .ok_or_else(|| {
+                log::error!(
+                    "Characteristic with UUID {} not found in service {}",
+                    cmd.characteristic_uuid,
+                    cmd.service_uuid
+                );
+                Error::InvalidBleConfiguration
+            })?;
+
+        // Get the characteristic
+        let characteristic_lock = characteristic.lock();
+
+        match self.server.as_ref() {
+            Some(server) => {
+                let conn = server
+                    .connections()
+                    .find(|desc| {
+                        if let Ok(val) = slice_to_array(cmd.address.as_slice()) {
+                            if let Some(addr_type) =
+                                BluetoothAddressType::try_from(cmd.address_type).ok()
+                            {
+                                return desc.address()
+                                    == BLEAddress::from_be_bytes(
+                                        val,
+                                        bluetooth_address_type_to_ble_address_type(addr_type),
+                                    );
+                            }
+                        }
+                        return false;
+                    })
+                    .ok_or_else(|| {
+                        log::error!(
+                            "Connection with address {:?} and type {:?} not found",
+                            cmd.address,
+                            cmd.address_type
+                        );
+                        Error::InvalidBleConfiguration
+                    })?;
+
+                characteristic_lock
+                    .notify_with(cmd.value.as_slice(), conn.conn_handle())
+                    .map_err(|e| {
+                        log::error!(
+                            "Failed to notify characteristic {} in service {}: {:?}",
+                            cmd.characteristic_uuid,
+                            cmd.service_uuid,
+                            e
+                        );
+                        Error::CharacteristicNotificationError
+                    })?;
+            }
+            None => {
+                log::error!("BLE server not initialized - peripheral must be configured first");
+                self.sender
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
+                                as _,
+                    })
+                    .map_err(|_| Error::UsbSendError)?;
+                return Err(Error::ServerNotInitialized);
+            }
+        }
+
+        log::info!(
+            "Successfully notified characteristic {} with value: {:?}",
+            cmd.characteristic_uuid,
+            cmd.value.as_slice()
+        );
+
+        Ok(())
+    }
+
+    fn handle_get_service_info(&mut self, cmd: HostCommandGetServiceInfo) -> Result<()> {
+        log::info!("Processing get service info command for UUID: {}", cmd.uuid);
+
+        let characteristic_uuids = self
+            .metadata
+            .service_to_characteristic_uuids
+            .get(&(cmd.uuid as u16))
+            .map(|chars| {
+                let mut uuids = Vec::new();
+                for (uuid, _properties) in chars {
+                    uuids.push(*uuid as u32);
+                }
+                uuids
+            })
+            .unwrap_or_else(|| {
+                log::warn!("No characteristics found for service {}", cmd.uuid);
+                Vec::new()
+            });
+
+        let response = PluginServiceInfoResponse {
+            service_uuid: cmd.uuid,
+            characteristic_uuids,
+            exists: self.get_service(cmd.uuid as u16).is_some(),
+        };
+
+        // Send the response to USB
+        self.sender.send(response).map_err(|_| {
+            log::error!("Failed to send service info response to USB");
+            Error::UsbSendError
+        })?;
+
+        log::info!(
+            "Successfully sent service info response for UUID: {}",
+            cmd.uuid
+        );
+        Ok(())
+    }
+
+    fn handle_get_characteristic_info(
+        &mut self,
+        cmd: HostCommandGetCharacteristicInfo,
+    ) -> Result<()> {
+        log::info!(
+            "Processing get characteristic info command for characteristic {} in service {}",
+            cmd.characteristic_uuid,
+            cmd.service_uuid
+        );
+
+        // Look for the characteristic in the specified service
+        let (exists, properties) = self
+            .metadata
+            .service_to_characteristic_uuids
+            .get(&(cmd.service_uuid as u16))
+            .and_then(|chars| {
+                chars.iter().find_map(|(uuid, properties)| {
+                    if *uuid == (cmd.characteristic_uuid as u16) {
+                        Some((true, properties.clone()))
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| {
+                log::warn!(
+                    "Characteristic {} not found in service {}",
+                    cmd.characteristic_uuid,
+                    cmd.service_uuid
+                );
+
+                (false, Vec::new())
+            });
+
+        let properties = properties.into_iter().map(|x| x.into()).collect();
+        let response = PluginCharacteristicInfoResponse {
+            characteristic_uuid: cmd.characteristic_uuid,
+            service_uuid: cmd.service_uuid,
+            properties,
+            exists,
+        };
+
+        // Send the response to USB
+        self.sender.send(response).map_err(|_| {
+            log::error!("Failed to send characteristic info response to USB");
+            Error::UsbSendError
+        })?;
+
+        log::info!(
+            "Successfully sent characteristic info response for characteristic {} in service {}",
+            cmd.characteristic_uuid,
+            cmd.service_uuid
+        );
+        Ok(())
+    }
+
+    fn handle_start_advertisement(&mut self, cmd: HostCommandStartAdvertisement) -> Result<()> {
+        let advertisement = self.device.get_advertising();
+        log::info!(
+            "Starting BLE advertisement, multi-connect: {}",
+            cmd.allow_multi_connect
+        );
+
+        // Note: On the first call, this will auto-configure using any predefined profile settings.
+        // Subsequent calls require explicit configuration via configure_profile() or manual service setup.
+        match self.metadata.get_or_init_name(&mut self.ns).as_ref() {
+            Some(name) => {
+                let mut adv_data_base = esp32_nimble::BLEAdvertisementData::new();
+                let adv_data = adv_data_base.name(name.as_str());
+
+                // Get all service UUIDs to include in advertisement
+                for uuid in self.get_service_uuids().into_iter() {
+                    adv_data.add_service_uuid(BleUuid::from_uuid16(uuid));
+                }
+
+                advertisement.lock().set_data(adv_data).map_err(|e| {
+                    log::error!("Failed to set advertisement data: {:?}", e);
+                    Error::AdvertisementError("Failed to start advertisement")
+                })?;
+                advertisement.lock().start().map_err(|e| {
+                    log::error!("Failed to start advertisement: {:?}", e);
+                    Error::AdvertisementError("Failed to start advertisement")
+                })?;
+                log::info!("Started BLE advertisement with name: {name}");
+            }
+            None => {
+                log::error!(
+                    "Error: Received advertisement command without peripheral configuration"
+                );
+                self.sender
+                    .send(PluginConfigurationError { error_type: PluginConfigurationErrorType::AdvertisementWithoutPeripheralConfiguration as _ })
+                    .map_err(|_| Error::UsbSendError)?;
+                return Err(Error::InvalidBleConfiguration);
+            }
+        }
+
+        match self.server.as_mut() {
+            Some(server) => {
+                let sender = self.sender.clone();
+                server.on_connect(move |server, desc| {
+                    log::info!("Client connected: {:?}", desc);
+
+                    let addr = desc.address();
+                    let response = PluginOnConnectResponse {
+                        address: addr.as_be_bytes().to_vec(),
+                        address_type: ble_address_type_to_bluetooth_address_type(addr.addr_type())
+                            as _,
+                    };
+                    sender.send(response).ok();
+                    if cmd.allow_multi_connect
+                        && server.connected_count() < (CONFIG_BT_NIMBLE_MAX_CONNECTIONS as usize)
+                    {
+                        log::info!("Multi-connect support: start advertising");
+                        if let Err(e) = advertisement.lock().start() {
+                            log::error!(
+                                "Failed to restart advertisement for multi-connect: {:?}",
+                                e
+                            );
+                        }
+                    }
+                });
+
+                server.on_disconnect(move |_desc, reason| {
+                    log::info!("Client disconnected ({:?})", reason);
+                });
+
+                let sender = self.sender.clone();
+                server.on_authentication_complete(move |_, desc, status| {
+                    log::info!("Authentication completed for client: {:?}", desc);
+                    let addr = desc.address().as_be_bytes();
+                    let response = PluginAuthenticationCompletedResponse {
+                        address: addr.to_vec(),
+                        address_type: ble_address_type_to_bluetooth_address_type(
+                            desc.address().addr_type(),
+                        ) as _,
+                        success: status.is_ok(),
+                    };
+                    sender
+                        .send(response)
+                        .map_err(|e| {
+                            log::error!("Failed to send authentication response: {:?}", e);
+                            Error::UsbSendError
+                        })
+                        .ok();
+                });
+                log::info!("Successfully configured BLE server callbacks");
+            }
+            None => {
+                log::error!("Error: Server not initialized for BLE device");
+                return Err(Error::ServerNotInitialized);
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_configure_peripheral_security(
+        &mut self,
+        cmd: HostCommandConfigurePeripheralSecurity,
+    ) -> Result<()> {
+        log::debug!("Setting up BLE security configuration");
+
+        if cmd.passkey > 999999 {
+            log::error!("Invalid passkey: must be a 6-digit number");
+            return Err(Error::InvalidPasskeyLength);
+        }
+
+        self.device
+            .security()
+            .set_auth(AuthReq::all())
+            .set_passkey(cmd.passkey)
+            .set_io_cap(SecurityIOCap::DisplayOnly)
+            .resolve_rpa();
+
+        Ok(())
+    }
+
+    fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<()> {
+        // Update the device name during the profile configuration.
+        if let Some(name) = self.metadata.get_or_init_name(&mut self.ns) {
+            set_device_name(name.as_str());
+            log::info!("Configured device name")
+        }
+
+        log::info!("Configuring BLE profile: {:?}", cmd.profile);
+
+        match BleProfile::try_from(cmd.profile) {
+            Ok(BleProfile::Custom) => {
+                log::info!("Using custom profile with predefined services and characteristics");
+                // Get the server
+                let server = match self.server.as_mut() {
+                    Some(server) => server,
+                    None => {
+                        log::error!("No BLE server available. Configure peripheral first.");
+                        return Err(Error::InvalidBleConfiguration);
+                    }
+                };
+
+                // Restart the server with all predefined services and characteristics
+                server.restart(true).map_err(|source| {
+                    log::error!("Failed to restart BLE server: {:?}", source);
+                    Error::ServerRestartError(source)
+                })?;
+            }
+            Ok(other_profile) => {
+                log::warn!(
+                    "Predefined BLE profile {:?} is not implemented yet",
+                    other_profile
+                );
+            }
+            Err(_) => {
+                log::error!("Unknown BLE profile ID: {:?}", cmd.profile);
+                return Err(Error::InvalidBleConfiguration);
+            }
+        }
+
+        log::info!("Successfully configured profile {:?} by restarting server with predefined configuration", cmd.profile);
+        Ok(())
+    }
+
+    fn handle_stop_advertisement(&mut self, _cmd: HostCommandStopAdvertisement) -> Result<()> {
+        log::info!("Stopping BLE advertisement");
+
+        self.device.get_advertising().lock().stop().map_err(|e| {
+            log::error!("Failed to stop advertisement: {:?}", e);
+            Error::AdvertisementError("Failed to stop advertisement")
+        })?;
+
+        log::info!("Successfully stopped BLE advertisement");
         Ok(())
     }
 }

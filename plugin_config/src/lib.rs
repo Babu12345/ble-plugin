@@ -12,7 +12,7 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandConfigurePeripheral,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_configure_peripheral to configure the BLE peripheral")
     }
 
     /// Handle peripheral security configuration
@@ -20,7 +20,7 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandConfigurePeripheralSecurity,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_configure_peripheral_security to configure BLE security settings")
     }
 
     /// Handle start advertisement
@@ -28,7 +28,7 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandStartAdvertisement,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_start_advertisement to start BLE advertising")
     }
 
     /// Handle stop advertisement
@@ -36,12 +36,12 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandStopAdvertisement,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_stop_advertisement to stop BLE advertising")
     }
 
     /// Handle service configuration
     fn handle_configure_service(&mut self, _cmd: HostCommandConfigureService) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_configure_service to configure BLE services")
     }
 
     /// Handle characteristic configuration
@@ -49,7 +49,7 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandConfigureCharacteristic,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_configure_characteristic to configure BLE characteristics")
     }
 
     /// Handle characteristic read configuration
@@ -57,7 +57,7 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandConfigureCharacteristicRead,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_configure_characteristic_read to configure characteristic read operations")
     }
 
     /// Handle notify characteristic value
@@ -65,12 +65,12 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandNotifyCharacteristicValue,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_notify_characteristic_value to send characteristic notifications")
     }
 
     /// Handle get service info
     fn handle_get_service_info(&mut self, _cmd: HostCommandGetServiceInfo) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_get_service_info to retrieve service information")
     }
 
     /// Handle get characteristic info
@@ -78,11 +78,11 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandGetCharacteristicInfo,
     ) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_get_characteristic_info to retrieve characteristic information")
     }
 
     /// Handle configure profile
     fn handle_configure_profile(&mut self, _cmd: HostCommandConfigureProfile) -> Result<(), ERROR> {
-        unimplemented!()
+        unimplemented!("Please implement handle_configure_profile to configure BLE profiles")
     }
 }
