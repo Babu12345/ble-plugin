@@ -135,8 +135,6 @@ where
     /// Thread-safe USB sender for responses and BLE data forwarding
     sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
 
-    /// USB receiver for incoming host commands (exclusive access)
-    receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
     /// Optional BLE server instance (created after peripheral configuration)
     server: Option<&'static mut BLEServer>,
     metadata: Metadata,
@@ -154,12 +152,10 @@ where
     /// Create a new instance
     pub fn new(
         sender: PluginSender<DEFAULT_PACKET_SIZE>,
-        receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
         nvs_partition: EspNvsPartition<T>,
     ) -> Result<Self> {
         Ok(Self {
             sender: Arc::new(sender),
-            receiver,
             is_initialized: false,
             device: BLEDevice::take(),
             metadata: Default::default(),
