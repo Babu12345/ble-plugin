@@ -2,11 +2,9 @@
 name = "plugin_state_machine_std"
 version = "0.1.0"
 edition = "2021"
-authors = ["BLE Plugin Team"]
+authors = ["Babuabel Wanyeki"]
 description = "BLE-USB bridge state machine for ESP32-based plugin devices"
-documentation = "https://docs.rs/plugin_state_machine_std"
 readme = "README.md"
-repository = "https://github.com/your-org/ble-plugin"
 keywords = ["ble", "usb", "esp32", "embedded", "bridge"]
 categories = ["embedded", "hardware-support", "network-programming"]
 rust-version = "1.70"
