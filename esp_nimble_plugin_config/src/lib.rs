@@ -2,11 +2,15 @@
 //! Implements the plugin_config to be used in the plugin state machines for esp_nimble. Which is a bluetooth crate for esp32
 
 pub mod errors;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use esp32_nimble::{enums::OwnAddrType, BLEDevice, BLEServer};
+use esp32_nimble::{enums::OwnAddrType, utilities::BleUuid, BLEDevice, BLEServer};
 use esp_idf_svc::nvs::EspNvsPartition;
-use plugin_config::{slice_to_array, HostCommandConfigurePeripheral, PluginConfig};
+use plugin_config::{
+    plugin::{PluginReceiver, PluginSender},
+    slice_to_array, HostCommandConfigurePeripheral, HostCommandConfigureService, PluginConfig,
+    PluginConfigurationError, PluginConfigurationErrorType, DEFAULT_PACKET_SIZE,
+};
 use plugin_nvs::{namespace, namespaces::ConfigNamespace};
 mod utils;
 use crate::errors::{Error, Result};
@@ -66,6 +70,11 @@ where
 {
     is_initialized: bool,
     device: &'a mut BLEDevice,
+    /// Thread-safe USB sender for responses and BLE data forwarding
+    sender: Arc<PluginSender<DEFAULT_PACKET_SIZE>>,
+
+    /// USB receiver for incoming host commands (exclusive access)
+    receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
     /// Optional BLE server instance (created after peripheral configuration)
     server: Option<&'static mut BLEServer>,
     metadata: Metadata,
@@ -81,8 +90,14 @@ where
     T: NvsPartitionId,
 {
     /// Create a new instance
-    pub fn new(nvs_partition: EspNvsPartition<T>) -> Result<Self> {
+    pub fn new(
+        sender: PluginSender<DEFAULT_PACKET_SIZE>,
+        receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
+        nvs_partition: EspNvsPartition<T>,
+    ) -> Result<Self> {
         Ok(Self {
+            sender: Arc::new(sender),
+            receiver,
             is_initialized: false,
             device: BLEDevice::take(),
             metadata: Default::default(),
@@ -147,6 +162,39 @@ where
 
         self.clear_all_services_and_metadata();
         log::info!("Successfully configured peripheral '{}'", cmd.name);
+        Ok(())
+    }
+
+    fn handle_configure_service(&mut self, cmd: HostCommandConfigureService) -> Result<()> {
+        log::info!("Configuring BLE service with UUID: {}", cmd.uuid,);
+
+        let server = match self.server.as_mut() {
+            Some(server) => server,
+            None => {
+                log::error!("BLE server not initialized - peripheral must be configured first");
+                self.sender
+                    .send(PluginConfigurationError {
+                        error_type:
+                            PluginConfigurationErrorType::ServiceWithoutPeripheralConfiguration
+                                as _,
+                    })
+                    .map_err(|_| Error::UsbSendError)?;
+                return Err(Error::ServerNotInitialized);
+            }
+        };
+
+        // Create the BLE service converting from u16 to BleUuid
+        server.create_service(BleUuid::from_uuid16(cmd.uuid as u16));
+
+        log::info!("Successfully created BLE service with UUID: {}", cmd.uuid);
+
+        // Create a serivce entry and clear any existing characteristics for this service
+        self.metadata
+            .service_to_characteristic_uuids
+            .entry(cmd.uuid as u16)
+            .or_default()
+            .clear();
+
         Ok(())
     }
 }

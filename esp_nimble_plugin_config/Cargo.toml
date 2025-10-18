@@ -1,14 +1,11 @@
 [package]
 name = "esp_nimble_plugin_config"
-version.workspace = true
-authors.workspace = true
-repository.workspace = true
-edition.workspace = true
-rust-version.workspace = true
+version = "0.1.0"
+edition = "2021"
 
 [dependencies]
 # Custom
-plugin_config = { path = "../plugin_config", features = ["std"] }
+plugin_config = { path = "../plugin_config" }
 esp32-nimble = { git = "ssh://git@github.com/Babu12345/esp32-nimble.git", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [
     "no_std",
 ] }

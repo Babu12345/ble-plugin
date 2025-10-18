@@ -1,15 +1,13 @@
 [package]
 name = "plugin_config"
-version.workspace = true
-authors.workspace = true
-repository.workspace = true
-edition.workspace = true
-rust-version.workspace = true
+version = "0.1.0"
+edition = "2021"
 
 [dependencies]
 heapless = "0.9.1"
 protocol = { path = "../protocol", default-features = false }
 
 [features]
-default = ["std"]
+default = ["std", "protocol_buffer"]
 std = ["protocol/std"]
+protocol_buffer = ["protocol/protocol_buffer"]

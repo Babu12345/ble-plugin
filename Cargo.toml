@@ -7,8 +7,6 @@ members = [
     "host-cherry",
     "device-embassy",
     "device-embassy-jtag",
-    "plugin_config",
-    "esp_nimble_plugin_config",
 ]
 exclude = [
     "plugin-nvs",

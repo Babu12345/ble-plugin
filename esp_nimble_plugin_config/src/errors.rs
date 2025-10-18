@@ -5,6 +5,8 @@ pub enum Error {
     // Nimble
     /// Unable to set the address
     UnableToSetRNDAddress,
+    /// Server failed to be initialized
+    ServerNotInitialized,
     /// Invalid configuration
     InvalidBleConfiguration,
     // USB
