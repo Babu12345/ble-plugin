@@ -1,30 +1,7 @@
 //! Error library
 
-// /// Errors for the nimble plugin config
-// pub enum Error {
-//     // Nimble
-//     /// Unable to set the address
-//     UnableToSetRNDAddress,
-//     /// Server failed to be initialized
-//     ServerNotInitialized,
-//     /// Invalid configuration
-//     InvalidBleConfiguration,
-//     /// Characteristic Uuid saving storage error
-//     CharacteristicUuidStorageError,
-//     /// Characteristic notification error
-//     CharacteristicNotificationError,
-//     // USB
-//     /// Usb send error
-//     UsbSendError,
-//     // NVS
-//     /// Failed to resolve namespace
-//     FailedToResolveNvsNamespace,
-//     /// Write error
-//     NvsWriteError,
-// }
-
 use esp32_nimble::BLEError;
-use plugin_config::MessageTypeId;
+
 use thiserror_no_std::Error as ThisError;
 
 /// Comprehensive error types for the esp-nimble plugin config
@@ -109,22 +86,6 @@ pub enum Error {
     #[error("Invalid USB message format - check magic number and header structure")]
     InvalidMessageFormat,
 
-    /// Failure to decode USB message into expected command type
-    #[error("Failed to decode USB message into command type: {0}")]
-    FailedToDecodeMessage(&'static str),
-
-    /// Unhandled message type received from host
-    #[error("Unhandled message type received from host")]
-    UnhandledMessageType(MessageTypeId),
-
-    /// Unknown or unsupported message type ID
-    ///
-    /// This error indicates that the message type ID extracted from the
-    /// USB data doesn't correspond to any known command type. This may
-    /// indicate protocol version mismatch or data corruption.
-    #[error("Unknown message type ID - possible protocol version mismatch")]
-    UnknownMessageType,
-
     /// Failure to set the random address for the BLE device
     #[error("Failed to set random address")]
     UnableToSetRNDAddress,
@@ -140,7 +101,7 @@ pub enum Error {
     // NVS related errors
     /// Failure to save data to NVS storage
     #[error("Failed to resolve NVS namespace")]
-    FailedToResolveNvsNamespace(),
+    FailedToResolveNvsNamespace,
 
     /// Failure to write data to NVS storage
     #[error("Failed to write data to NVS storage")]

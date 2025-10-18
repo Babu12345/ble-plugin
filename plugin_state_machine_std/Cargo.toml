@@ -16,31 +16,19 @@ rust-version = "1.70"
 protocol = { path = "../protocol", default-features = false, features = [
     "std",
 ] }
-plugin-nvs = { path = "../plugin-nvs" }
 plugin_config = { path = "../plugin_config" }
-
-esp32-nimble = { git = "ssh://git@github.com/Babu12345/esp32-nimble.git", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [
-    "no_std",
-] }
-
-# ESP-IDF system services for task management and hardware interaction
-esp-idf-svc = { version = "0.51", default-features = false }
 
 # Logging framework for debugging and monitoring
 log = "0.4"
-
-# No-allocation collections for embedded systems
-heapless = "0.8.0"
 
 # UUID handling for BLE service and characteristic identifiers
 uuid = { version = "1.17.0", default-features = false }
 
 # Error library for displaying errors
 thiserror-no-std = "2.0.2"
-throttle = "0.1.0"
 
-# Thread pool for managing concurrent tasks
-threadpool = "1.8.1"
+[lib]
+doctest = false
 
 [features]
 default = ["protocol_buffer"]

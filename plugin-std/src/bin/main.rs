@@ -9,6 +9,7 @@ use esp_idf_svc::hal::{
     prelude::Peripherals,
 };
 use esp_idf_sys::cherry_device::ESP_USBD_BASE;
+use esp_nimble_plugin_config::{EspHardwareAccessories, EspNimblePluginConfig};
 use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
 use plugin_std::errors::{PluginError, Result};
@@ -41,8 +42,12 @@ fn main() -> Result<()> {
         let processors = usb_device
             .processors(scope, 100, Default::default(), Default::default())
             .unwrap();
+
+        let config = EspNimblePluginConfig::new(processors.0, nvs_default_partition).unwrap();
+        let accessory = EspHardwareAccessories::new(indicator);
+
         scope.spawn(
-            PluginStateMachine::new(processors.0, processors.1, indicator, nvs_default_partition)
+            PluginStateMachine::new(config, processors.1, accessory)
                 .unwrap()
                 .runner_fn(),
         );

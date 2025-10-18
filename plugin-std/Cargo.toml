@@ -27,6 +27,7 @@ plugin-nvs = { path = "../plugin-nvs" }
 protocol = { path = "../protocol", default-features = false, features = [
     "std",
 ] }
+esp_nimble_plugin_config = { path = "../esp_nimble_plugin_config" }
 ## Crates
 log = {version = "0.4.27", default-features = false}
 esp-idf-sys = { version = "0.36.1", default-features = false }

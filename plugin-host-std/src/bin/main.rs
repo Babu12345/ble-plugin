@@ -8,6 +8,7 @@ use esp_idf_svc::hal::{
     prelude::Peripherals,
 };
 use esp_idf_sys::cherry_host::ESP_USBH_BASE;
+use esp_nimble_plugin_config::{EspHardwareAccessories, EspNimblePluginConfig};
 use host_cherry::CdcAcmHostDevice;
 use plugin_host_std::errors::{PluginHostError, Result};
 use plugin_nvs::EspNvsDefaultPartition;
@@ -45,8 +46,10 @@ fn main() -> Result<()> {
             )
             .unwrap();
 
+        let config = EspNimblePluginConfig::new(processors.0, nvs_default_partition).unwrap();
+        let accessory = EspHardwareAccessories::new(indicator);
         scope.spawn(
-            PluginStateMachine::new(processors.0, processors.1, indicator, nvs_default_partition)
+            PluginStateMachine::new(config, processors.1, accessory)
                 .unwrap()
                 .runner_fn(),
         );

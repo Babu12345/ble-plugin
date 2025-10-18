@@ -9,6 +9,7 @@ use esp_idf_svc::hal::{
     prelude::Peripherals,
 };
 use esp_idf_sys::{cherry_device::ESP_USBD_BASE, cherry_host::ESP_USBH_BASE};
+use esp_nimble_plugin_config::{EspHardwareAccessories, EspNimblePluginConfig};
 use host_cherry::CdcAcmHostDevice;
 use plugin_hostordevice_std::errors::{PluginError, Result};
 use plugin_hostordevice_std::resolver::USBTypeResolver;
@@ -65,9 +66,13 @@ fn main() -> Result<()> {
         }?;
 
         scope.spawn(
-            PluginStateMachine::new(processors.0, processors.1, indicator, nvs_default_partition)
-                .unwrap()
-                .runner_fn(),
+            PluginStateMachine::new(
+                EspNimblePluginConfig::new(processors.0, nvs_default_partition).unwrap(),
+                processors.1,
+                EspHardwareAccessories::new(indicator),
+            )
+            .unwrap()
+            .runner_fn(),
         );
 
         Ok(())

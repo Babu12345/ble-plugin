@@ -33,5 +33,6 @@ esp-idf-svc = { version = "0.51", features = [
     "embassy-time-driver",
     "embassy-sync",
 ], default-features = false }
+
 [build-dependencies]
 embuild = "0.33"

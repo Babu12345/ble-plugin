@@ -31,6 +31,7 @@ protocol = { path = "../protocol", default-features = false, features = [
 host-cherry = {path = "../host-cherry"}
 plugin_state_machine_std = { path = "../plugin_state_machine_std" }
 plugin-nvs = { path = "../plugin-nvs" }
+esp_nimble_plugin_config = { path = "../esp_nimble_plugin_config" }
 ## Crates
 log = "0.4"
 esp-idf-sys = { version = "0.36.1", default-features = false }

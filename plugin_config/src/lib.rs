@@ -1,18 +1,22 @@
 #![deny(missing_docs)]
 //! Library that contains hardware agnostic methods for the plugin hardware to be used in the state machine
 
+use std::fmt::Debug;
+
 pub use protocol::plugin::*;
 pub use protocol::protocol::*;
 pub use protocol::utils::*;
 pub use protocol::DEFAULT_PACKET_SIZE;
 /// Hardware agnostic plugin configurator
-pub trait PluginConfig<ERROR> {
+pub trait PluginConfig<ERROR: Debug> {
     /// Handle peripheral configuration
     fn handle_configure_peripheral(
         &mut self,
         _cmd: HostCommandConfigurePeripheral,
     ) -> Result<(), ERROR> {
-        unimplemented!("Please implement handle_configure_peripheral to configure the BLE peripheral")
+        unimplemented!(
+            "Please implement handle_configure_peripheral to configure the BLE peripheral"
+        )
     }
 
     /// Handle peripheral security configuration
@@ -49,7 +53,9 @@ pub trait PluginConfig<ERROR> {
         &mut self,
         _cmd: HostCommandConfigureCharacteristic,
     ) -> Result<(), ERROR> {
-        unimplemented!("Please implement handle_configure_characteristic to configure BLE characteristics")
+        unimplemented!(
+            "Please implement handle_configure_characteristic to configure BLE characteristics"
+        )
     }
 
     /// Handle characteristic read configuration
@@ -84,5 +90,21 @@ pub trait PluginConfig<ERROR> {
     /// Handle configure profile
     fn handle_configure_profile(&mut self, _cmd: HostCommandConfigureProfile) -> Result<(), ERROR> {
         unimplemented!("Please implement handle_configure_profile to configure BLE profiles")
+    }
+}
+
+/// Enum representing the possible states of the blink indication
+pub enum BlinkState {
+    /// Indicates a successful operation
+    Success,
+    /// Indicates a failure or error condition
+    Failure,
+}
+
+/// Trait for hardware accessories like blinking
+pub trait HardwareAccessories {
+    /// Blink
+    fn blink(&mut self, _state: BlinkState) {
+        unimplemented!("Implement blink to allow blinking")
     }
 }
