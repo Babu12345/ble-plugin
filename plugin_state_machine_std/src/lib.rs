@@ -2,22 +2,32 @@
 
 //! # Plugin State Machine Standard
 //!
-//! A comprehensive BLE-USB bridge state machine implementation for ESP32-based plugin devices.
+//! A hardware-agnostic BLE-USB bridge state machine implementation for BLE plugin devices.
 //!
 //! This library provides the core processing logic and state management required to facilitate
 //! bidirectional data and command transfer between BLE peripherals and USB hosts. It serves as
 //! the central processing unit for BLE plugin devices, handling USB command processing, BLE
 //! device management, and efficient message routing.
 //!
+//! ## Hardware Agnostic Design
+//!
+//! The state machine is designed to work with any BLE stack through a trait-based architecture:
+//!
+//! - **[`PluginConfig<ERROR>`]**: Trait defining BLE operations (peripheral config, services, characteristics, etc.)
+//! - **[`HardwareAccessories`]**: Trait for hardware-specific functionality (LED indicators, etc.)
+//!
+//! This design allows the same state machine core to support multiple BLE stacks (ESP32-Nimble,
+//! BlueZ, Apache Mynewt, Zephyr, etc.) and hardware platforms by simply implementing these traits.
+//!
 //! ## Key Features
 //!
+//! - **Hardware Agnostic**: Trait-based design works with any BLE stack implementation
 //! - **Efficient Message Dispatch**: Uses message type IDs for O(1) command routing
 //! - **Protocol Validation**: Magic number validation and header integrity checking
-//! - **BLE Integration**: Deep integration with ESP32-Nimble BLE stack
-//! - **Thread-Safe Communication**: Arc-wrapped senders for callback integration
+//! - **Flexible BLE Integration**: Support for any BLE stack through [`PluginConfig`] trait
+//! - **Thread-Safe Communication**: USB communication channels for safe concurrent access
 //! - **Comprehensive Error Handling**: Detailed error types for robust operation
-//! - **Memory Efficient**: Uses `heapless` collections for predictable memory usage
-//! - **Non-Volatile Storage**: Persistent configuration storage using ESP32 NVS partitions
+//! - **Memory Efficient**: Optimized for embedded systems
 //!
 //! ## Architecture Overview
 //!
@@ -52,86 +62,85 @@
 //!
 //! ```rust,no_run
 //! use plugin_state_machine_std::PluginStateMachine;
-//! use protocol::plugin::plugin::{PluginSender, PluginReceiver};
-//! use esp32_nimble::BLEDevice;
+//! use plugin_config::{PluginConfig, HardwareAccessories, BlinkState};
+//! use protocol::plugin::plugin::PluginReceiver;
 //! use protocol::DEFAULT_PACKET_SIZE;
 //!
-//! // Initialize communication channels
-//! let (sender, receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
-//!     /* your USB channel setup */;
-//! # panic!("This is a documentation example");
-//! let ble_device = BLEDevice::take();
+//! // Step 1: Implement PluginConfig for your BLE stack
+//! struct MyBleConfig {
+//!     // Your BLE stack specific fields
+//! }
 //!
-//! // Create and run the state machine
-//! let state_machine = PluginStateMachine::new(sender, receiver, ble_device);
+//! impl PluginConfig<MyError> for MyBleConfig {
+//!     fn handle_configure_peripheral(
+//!         &mut self,
+//!         cmd: HostCommandConfigurePeripheral
+//!     ) -> Result<(), MyError> {
+//!         // Your BLE-specific implementation
+//!         Ok(())
+//!     }
+//!     // Implement other trait methods...
+//! }
+//!
+//! // Step 2: Implement HardwareAccessories
+//! struct MyHardware;
+//!
+//! impl HardwareAccessories for MyHardware {
+//!     fn blink(&mut self, state: BlinkState) {
+//!         // Your hardware-specific LED control
+//!     }
+//! }
+//!
+//! # struct MyError;
+//! # impl std::fmt::Debug for MyError { fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { Ok(()) }}
+//! # let receiver: PluginReceiver<DEFAULT_PACKET_SIZE> = panic!();
+//! // Step 3: Create and run the state machine
+//! let config = MyBleConfig { /* ... */ };
+//! let accessories = MyHardware;
+//!
+//! let state_machine = PluginStateMachine::new(config, receiver, accessories)?;
 //! let runner = state_machine.runner_fn();
 //!
 //! // Typically run in a separate thread
 //! std::thread::spawn(runner);
+//! # Ok::<(), MyError>(())
 //! ```
 //!
-//! ## Non-Volatile Storage (NVS)
+//! ## Trait-Based Architecture
 //!
-//! The state machine leverages ESP32's Non-Volatile Storage (NVS) subsystem for persistent
-//! configuration management. This enables the plugin device to retain critical settings
-//! across power cycles and resets.
+//! The state machine achieves hardware independence through two core traits from [`plugin_config`]:
 //!
-//! ### NVS Architecture
+//! ### PluginConfig Trait
 //!
-//! ```text
-//! ┌─────────────────────────────────────────┐
-//! │         NVS Partition (Flash)           │
-//! ├─────────────────────────────────────────┤
-//! │  ConfigNamespace                        │
-//! │  ├── BLE Device Name                    │
-//! │  ├── [Future: Service Configurations]   │
-//! │  └── [Future: Security Settings]        │
-//! └─────────────────────────────────────────┘
-//! ```
+//! The [`PluginConfig<ERROR>`] trait defines all BLE operations:
 //!
-//! ### Current Storage Capabilities
+//! - `handle_configure_peripheral`: Configure BLE peripheral (name, address)
+//! - `handle_configure_peripheral_security`: Set up security/authentication
+//! - `handle_start_advertisement` / `handle_stop_advertisement`: Control advertising
+//! - `handle_configure_service`: Create BLE services
+//! - `handle_configure_characteristic`: Create characteristics with properties
+//! - `handle_configure_characteristic_read`: Configure read operations
+//! - `handle_notify_characteristic_value`: Send notifications to clients
+//! - `handle_get_service_info` / `handle_get_characteristic_info`: Query information
+//! - `handle_configure_profile`: Load predefined BLE profiles
 //!
-//! - **BLE Device Name**: Automatically persisted when configured via [`HostCommandConfigurePeripheral`]
-//!   - Stored in the `ConfigNamespace` under the `name_config_key`
-//!   - Survives device resets and power cycles
-//!   - Maximum name length: `MAX_NAME_SIZE` bytes
+//! ### HardwareAccessories Trait
 //!
-//! ### Storage Operations
+//! The [`HardwareAccessories`] trait provides hardware-specific functionality:
 //!
-//! The NVS integration provides:
-//! - **Automatic Persistence**: Configuration changes are immediately written to flash
-//! - **Namespace Isolation**: Uses dedicated `ConfigNamespace` to prevent conflicts
-//! - **Error Recovery**: Graceful handling of write failures with error logging
-//! - **Thread-Safe Access**: NVS operations are protected by internal synchronization
+//! - `blink`: Visual feedback through LED indicators (success/failure states)
 //!
-//! ### Future NVS Enhancements
+//! ### Example Implementations
 //!
-//! The NVS infrastructure is designed for extensibility:
-//! - Service and characteristic configurations
-//! - Security settings and pairing information
-//! - Custom application-specific data
-//! - Connection history and trusted devices
+//! - **ESP32-Nimble**: See [`esp_nimble_plugin_config`] crate for ESP32-Nimble implementation
+//! - **Custom BLE Stack**: Implement these traits for BlueZ, Apache Mynewt, Zephyr, etc.
 //!
-//! ### Usage Example
+//! ### Benefits of Trait-Based Design
 //!
-//! ```rust,no_run
-//! use plugin_state_machine_std::PluginStateMachine;
-//! use esp_idf_svc::nvs::{EspNvs, EspNvsPartition, NvsDefault};
-//!
-//! // Initialize NVS partition
-//! let nvs_partition = EspNvsPartition::<NvsDefault>::take()?;
-//!
-//! // Create state machine with NVS support
-//! let state_machine = PluginStateMachine::new(
-//!     sender,
-//!     receiver,
-//!     indicator,
-//!     nvs_partition
-//! )?;
-//!
-//! // BLE name will be automatically persisted to NVS when configured
-//! # Ok::<(), Box<dyn std::error::Error>>(())
-//! ```
+//! - **Portability**: Same state machine works across different hardware platforms
+//! - **Testability**: Easy to create mock implementations for testing
+//! - **Flexibility**: Swap BLE stacks without changing state machine code
+//! - **Extensibility**: Add support for new BLE stacks by implementing traits
 //!
 //! ## Supported Commands
 //!
@@ -158,18 +167,20 @@
 //! The state machine provides comprehensive error handling through the [`errors`] module:
 //!
 //! - [`StateMachineError::InvalidMessageFormat`]: Malformed USB messages
-//! - [`StateMachineError::UnknownMessageType`]: Unsupported command types  
-//! - [`StateMachineError::InvalidBleConfiguration`]: BLE setup errors
-//! - [`StateMachineError::UsbSendError`]: USB communication failures
-//! - [`StateMachineError::NvsWriteError`]: Failed to persist data to NVS
-//! - [`StateMachineError::FailedToResolveNvsNamespace`]: NVS namespace initialization error
+//! - [`StateMachineError::UnhandledMessageType`]: Unsupported command types
+//! - [`StateMachineError::FailedToDecodeMessage`]: Message deserialization errors
+//! - [`StateMachineError::InternalConfigError`]: Errors from the underlying BLE configuration implementation
+//!
+//! BLE-specific errors are handled by the [`PluginConfig`] trait implementation and wrapped
+//! in [`StateMachineError::InternalConfigError`].
 //!
 //! ## Performance Characteristics
 //!
 //! - **Command Routing**: O(1) lookup using message type IDs
-//! - **Memory Usage**: Optimized for embedded systems using heapless collections
+//! - **Memory Usage**: Optimized for embedded systems
 //! - **Latency**: Minimal processing overhead with direct dispatch
 //! - **Throughput**: Efficient binary serialization with bincode
+//! - **Hardware Independence**: Zero-cost abstractions through trait monomorphization
 //!
 //! [`HostCommandConfigurePeripheral`]: protocol::io_types::HostCommandConfigurePeripheral
 //! [`HostCommandStartAdvertisement`]: protocol::io_types::HostCommandStartAdvertisement
@@ -182,11 +193,12 @@
 //! [`HostCommandNotifyCharacteristicValue`]: protocol::io_types::HostCommandNotifyCharacteristicValue
 //! [`HostCommandConfigureProfile`]: protocol::io_types::HostCommandConfigureProfile
 //! [`StateMachineError::InvalidMessageFormat`]: errors::StateMachineError::InvalidMessageFormat
-//! [`StateMachineError::UnknownMessageType`]: errors::StateMachineError::UnknownMessageType
-//! [`StateMachineError::InvalidBleConfiguration`]: errors::StateMachineError::InvalidBleConfiguration
-//! [`StateMachineError::UsbSendError`]: errors::StateMachineError::UsbSendError
-//! [`StateMachineError::NvsWriteError`]: errors::StateMachineError::NvsWriteError
-//! [`StateMachineError::FailedToResolveNvsNamespace`]: errors::StateMachineError::FailedToResolveNvsNamespace
+//! [`StateMachineError::UnhandledMessageType`]: errors::StateMachineError::UnhandledMessageType
+//! [`StateMachineError::FailedToDecodeMessage`]: errors::StateMachineError::FailedToDecodeMessage
+//! [`StateMachineError::InternalConfigError`]: errors::StateMachineError::InternalConfigError
+//! [`PluginConfig<ERROR>`]: plugin_config::PluginConfig
+//! [`HardwareAccessories`]: plugin_config::HardwareAccessories
+//! [`plugin_config`]: plugin_config
 
 pub mod errors;
 
@@ -238,25 +250,32 @@ impl Default for PluginStateMachineMetadata {
 /// handling USB command reception, BLE device configuration, and data forwarding between
 /// the two communication domains.
 ///
+/// ## Hardware Agnostic Design
+///
+/// This state machine is hardware-agnostic and works with any BLE stack through traits:
+/// - **CONFIG**: Generic type implementing [`PluginConfig<ERROR>`] for BLE operations
+/// - **H**: Generic type implementing [`HardwareAccessories`] for hardware-specific functions
+///
 /// ## Architecture
 ///
 /// The state machine operates as a bridge:
-/// - **USB Side**: Receives commands from host and sends responses/data
-/// - **BLE Side**: Manages peripheral configuration and handles client interactions
+/// - **USB Side**: Receives commands from host through receiver
+/// - **BLE Side**: Delegates to CONFIG implementation (ESP32-Nimble, BlueZ, etc.)
 /// - **Processing**: Efficiently routes messages using type IDs and maintains state
+/// - **Hardware**: Uses H for hardware-specific operations (LED indicators, etc.)
 ///
 /// ## Thread Safety
 ///
-/// - USB sender is Arc-wrapped for sharing across BLE callbacks
 /// - USB receiver has exclusive access for command processing
-/// - BLE device uses static mutable reference for ESP32 integration
+/// - BLE operations are delegated to the CONFIG implementation
+/// - Hardware accessories are managed through the H implementation
 ///
 /// ## Usage Pattern
 ///
-/// 1. Create with communication channels and BLE device
+/// 1. Create with a CONFIG implementation, USB receiver, and hardware accessories
 /// 2. Start the runner (typically in a separate thread)
 /// 3. State machine processes commands automatically
-/// 4. BLE callbacks forward data back to USB host
+/// 4. BLE operations are handled by your CONFIG implementation
 pub struct PluginStateMachine<CONFIG, ERROR, H>
 where
     CONFIG: PluginConfig<ERROR>,
@@ -285,15 +304,21 @@ where
 {
     /// Create a new instance of the plugin state machine
     ///
-    /// Initializes the state machine with the necessary communication channels and BLE device.
-    /// The state machine starts in an unconfigured state and requires peripheral configuration
-    /// before it can handle BLE operations.
+    /// Initializes the state machine with the necessary communication channels, BLE configuration,
+    /// and hardware accessories. The state machine is hardware-agnostic and works with any BLE
+    /// stack that implements the [`PluginConfig`] trait.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `Config` - Type implementing [`PluginConfig<ConfigError>`] for BLE operations
+    /// * `ConfigError` - Error type used by the BLE configuration implementation
+    /// * `H` - Type implementing [`HardwareAccessories`] for hardware-specific operations
     ///
     /// # Arguments
     ///
-    /// * `sender` - Channel for sending responses and data to the USB host
-    /// * `receiver` - Channel for receiving commands from the USB host  
-    /// * `ble_device` - ESP32 BLE device instance (must be static for hardware integration)
+    /// * `config` - Your BLE stack implementation (ESP32-Nimble, BlueZ, etc.)
+    /// * `receiver` - Channel for receiving commands from the USB host
+    /// * `accessories` - Hardware accessories implementation for LED indicators, etc.
     ///
     /// # Returns
     ///
@@ -303,16 +328,22 @@ where
     ///
     /// ```rust,no_run
     /// use plugin_state_machine_std::PluginStateMachine;
-    /// use protocol::plugin::plugin::{PluginSender, PluginReceiver};
-    /// use esp32_nimble::BLEDevice;
+    /// use plugin_config::{PluginConfig, HardwareAccessories};
+    /// use protocol::plugin::plugin::PluginReceiver;
     /// use protocol::DEFAULT_PACKET_SIZE;
     ///
-    /// let (sender, receiver): (PluginSender<DEFAULT_PACKET_SIZE>, _) =
-    ///     /* your USB channel setup */;
-    /// # panic!("Documentation example");
-    /// let ble_device = BLEDevice::take();
+    /// # struct MyBleConfig;
+    /// # struct MyError;
+    /// # impl std::fmt::Debug for MyError { fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { Ok(()) }}
+    /// # impl PluginConfig<MyError> for MyBleConfig {}
+    /// # struct MyHardware;
+    /// # impl HardwareAccessories for MyHardware {}
+    /// # let receiver: PluginReceiver<DEFAULT_PACKET_SIZE> = panic!();
+    /// let config = MyBleConfig { /* ... */ };
+    /// let accessories = MyHardware;
     ///
-    /// let state_machine = PluginStateMachine::new(sender, receiver, ble_device);
+    /// let state_machine = PluginStateMachine::new(config, receiver, accessories)?;
+    /// # Ok::<(), MyError>(())
     /// ```
     pub fn new(
         config: Config,

@@ -1,6 +1,15 @@
 # Plugin State Machine Standard
 
-A Rust library implementing a complete BLE-USB bridge state machine for ESP32-based BLE plugin devices. This crate provides the core processing logic and state management to facilitate bidirectional data and command transfer between BLE peripherals and USB hosts.
+A hardware-agnostic Rust library implementing a complete BLE-USB bridge state machine for BLE plugin devices. This crate provides the core processing logic and state management to facilitate bidirectional data and command transfer between BLE peripherals and USB hosts.
+
+## Hardware Agnostic Design
+
+The state machine is designed to be hardware-agnostic through the use of traits, allowing it to work with any BLE stack implementation. The library uses two key traits:
+
+- **`PluginConfig<ERROR>`**: Defines the interface for BLE stack operations (peripheral configuration, services, characteristics, advertising, etc.)
+- **`HardwareAccessories`**: Provides hardware-specific functionality like LED indicators
+
+This design allows the same state machine core to support multiple BLE stacks (ESP32-Nimble, BlueZ, etc.) and hardware platforms by simply implementing these traits.
 
 ## Overview
 
@@ -170,22 +179,40 @@ USB Host ←→ Plugin State Machine ←→ BLE Peripheral/Central
 
 ```rust
 use plugin_state_machine_std::PluginStateMachine;
-use protocol::plugin::plugin::{PluginSender, PluginReceiver};
-use esp32_nimble::BLEDevice;
-use std::time::Duration;
+use plugin_config::{PluginConfig, HardwareAccessories};
+use protocol::plugin::plugin::PluginReceiver;
 
-// Initialize communication channels with throttle configuration
-// Throttle parameters: (interval, max_requests_per_interval)
-let throttle_config = (Duration::from_millis(10), 10);
-let (sender, receiver) = /* USB channel setup with throttle */;
-let ble_device = BLEDevice::take();
+// Implement the PluginConfig trait for your specific BLE stack
+struct MyBleConfig {
+    // Your BLE stack specific fields
+}
 
-// Create state machine
+impl PluginConfig<MyError> for MyBleConfig {
+    fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) -> Result<(), MyError> {
+        // Your BLE-specific implementation
+    }
+    // ... implement other trait methods
+}
+
+// Implement HardwareAccessories for your hardware
+struct MyHardwareAccessories;
+
+impl HardwareAccessories for MyHardwareAccessories {
+    fn blink(&mut self, state: BlinkState) {
+        // Your hardware-specific LED control
+    }
+}
+
+// Create the state machine with your implementations
+let config = MyBleConfig::new(/* ... */);
+let receiver = /* USB channel setup */;
+let accessories = MyHardwareAccessories;
+
 let state_machine = PluginStateMachine::new(
-    sender,
-    receiver, 
-    ble_device
-);
+    config,
+    receiver,
+    accessories
+)?;
 
 // Run the state machine (typically in a separate thread)
 let runner = state_machine.runner_fn();
@@ -298,12 +325,47 @@ The crate integrates deeply with the ESP32-Nimble BLE stack:
 - **Async-Ready**: Compatible with ESP-IDF async runtime
 - **Data Throttling**: Input rate limiting to prevent buffer overflow and ensure stable processing
 
+## Trait-Based Architecture
+
+The state machine's hardware-agnostic design is built on two core traits from the `plugin_config` crate:
+
+### PluginConfig Trait
+
+The `PluginConfig<ERROR>` trait defines all BLE operations that must be implemented for your specific hardware:
+
+```rust
+pub trait PluginConfig<ERROR: Debug> {
+    fn handle_configure_peripheral(&mut self, cmd: HostCommandConfigurePeripheral) -> Result<(), ERROR>;
+    fn handle_configure_peripheral_security(&mut self, cmd: HostCommandConfigurePeripheralSecurity) -> Result<(), ERROR>;
+    fn handle_start_advertisement(&mut self, cmd: HostCommandStartAdvertisement) -> Result<(), ERROR>;
+    fn handle_stop_advertisement(&mut self, cmd: HostCommandStopAdvertisement) -> Result<(), ERROR>;
+    fn handle_configure_service(&mut self, cmd: HostCommandConfigureService) -> Result<(), ERROR>;
+    fn handle_configure_characteristic(&mut self, cmd: HostCommandConfigureCharacteristic) -> Result<(), ERROR>;
+    fn handle_configure_characteristic_read(&mut self, cmd: HostCommandConfigureCharacteristicRead) -> Result<(), ERROR>;
+    fn handle_notify_characteristic_value(&mut self, cmd: HostCommandNotifyCharacteristicValue) -> Result<(), ERROR>;
+    fn handle_get_service_info(&mut self, cmd: HostCommandGetServiceInfo) -> Result<(), ERROR>;
+    fn handle_get_characteristic_info(&mut self, cmd: HostCommandGetCharacteristicInfo) -> Result<(), ERROR>;
+    fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<(), ERROR>;
+}
+```
+
+### HardwareAccessories Trait
+
+The `HardwareAccessories` trait provides hardware-specific functionality:
+
+```rust
+pub trait HardwareAccessories {
+    fn blink(&mut self, state: BlinkState);
+}
+```
+
+### Example Implementations
+
+- **ESP32-Nimble**: See `esp_nimble_plugin_config` crate for ESP32-Nimble BLE stack implementation
+- **Custom Implementation**: Implement these traits for your BLE stack (BlueZ, Apache Mynewt, Zephyr, etc.)
+
 ## Dependencies
 
-- `esp32-nimble`: BLE stack integration
-- `esp-idf-svc`: ESP32 system services
+- `plugin_config`: Core traits for hardware abstraction
 - `protocol`: Shared protocol definitions (Protocol Buffers)
-- `prost`: Protocol Buffers implementation for Rust
-- `heapless`: No-allocation structures where possible
-- `uuid`: UUID handling
 - `log`: Logging support
