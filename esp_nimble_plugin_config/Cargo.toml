@@ -3,7 +3,7 @@ name = "esp_nimble_plugin_config"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
+[target.'cfg(all(target_arch = "xtensa", target_os = "espidf"))'.dependencies]
 # Custom
 plugin_config = { path = "../plugin_config" }
 esp32-nimble = { git = "ssh://git@github.com/Babu12345/esp32-nimble.git", rev = "b9cd60de75bc71e404a2b06f8e66eecf9ae116a0", default-features = false, features = [

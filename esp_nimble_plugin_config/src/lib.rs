@@ -1,5 +1,6 @@
-#![deny(missing_docs)]
 //! Implements the plugin_config to be used in the plugin state machines for esp_nimble. Which is a bluetooth crate for esp32
+#![deny(missing_docs)]
+#![cfg(all(target_arch = "xtensa", target_os = "espidf"))]
 
 pub mod errors;
 use std::{collections::HashMap, sync::Arc, time::Duration};
