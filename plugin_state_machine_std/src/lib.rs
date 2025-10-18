@@ -124,11 +124,19 @@
 //! - `handle_get_service_info` / `handle_get_characteristic_info`: Query information
 //! - `handle_configure_profile`: Load predefined BLE profiles
 //!
+//! **Note**: All trait methods have default implementations that call `unimplemented!()`,
+//! allowing you to implement only the methods you need. Additional methods may be added
+//! to this trait in future versions to support new BLE features and operations.
+//!
 //! ### HardwareAccessories Trait
 //!
 //! The [`HardwareAccessories`] trait provides hardware-specific functionality:
 //!
 //! - `blink`: Visual feedback through LED indicators (success/failure states)
+//!
+//! **Note**: All trait methods have default implementations that call `unimplemented!()`,
+//! allowing you to implement only the methods you need. Additional methods may be added
+//! to this trait in future versions to support new hardware accessories and functionality.
 //!
 //! ### Example Implementations
 //!

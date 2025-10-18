@@ -349,6 +349,8 @@ pub trait PluginConfig<ERROR: Debug> {
 }
 ```
 
+**Note**: All trait methods have default implementations that call `unimplemented!()`, allowing you to implement only the methods you need. Additional methods may be added to these traits in future versions to support new BLE features and operations.
+
 ### HardwareAccessories Trait
 
 The `HardwareAccessories` trait provides hardware-specific functionality:
@@ -358,6 +360,8 @@ pub trait HardwareAccessories {
     fn blink(&mut self, state: BlinkState);
 }
 ```
+
+**Note**: All trait methods have default implementations that call `unimplemented!()`, allowing you to implement only the methods you need. Additional methods may be added to these traits in future versions to support new hardware accessories and functionality.
 
 ### Example Implementations
 
