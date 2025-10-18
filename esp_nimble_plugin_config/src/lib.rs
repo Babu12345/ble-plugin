@@ -2,27 +2,26 @@
 #![deny(missing_docs)]
 #![cfg(all(target_arch = "xtensa", target_os = "espidf"))]
 
+mod accessories;
 pub mod errors;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+pub use accessories::*;
+use std::{collections::HashMap, sync::Arc};
 
 use esp32_nimble::{
     enums::{AuthReq, OwnAddrType, SecurityIOCap},
     utilities::BleUuid,
     BLEAddress, BLEDevice, BLEServer, BLEService, NimbleProperties,
 };
-use esp_idf_svc::hal::gpio::AnyOutputPin;
-use esp_idf_svc::hal::gpio::Output;
-use esp_idf_svc::hal::gpio::PinDriver;
+
 use esp_idf_svc::{
     hal::task::block_on, nvs::EspNvsPartition, sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS,
 };
 use plugin_config::{
     plugin::PluginSender, slice_to_array, BleProfile, BleProperties, BluetoothAddressType,
-    HardwareAccessories, HostCommandConfigureCharacteristic,
-    HostCommandConfigureCharacteristicRead, HostCommandConfigurePeripheral,
-    HostCommandConfigurePeripheralSecurity, HostCommandConfigureProfile,
-    HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
-    HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
+    HostCommandConfigureCharacteristic, HostCommandConfigureCharacteristicRead,
+    HostCommandConfigurePeripheral, HostCommandConfigurePeripheralSecurity,
+    HostCommandConfigureProfile, HostCommandConfigureService, HostCommandGetCharacteristicInfo,
+    HostCommandGetServiceInfo, HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
     HostCommandStopAdvertisement, PluginAuthenticationCompletedResponse,
     PluginCharacteristicInfoResponse, PluginConfig, PluginConfigurationError,
     PluginConfigurationErrorType, PluginData, PluginDataSendType, PluginOnConnectResponse,
@@ -30,9 +29,6 @@ use plugin_config::{
 };
 use plugin_nvs::{namespace, namespaces::ConfigNamespace};
 
-use std::sync::Mutex;
-use threadpool::ThreadPool;
-use throttle::Throttle;
 mod utils;
 use crate::{
     errors::{Error, Result},
@@ -856,76 +852,5 @@ where
 
         log::info!("Successfully stopped BLE advertisement");
         Ok(())
-    }
-}
-
-/// Esp32's hardware accessories
-pub struct EspHardwareAccessories {
-    /// Pin indicator
-    indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>,
-    /// Throttle for blink indication to prevent excessive blinking
-    /// and errors
-    blink_throttle: Throttle,
-    /// Thread pool for managing blink operations
-    blink_thread_pool: ThreadPool,
-}
-
-impl EspHardwareAccessories {
-    /// New instance
-    pub fn new(indicator: Arc<Mutex<PinDriver<'static, AnyOutputPin, Output>>>) -> Self {
-        Self {
-            indicator,
-            blink_throttle: Throttle::new(Duration::from_millis(500), 1),
-            blink_thread_pool: ThreadPool::new(1),
-        }
-    }
-}
-
-impl HardwareAccessories for EspHardwareAccessories {
-    fn blink(&mut self, state: plugin_config::BlinkState) {
-        // Apply throttling
-        match self.blink_throttle.accept() {
-            Ok(_) => {}
-            Err(_) => {
-                log::debug!("Blink indication throttled");
-                return;
-            }
-        }
-
-        let indicator = self.indicator.clone();
-
-        // Submit blink task to thread pool
-        self.blink_thread_pool.execute(move || {
-            for i in 0..4 {
-                // Try to acquire lock non-blocking
-                match indicator.try_lock() {
-                    Ok(mut indicator) => {
-                        if let Err(e) = {
-                            match i % 2 {
-                                0 => indicator.set_low(),
-                                _ => indicator.set_high(),
-                            }
-                        } {
-                            log::error!("Failed to toggle GPIO: {:?}", e);
-                            return;
-                        }
-                    }
-                    Err(_) => {
-                        log::debug!("GPIO lock busy, skipping blink");
-                        return;
-                    }
-                }
-
-                // Sleep after releasing the lock
-                match state {
-                    plugin_config::BlinkState::Success => {
-                        std::thread::sleep(Duration::from_millis(if i == 0 { 50 } else { 5 }));
-                    }
-                    plugin_config::BlinkState::Failure => {
-                        std::thread::sleep(Duration::from_millis(40));
-                    }
-                }
-            }
-        });
     }
 }
