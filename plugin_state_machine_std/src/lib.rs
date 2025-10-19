@@ -234,10 +234,7 @@ use std::time::Duration;
 use protocol::protocol::MessageTypeId;
 use protocol::DEFAULT_PACKET_SIZE;
 
-/// Internal metadata storage for the plugin state machine
-///
-/// This structure maintains the current state and configuration of the BLE plugin,
-/// including device name, service-characteristic relationships, and connection information.
+/// Internal metadata for the plugin state machine
 #[derive(Clone)]
 struct PluginStateMachineMetadata {
     /// Processing delay for the state machine
@@ -294,7 +291,7 @@ where
     /// USB receiver for incoming host commands (exclusive access)
     receiver: PluginReceiver<DEFAULT_PACKET_SIZE>,
 
-    /// Internal state and configuration metadata
+    /// Internal state machine metadata
     metadata: PluginStateMachineMetadata,
 
     /// Hardware accessories

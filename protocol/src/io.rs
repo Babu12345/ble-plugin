@@ -383,9 +383,7 @@ pub trait IO<'a>: IOBase<'a> {
             .map(|i| ((input[MESSAGE_MAGIC_BYTES + MESSAGE_TYPE_ID_BYTES + i] as usize) << (i * 8)))
             .sum();
         if length > DEFAULT_PACKET_SIZE {
-            return Err(Error::UnableToDeserializeFromBincode(
-                "Packet size exceeds the allowable limit",
-            ));
+            return Err(Error::InvalidPayloadSize);
         }
 
         Self::deserialize_bytes(&input[MESSAGE_HEADER_SIZE..(MESSAGE_HEADER_SIZE + length)])

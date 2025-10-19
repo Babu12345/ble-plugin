@@ -48,4 +48,6 @@ pub enum Error {
     InvalidMagicNumber,
     /// Unknown message type
     InvalidMessageType,
+    /// Payload size exceeds allowable limit
+    InvalidPayloadSize,
 }
