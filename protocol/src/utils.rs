@@ -16,7 +16,7 @@ pub fn slice_to_array<const N: usize>(slice: &[u8]) -> crate::errors::Result<[u8
 
 /// Extracting the message type id from raw bytes
 #[inline(always)]
-pub fn extract_message_type_id(data: &[u8]) -> crate::errors::Result<MessageTypeId> {
+pub(crate) fn extract_message_type_id(data: &[u8]) -> crate::errors::Result<MessageTypeId> {
     // Check if we have enough bytes for a valid header
     if data.len() < MESSAGE_HEADER_SIZE {
         return Err(crate::errors::Error::InvalidDataLengthForHeader);
