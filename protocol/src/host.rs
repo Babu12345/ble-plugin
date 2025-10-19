@@ -7,11 +7,9 @@ pub use common::*;
 
 /// Common types and traits
 mod common {
-    use strum::IntoEnumIterator;
 
     use crate::{
-        errors::Result, protocol::MessageTypeId, PluginIO, MESSAGE_HEADER_SIZE, MESSAGE_MAGIC,
-        MESSAGE_MAGIC_BYTES,
+        errors::Result, protocol::MessageTypeId, utils::extract_message_type_id, PluginIO,
     };
 
     /// Securely stores received data
@@ -60,29 +58,7 @@ mod common {
         /// ```
         #[inline]
         pub fn extract_message_type_id(&self) -> Result<MessageTypeId> {
-            let data = self.raw_bytes();
-            // Check if we have enough bytes for a valid header
-            if data.len() < MESSAGE_HEADER_SIZE {
-                return Err(crate::errors::Error::InvalidDataLengthForHeader);
-            }
-
-            // Verify magic number
-            let magic = data[0];
-            if magic != MESSAGE_MAGIC {
-                return Err(crate::errors::Error::InvalidMagicNumber);
-            }
-
-            // Extract message type ID
-            let type_id =
-                u16::from_le_bytes([data[MESSAGE_MAGIC_BYTES], data[MESSAGE_MAGIC_BYTES + 1]]);
-
-            let message_type_id = MessageTypeId::iter()
-                .find(|message_type_id| (*message_type_id as i32) == (type_id as i32));
-
-            match message_type_id {
-                Some(id) => Ok(id),
-                None => Err(crate::errors::Error::InvalidMessageType),
-            }
+            extract_message_type_id(self.raw_bytes())
         }
     }
 }
