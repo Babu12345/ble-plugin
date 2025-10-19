@@ -169,7 +169,7 @@ where
         })
     }
     /// Initialize the struct
-    pub fn initialize(&mut self) {
+    fn initialize(&mut self) {
         self.is_initialized = true
     }
 
@@ -185,7 +185,7 @@ where
     }
 
     /// Get a stored BLE service by UUID for characteristic creation
-    pub fn get_service(
+    fn get_service(
         &self,
         service_uuid: u16,
     ) -> Option<&Arc<esp32_nimble::utilities::mutex::Mutex<BLEService>>> {
@@ -196,7 +196,7 @@ where
     }
 
     /// Get all configured service UUIDs
-    pub fn get_service_uuids(&self) -> heapless::Vec<u16, 16> {
+    fn get_service_uuids(&self) -> heapless::Vec<u16, 16> {
         self.metadata
             .service_to_characteristic_uuids
             .keys()
