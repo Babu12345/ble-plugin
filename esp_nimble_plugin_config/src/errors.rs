@@ -51,13 +51,6 @@ pub enum Error {
     #[error("Failed to send data over USB channel")]
     UsbSendError,
 
-    /// General data processing error with descriptive message
-    ///
-    /// Contains a static string describing the specific processing error.
-    /// Used for various data handling failures that don't fit other categories.
-    #[error("Data processing error: {0}")]
-    DataProcessingError(&'static str),
-
     /// BLE characteristic notification or indication failure
     ///
     /// This error occurs when attempting to notify or indicate a
