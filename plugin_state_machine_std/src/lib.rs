@@ -571,12 +571,18 @@ where
                                 _ => Err(StateMachineError::UnhandledMessageType(message_type)),
                             };
 
-                            if let Err(e) = result {
-                                log::error!("Failed to handle command {:?}: {:?}", message_type, e);
-                                self.accessories.blink(BlinkState::Failure);
-                            } else {
-                                self.accessories.blink(BlinkState::Success);
-                            }
+                            self.accessories.blink({
+                                if let Err(e) = result {
+                                    log::error!(
+                                        "Failed to handle command {:?}: {:?}",
+                                        message_type,
+                                        e
+                                    );
+                                    BlinkState::Failure
+                                } else {
+                                    BlinkState::Success
+                                }
+                            });
                         }
                         Err(e) => {
                             log::error!("Failed to extract message type ID: {:?}", e);
