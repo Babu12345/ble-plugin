@@ -41,7 +41,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         ep_out_buffer: &'a mut [u8; 1024],
         config_descriptor: &'a mut [u8; 256],
         bos_descriptor: &'a mut [u8; 256],
-        control_buf: &'a mut [u8; 64],
+        control_buf: &'a mut [u8; 128],
         state: &'a mut State<'a>,
         is_self_powered: bool,
     ) -> Self {
@@ -49,7 +49,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         let driver = Driver::new(usb, ep_out_buffer, config);
 
         // Create embassy-usb Config
-        let mut config = embassy_usb::Config::new(0xFFFF, 0xFFFF);
+        let mut config = embassy_usb::Config::new(0x1209, 0x0001);
         config.manufacturer = Some("Wanyeki Technologies LLC");
         config.product = Some("USB-serial example");
         config.serial_number = Some("12345678");
