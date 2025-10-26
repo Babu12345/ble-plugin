@@ -61,6 +61,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         config.device_protocol = 0x01;
         config.composite_with_iads = true;
         config.device_release = 0x0100;
+        config.supports_remote_wakeup = true;
 
         if is_self_powered {
             config.max_power = 1;
