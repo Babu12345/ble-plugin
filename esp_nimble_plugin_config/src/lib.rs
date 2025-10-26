@@ -228,7 +228,9 @@ where
             self.device.set_rnd_addr(addr).map_err(|_| {
                 log::error!("Failed to set random address for BLE device");
                 Error::UnableToSetRNDAddress
-            })?;
+            })?
+        } else {
+            log::info!("Peripheral is already initialized. Unable to reset the address")
         }
 
         let name: heapless::String<30> = heapless::String::try_from(cmd.name.as_str())

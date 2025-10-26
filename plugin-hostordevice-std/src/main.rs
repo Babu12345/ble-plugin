@@ -62,7 +62,7 @@ fn main() -> Result<()> {
                 .map_err(|_| PluginError::UsbInitError(USBTypeResolver::UsbDevice))?
                 .sleep(Duration::from_millis(500))
                 .processors(scope, 300, Default::default(), Default::default())
-                .map_err(|_| PluginError::ProcessorInitError(USBTypeResolver::UsbHost)),
+                .map_err(|_| PluginError::ProcessorInitError(USBTypeResolver::UsbDevice)),
         }?;
 
         scope.spawn(
