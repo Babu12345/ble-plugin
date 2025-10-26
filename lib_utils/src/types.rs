@@ -27,6 +27,11 @@ impl<const N: usize> AlignedBuffer<N> {
         self.data
     }
 
+    /// Get a mutable reference
+    pub fn as_mut<'a>(&'a mut self) -> &'a mut [u8] {
+        &mut self.data
+    }
+
     /// Get the raw data
     pub fn len(&self) -> usize {
         self.data.len()
