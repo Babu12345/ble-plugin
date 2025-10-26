@@ -64,7 +64,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         config.supports_remote_wakeup = true;
 
         if is_self_powered {
-            config.max_power = 1;
+            config.max_power = 200;
             config.self_powered = true;
         }
 
