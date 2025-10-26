@@ -28,7 +28,7 @@ impl<const N: usize> AlignedBuffer<N> {
     }
 
     /// Get a mutable reference
-    pub fn as_mut<'a>(&'a mut self) -> &'a mut [u8] {
+    pub fn as_mut<'a>(&'a mut self) -> &'a mut [u8; N] {
         &mut self.data
     }
 
