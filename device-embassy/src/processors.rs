@@ -36,7 +36,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
     CdcAcmDeviceHost<'a, CH_SIZE, BUFFER_SIZE, M>
 {
     /// Initializes and creates a new instance of the device
-    pub fn new(
+    pub async fn new(
         usb: Usb<'a>,
         ep_out_buffer: &'a mut [u8; 1024],
         config_descriptor: &'a mut [u8; 256],
@@ -80,11 +80,17 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
             control_buf,
         );
 
+        Timer::after_millis(100).await;
+
         // Create classes on the builder.
         let class = CdcAcmClass::new(&mut builder, state, BUFFER_SIZE as u16);
 
+        Timer::after_millis(100).await;
+
         // Build the builder.
         let usb_device = builder.build();
+
+        Timer::after_millis(100).await;
 
         Self {
             usb_device,
