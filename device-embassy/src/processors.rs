@@ -88,6 +88,9 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
 
         usb_device.disable().await;
 
+        usb_device.remote_wakeup().await.ok();
+        Timer::after_millis(500).await;
+
         Self {
             usb_device,
             class,
