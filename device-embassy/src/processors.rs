@@ -80,17 +80,17 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
             control_buf,
         );
 
-        Timer::after_millis(100).await;
+        Timer::after_millis(500).await;
 
         // Create classes on the builder.
         let class = CdcAcmClass::new(&mut builder, state, BUFFER_SIZE as u16);
 
-        Timer::after_millis(100).await;
+        Timer::after_millis(500).await;
 
         // Build the builder.
         let usb_device = builder.build();
 
-        Timer::after_millis(100).await;
+        Timer::after_millis(500).await;
 
         Self {
             usb_device,
