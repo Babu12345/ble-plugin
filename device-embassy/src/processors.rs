@@ -124,6 +124,10 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
         let (mut sender, mut receiver) = self.class.split();
 
         let processor_runner = async move {
+            self.usb_device.disable().await;
+            Timer::after_millis(200).await;
+            self.usb_device.remote_wakeup().await.ok();
+            Timer::after_millis(200).await;
             let usb_runner = self.usb_device.run();
 
             let to_usb_fn = async {
