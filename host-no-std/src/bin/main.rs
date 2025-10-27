@@ -42,8 +42,7 @@ async fn main(_spawner: Spawner) {
         &mut control_buf,
         &mut state,
         true,
-    )
-    .await;
+    );
 
     let to = Channel::<NoopRawMutex, _, 20>::new();
     let from = Channel::<NoopRawMutex, _, 20>::new();
