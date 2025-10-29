@@ -41,6 +41,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         ep_out_buffer: &'a mut [u8; 1024],
         config_descriptor: &'a mut [u8; 256],
         bos_descriptor: &'a mut [u8; 256],
+        msos_descriptor: &'a mut [u8; 256],
         control_buf: &'a mut [u8; 64],
         state: &'a mut State<'a>,
         is_self_powered: bool,
@@ -76,7 +77,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
             config,
             config_descriptor,
             bos_descriptor,
-            &mut [], // no msos descriptors
+            msos_descriptor, // no msos descriptors
             control_buf,
         );
 
@@ -121,10 +122,9 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
         AsyncHostSender<'ch, M, BUFFER_SIZE, CH_SIZE>,
         AsyncHostReceiver<'ch, M, BUFFER_SIZE, CH_SIZE>,
     )> {
-        let (mut sender, mut receiver, ctrl) = self.class.split_with_control();
+        let (mut sender, mut receiver) = self.class.split();
 
         let processor_runner = async move {
-            ctrl.control_changed().await;
             let usb_runner = self.usb_device.run();
 
             let to_usb_fn = async {
