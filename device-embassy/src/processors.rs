@@ -121,9 +121,10 @@ impl<'a, const CH_SIZE: usize, M: RawMutex>
         AsyncHostSender<'ch, M, BUFFER_SIZE, CH_SIZE>,
         AsyncHostReceiver<'ch, M, BUFFER_SIZE, CH_SIZE>,
     )> {
-        let (mut sender, mut receiver) = self.class.split();
+        let (mut sender, mut receiver, ctrl) = self.class.split_with_control();
 
         let processor_runner = async move {
+            ctrl.control_changed().await;
             let usb_runner = self.usb_device.run();
 
             let to_usb_fn = async {
