@@ -41,7 +41,6 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
         ep_out_buffer: &'a mut [u8; 1024],
         config_descriptor: &'a mut [u8; 256],
         bos_descriptor: &'a mut [u8; 256],
-        msos_descriptor: &'a mut [u8; 256],
         control_buf: &'a mut [u8; 64],
         state: &'a mut State<'a>,
         is_self_powered: bool,
@@ -77,7 +76,7 @@ impl<'a, const CH_SIZE: usize, const BUFFER_SIZE: usize, M: RawMutex>
             config,
             config_descriptor,
             bos_descriptor,
-            msos_descriptor, // no msos descriptors
+            &mut [], // no msos descriptors
             control_buf,
         );
 
