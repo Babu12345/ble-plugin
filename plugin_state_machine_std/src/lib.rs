@@ -419,7 +419,7 @@ where
                                 MessageTypeId::TypeHostCommandConfigurePeripheral => {
                                     match data.decode::<HostCommandConfigurePeripheral>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config.handle_configure_peripheral(cmd).map_err(
                                                 |e| StateMachineError::InternalConfigError(e),
                                             )
@@ -432,7 +432,7 @@ where
                                 MessageTypeId::TypeHostCommandConfigureService => {
                                     match data.decode::<HostCommandConfigureService>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config.handle_configure_service(cmd).map_err(|e| {
                                                 StateMachineError::InternalConfigError(e)
                                             })
@@ -445,7 +445,7 @@ where
                                 MessageTypeId::TypeHostCommandConfigureCharacteristic => {
                                     match data.decode::<HostCommandConfigureCharacteristic>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config
                                                 .handle_configure_characteristic(cmd)
                                                 .map_err(|e| {
@@ -460,7 +460,7 @@ where
                                 MessageTypeId::TypeHostCommandConfigureCharacteristicRead => {
                                     match data.decode::<HostCommandConfigureCharacteristicRead>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config
                                                 .handle_configure_characteristic_read(cmd)
                                                 .map_err(|e| {
@@ -475,7 +475,7 @@ where
                                 MessageTypeId::TypeHostCommandNotifyCharacteristicValue => {
                                     match data.decode::<HostCommandNotifyCharacteristicValue>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config
                                                 .handle_notify_characteristic_value(cmd)
                                                 .map_err(|e| {
@@ -490,7 +490,7 @@ where
                                 MessageTypeId::TypeHostCommandGetServiceInfo => {
                                     match data.decode::<HostCommandGetServiceInfo>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config.handle_get_service_info(cmd).map_err(|e| {
                                                 StateMachineError::InternalConfigError(e)
                                             })
@@ -503,7 +503,7 @@ where
                                 MessageTypeId::TypeHostCommandGetCharacteristicInfo => {
                                     match data.decode::<HostCommandGetCharacteristicInfo>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config.handle_get_characteristic_info(cmd).map_err(
                                                 |e| StateMachineError::InternalConfigError(e),
                                             )
@@ -516,7 +516,7 @@ where
                                 MessageTypeId::TypeHostCommandStartAdvertisement => {
                                     match data.decode::<HostCommandStartAdvertisement>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config.handle_start_advertisement(cmd).map_err(
                                                 |e| StateMachineError::InternalConfigError(e),
                                             )
@@ -530,7 +530,7 @@ where
                                 MessageTypeId::TypeHostCommandConfigurePeripheralSecurity => {
                                     match data.decode::<HostCommandConfigurePeripheralSecurity>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config
                                                 .handle_configure_peripheral_security(cmd)
                                                 .map_err(|e| {
@@ -545,7 +545,7 @@ where
                                 MessageTypeId::TypeHostCommandConfigureProfile => {
                                     match data.decode::<HostCommandConfigureProfile>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config.handle_configure_profile(cmd).map_err(|e| {
                                                 StateMachineError::InternalConfigError(e)
                                             })
@@ -558,7 +558,7 @@ where
                                 MessageTypeId::TypeHostCommandStopAdvertisement => {
                                     match data.decode::<HostCommandStopAdvertisement>() {
                                         Ok(cmd) => {
-                                            log::info!("Received USB command: {:?}", cmd);
+                                            log::info!("Received USB command: {cmd:?}");
                                             self.config.handle_stop_advertisement(cmd).map_err(
                                                 |e| StateMachineError::InternalConfigError(e),
                                             )
@@ -574,9 +574,7 @@ where
                             self.accessories.blink({
                                 if let Err(e) = result {
                                     log::error!(
-                                        "Failed to handle command {:?}: {:?}",
-                                        message_type,
-                                        e
+                                        "Failed to handle command {message_type:?}: {e:?}",
                                     );
                                     BlinkState::Failure
                                 } else {
@@ -585,7 +583,7 @@ where
                             });
                         }
                         Err(e) => {
-                            log::error!("Failed to extract message type ID: {:?}", e);
+                            log::error!("Failed to extract message type ID: {e:?}");
                             log::warn!(
                                 "Received unrecognized command data from USB, raw data length: {} bytes",
                                 data.size()
@@ -595,7 +593,7 @@ where
                     }
                 }
                 Err(e) => {
-                    log::error!("Failed to receive data from USB: {:?}", e);
+                    log::error!("Failed to receive data from USB: {e:?}");
                     std::thread::sleep(Duration::from_millis(100));
                     self.accessories.blink(BlinkState::Failure);
                 }
