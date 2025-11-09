@@ -395,28 +395,31 @@ pub trait IO<'a>: IOBase<'a> {
     fn to_bytes<const N: usize>(&self) -> Result<[u8; N]> {
         use lib_utils::MatchSliceLengths;
 
-        let mut serialized_bytes = self.serialize_bytes()?;
-        let length = serialized_bytes.len() as usize;
+        let serialized_bytes = self.serialize_bytes()?;
+        let payload_data_length = serialized_bytes.len() as usize;
 
         // Create full message header: magic + type_id + length
-        let mut payload_data: std::vec::Vec<u8> = std::vec::Vec::new();
+        let mut message_data: std::vec::Vec<u8> =
+            std::vec::Vec::with_capacity(payload_data_length + MESSAGE_HEADER_SIZE);
 
         // Add magic byte (0xDE)
-        payload_data.push(MESSAGE_MAGIC);
+        message_data.push(MESSAGE_MAGIC);
 
         // Add message type ID (2 bytes)
-        payload_data.extend_from_slice(&(Self::MESSAGE_TYPE_ID as u16).to_le_bytes());
+        message_data.extend_from_slice(&(Self::MESSAGE_TYPE_ID as u16).to_le_bytes());
 
         // Add length bytes
-        payload_data
-            .extend((0..DATA_BYTES_LENGTH_IN_BYTES).map(|x| ((length >> (x * 8)) & 0xFF) as u8));
+        message_data.extend(
+            (0..DATA_BYTES_LENGTH_IN_BYTES)
+                .map(|x| ((payload_data_length >> (x * 8)) & 0xFF) as u8),
+        );
 
-        payload_data.append(&mut serialized_bytes);
+        message_data.extend(&serialized_bytes);
 
-        if payload_data.len() > N {
+        if message_data.len() > N {
             return Err(Error::SerializationBufferOverflow);
         }
-        Ok(payload_data.match_size(0x00))
+        Ok(message_data.match_size(0x00))
     }
 
     /// Serialize to bytes
