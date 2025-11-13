@@ -12,8 +12,7 @@ use host_jtag_no_std::configs::initalize_logger;
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::devices::host::AsyncHostProcessor;
 
-// BLE no-std example: https://github.com/embassy-rs/trouble/blob/main/examples/apps/src/ble_bas_peripheral_sec.rs
-// USB device example: https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/embassy_usb_serial.rs
+// USB serial device example: https://github.com/esp-rs/esp-hal/blob/main/examples/async/embassy_usb_serial_jtag/src/main.rs
 #[esp_hal_embassy::main]
 async fn main(_spawner: Spawner) {
     let peripherals = esp_hal::init(esp_hal::Config::default().with_cpu_clock(CpuClock::max()));
