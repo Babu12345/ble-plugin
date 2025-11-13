@@ -223,13 +223,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "device-embassy"
+name = "device-embassy-jtag"
 version = "0.0.1"
 dependencies = [
  "embassy-futures",
  "embassy-sync 0.6.2",
  "embassy-time",
  "embassy-usb",
+ "embedded-io-async",
  "esp-hal",
  "log",
  "protocol",
@@ -870,11 +871,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "host-no-std"
+name = "host-jtag-no-std"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "device-embassy",
+ "device-embassy-jtag",
  "embassy-executor",
  "embassy-futures",
  "embassy-sync 0.6.2",

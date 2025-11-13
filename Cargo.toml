@@ -22,6 +22,7 @@ exclude = [
     "plugin_config",
     "esp_nimble_plugin_config",
     "device-jtag",
+    "host-jtag-no-std",
 ]
 resolver = "2"
 
