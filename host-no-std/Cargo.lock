@@ -236,6 +236,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "device-embassy-jtag"
+version = "0.0.1"
+
+[[package]]
 name = "document-features"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -875,6 +879,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "device-embassy",
+ "device-embassy-jtag",
  "embassy-executor",
  "embassy-futures",
  "embassy-sync 0.6.2",

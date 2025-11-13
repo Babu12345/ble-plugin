@@ -113,7 +113,7 @@ pub mod host {
         host::{HostReceiver, HostSender},
     };
 
-    /// Trait for processing data in and out of the device
+    /// Trait for processing data in and out of the host device
     #[cfg(feature = "std")]
     pub trait HostProcessor<const CH_SIZE: usize, ERROR> {
         /// Handles the generation of the processors for receiving and sending data

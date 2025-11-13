@@ -1,6 +1,0 @@
-[package]
-name = "host-jtag"
-version = "0.1.0"
-edition = "2024"
-
-[target.'cfg(all(target_arch = "xtensa", target_os = "espidf"))'.dependencies]
