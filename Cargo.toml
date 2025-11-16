@@ -7,6 +7,7 @@ members = [
     "host-cherry",
     "device-embassy",
     "device-embassy-jtag",
+    "device-embassy-uart",
 ]
 exclude = [
     "plugin-nvs",
@@ -23,6 +24,7 @@ exclude = [
     "esp_nimble_plugin_config",
     "device-jtag",
     "host-jtag-no-std",
+    "host-uart-no-std",
 ]
 resolver = "2"
 

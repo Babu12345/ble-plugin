@@ -16,12 +16,6 @@ esp-idf-sys = { version = "0.36.1", default-features = false }
 heapless = "0.8.0"
 esp-idf-svc = { version = "0.51", default-features = false }
 thiserror-no-std = "2.0.2"
-[[package.metadata.esp-idf-sys.extra_components]]
-# remote_component = { name = "cherry-embedded/cherryusb", version = "1.5.2~2" }
-component_dirs = "components/cherryusb"
-bindings_header = "cherry_usb_host_bindings.h"
-bindings_module = "cherry_host"
-
 
 [features]
 default = ["protocol_buffer"]

@@ -1,0 +1,21 @@
+[package]
+name = "device-embassy-uart"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[target.'cfg(all(any(target_arch = "xtensa", target_arch = "riscv32"), target_os = "none"))'.dependencies]
+protocol = { git = "ssh://git@github.com/Babu12345/ble-plugin.git", default-features = false, features = [
+    "quick_protocol_buffer",
+] }
+
+## External crates
+esp-hal = { version = "0.23.0" }
+log = { version = "0.4.21" }
+embassy-time = { version = "^0.4", features = ["generic-queue-8"] }
+embassy-usb = "0.4.0"
+embassy-futures = "0.1.1"
+embassy-sync = { version = "0.6.1", default-features = false }
+embedded-io-async = "0.6"
