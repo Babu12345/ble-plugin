@@ -176,3 +176,9 @@ Host github.com
 [net]
 git-fetch-with-cli = true
 ```
+
+## License
+
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

@@ -350,5 +350,11 @@ The attribute macros are designed to produce helpful error messages when used in
 ## Dependencies
 
 - **proc-macro2**: Core procedural macro utilities
-- **quote**: Code generation and token stream manipulation  
+- **quote**: Code generation and token stream manipulation
 - **syn**: Rust AST parsing with full feature support
+
+## License
+
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

@@ -53,3 +53,9 @@ cargo run
 ```
 
 Requires ESP32-S3 with USB OTG support.
+
+## License
+
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

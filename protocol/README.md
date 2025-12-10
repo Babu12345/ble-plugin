@@ -297,3 +297,9 @@ sudo apt-get install protobuf-compiler  # Ubuntu/Debian
 ```
 
 The `.proto` files are automatically compiled into Rust code during the build process.
+
+## License
+
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

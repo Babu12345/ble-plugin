@@ -175,3 +175,9 @@ All examples are located in the `examples/` folder:
 
 - `examples/example_usage.py` - Complete integration examples including the configure_profile command
 - `examples/example_listening.py` - USB data listening examples
+
+## License
+
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

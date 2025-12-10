@@ -296,4 +296,6 @@ The implementation is based on CherryUSB examples:
 
 ## License
 
-This module follows the same license as the parent BLE plugin project.
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

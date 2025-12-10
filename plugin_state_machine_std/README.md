@@ -373,3 +373,9 @@ pub trait HardwareAccessories {
 - `plugin_config`: Core traits for hardware abstraction
 - `protocol`: Shared protocol definitions (Protocol Buffers)
 - `log`: Logging support
+
+## License
+
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

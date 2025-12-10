@@ -74,3 +74,9 @@ git commit -m "Update protocol definitions"
 ```
 
 For questions about the protocol, see [`protocol/README.md`](../protocol/README.md).
+
+## License
+
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.

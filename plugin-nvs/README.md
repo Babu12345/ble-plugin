@@ -74,4 +74,6 @@ The crate provides comprehensive error types through `PluginNvcError`:
 
 ## License
 
-See the parent repository for license information.
+Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
+
+This project is private and proprietary.
