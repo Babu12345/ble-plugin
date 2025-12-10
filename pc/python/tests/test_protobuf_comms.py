@@ -1,3 +1,8 @@
+# Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+#
+# This source code is proprietary and confidential. Unauthorized copying,
+# modification, distribution, or use of this software is strictly prohibited.
+
 """
 Test protobuf encoding/decoding functionality in comms.py
 
@@ -362,5 +367,3 @@ class TestProtobufIntegrationWithUSBFunctions:
         assert result.service_uuid == 0x4321
         assert list(result.characteristic_uuids) == [0x1010, 0x2020]
         assert result.exists is False
-
-

@@ -1,3 +1,8 @@
+# Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+#
+# This source code is proprietary and confidential. Unauthorized copying,
+# modification, distribution, or use of this software is strictly prohibited.
+
 from plugin_host.comms import USBHostDevice, USBCommunicationError
 import plugin_host.protocol_pb2 as protocol_pb2
 from time import perf_counter

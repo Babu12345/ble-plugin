@@ -1,3 +1,8 @@
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 //! Key for the "peripheral_config" configuration setting in NVS.
 
 use esp_idf_svc::nvs::{EspNvs, NvsPartitionId};

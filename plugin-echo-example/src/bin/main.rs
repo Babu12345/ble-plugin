@@ -1,3 +1,8 @@
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 // The code below is a simple echo used for testing the operation of the USB device using simple CDC interface.
 #![no_std]
 #![no_main]

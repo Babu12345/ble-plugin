@@ -1,3 +1,8 @@
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 //! Processor functions. Should be run via threads for proper operation and not with async await
 use esp_idf_sys::{
     TickType_t,

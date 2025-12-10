@@ -1,5 +1,11 @@
 #![deny(missing_docs)]
 
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
+
 //! # Plugin State Machine Standard
 //!
 //! A hardware-agnostic BLE-USB bridge state machine implementation for BLE plugin devices.

@@ -1,3 +1,8 @@
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 //! USB device class for the esp-idf hal interace
 //! Taking example for https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/usb_serial.rs for the final product of
 //! how this will be called and referenced in code.

@@ -1,4 +1,10 @@
 #![deny(missing_docs)]
+
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 //! Library that contains hardware agnostic methods for the plugin hardware to be used in the state machine
 
 use std::fmt::Debug;

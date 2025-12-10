@@ -1,3 +1,8 @@
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 //! Defines the traits for the plugin
 //! The peripheral is the device that will connect to the host and receives and transmits data to the primary
 //! Typically this can be bluetooth but can really be any other propriary or open source interface if required.

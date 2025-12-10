@@ -1,3 +1,8 @@
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 //! Error crate for the plugin-nvc crate.
 
 /// Defines error types and handling mechanisms specific to non-volatile storage operations.

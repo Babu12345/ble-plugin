@@ -1,5 +1,11 @@
 #![cfg(test)]
 
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
+
 //! MESSAGE_TYPE_ID registration and uniqueness validation using inventory.
 //! Should only be used for testing
 //!

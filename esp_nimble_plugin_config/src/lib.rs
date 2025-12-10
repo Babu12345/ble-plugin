@@ -1,3 +1,8 @@
+// Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
+//
+// This source code is proprietary and confidential. Unauthorized copying,
+// modification, distribution, or use of this software is strictly prohibited.
+
 //! Implements the plugin_config to be used in the plugin state machines for esp_nimble. Which is a bluetooth crate for esp32
 #![deny(missing_docs)]
 #![cfg(all(target_arch = "xtensa", target_os = "espidf"))]
