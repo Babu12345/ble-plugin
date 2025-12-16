@@ -13,6 +13,8 @@ pub use protocol::plugin::*;
 pub use protocol::protocol::*;
 pub use protocol::utils::*;
 pub use protocol::DEFAULT_PACKET_SIZE;
+
+pub mod profiles;
 /// Hardware agnostic plugin configurator
 pub trait PluginConfig<ERROR: Debug> {
     /// Handle peripheral configuration
@@ -94,8 +96,117 @@ pub trait PluginConfig<ERROR: Debug> {
     }
 
     /// Handle configure profile
-    fn handle_configure_profile(&mut self, _cmd: HostCommandConfigureProfile) -> Result<(), ERROR> {
-        unimplemented!("Please implement handle_configure_profile to configure BLE profiles")
+    ///
+    /// Default implementation that handles standard BLE profiles:
+    /// - Custom: Uses pre-configured services/characteristics, just restarts server
+    /// - HeartRateMonitor: Standard Heart Rate Service (0x180D)
+    /// - BatteryService: Standard Battery Service (0x180F)
+    /// - DeviceInformation: Standard Device Information Service (0x180A)
+    ///
+    /// Implementations must provide:
+    /// - `restart_server_with_profile()` to restart the BLE server
+    /// - `handle_unknown_profile()` for error handling
+    fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<(), ERROR> {
+        // Match on the profile type
+        match BleProfile::try_from(cmd.profile) {
+            Ok(BleProfile::Custom) => {
+                // Custom profile is already configured via prior configure_service
+                // and configure_characteristic commands. Just restart the server.
+                return self.restart_server_with_profile(cmd.save_on_disconnect);
+            }
+            Ok(BleProfile::HeartRateMonitor) => {
+                let profile_def = profiles::heart_rate::heart_rate_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::BatteryService) => {
+                let profile_def = profiles::battery_service::battery_service_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::DeviceInformation) => {
+                let profile_def = profiles::device_info::device_info_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::Unspecified) | Err(_) => {
+                return self.handle_unknown_profile();
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Apply a profile definition by configuring its services and characteristics.
+    ///
+    /// This helper method iterates through the profile's services and characteristics,
+    /// calling the appropriate handler methods to configure the BLE stack.
+    ///
+    /// # Arguments
+    /// * `profile` - The profile definition to apply
+    /// * `save_on_disconnect` - Whether to save the profile configuration to NVS
+    ///
+    /// # Returns
+    /// Result indicating success or failure
+    fn apply_profile_definition(
+        &mut self,
+        profile: profiles::ProfileDefinition,
+        save_on_disconnect: bool,
+    ) -> Result<(), ERROR> {
+        // Configure each service and its characteristics
+        for service in profile.services {
+            // Configure the service
+            self.handle_configure_service(HostCommandConfigureService {
+                uuid: service.uuid as u32,
+            })?;
+
+            // Configure each characteristic in the service
+            for characteristic in service.characteristics {
+                self.handle_configure_characteristic(HostCommandConfigureCharacteristic {
+                    uuid: characteristic.uuid as u32,
+                    service_uuid: service.uuid as u32,
+                    properties: characteristic.properties,
+                })?;
+
+                // If the characteristic has a default value, set it
+                if let Some(default_value) = characteristic.default_value {
+                    self.handle_configure_characteristic_read(
+                        HostCommandConfigureCharacteristicRead {
+                            uuid: characteristic.uuid as u32,
+                            service_uuid: service.uuid as u32,
+                            value: default_value,
+                        },
+                    )?;
+                }
+            }
+        }
+
+        // Restart the server with the new profile configuration
+        self.restart_server_with_profile(save_on_disconnect)?;
+
+        Ok(())
+    }
+
+    /// Restart the BLE server with the configured profile.
+    ///
+    /// This method should restart the BLE server to apply the new profile configuration.
+    /// Implementations may also handle NVS persistence if `save_on_disconnect` is true.
+    ///
+    /// # Arguments
+    /// * `save_on_disconnect` - Whether to save the profile configuration to NVS
+    ///
+    /// # Returns
+    /// Result indicating success or failure
+    fn restart_server_with_profile(&mut self, _save_on_disconnect: bool) -> Result<(), ERROR> {
+        unimplemented!("Please implement restart_server_with_profile to restart the BLE server")
+    }
+
+    /// Handle unknown or unspecified profile.
+    ///
+    /// This method is called when an unknown profile ID is received.
+    /// Implementations should return an appropriate error.
+    ///
+    /// # Returns
+    /// Result indicating failure with appropriate error
+    fn handle_unknown_profile(&mut self) -> Result<(), ERROR> {
+        unimplemented!("Please implement handle_unknown_profile to handle unknown profile errors")
     }
 }
 

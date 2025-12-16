@@ -22,11 +22,11 @@ use esp_idf_svc::{
     hal::task::block_on, nvs::EspNvsPartition, sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS,
 };
 use plugin_config::{
-    plugin::PluginSender, slice_to_array, BleProfile, BleProperties, BluetoothAddressType,
+    plugin::PluginSender, slice_to_array, BleProperties, BluetoothAddressType,
     HostCommandConfigureCharacteristic, HostCommandConfigureCharacteristicRead,
     HostCommandConfigurePeripheral, HostCommandConfigurePeripheralSecurity,
-    HostCommandConfigureProfile, HostCommandConfigureService, HostCommandGetCharacteristicInfo,
-    HostCommandGetServiceInfo, HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
+    HostCommandConfigureService, HostCommandGetCharacteristicInfo, HostCommandGetServiceInfo,
+    HostCommandNotifyCharacteristicValue, HostCommandStartAdvertisement,
     HostCommandStopAdvertisement, PluginAuthenticationCompletedResponse,
     PluginCharacteristicInfoResponse, PluginConfig, PluginConfigurationError,
     PluginConfigurationErrorType, PluginData, PluginDataSendType, PluginOnConnectResponse,
@@ -806,47 +806,43 @@ where
         Ok(())
     }
 
-    fn handle_configure_profile(&mut self, cmd: HostCommandConfigureProfile) -> Result<()> {
-        // Update the device name during the profile configuration.
+    // Note: handle_configure_profile uses the default trait implementation
+    // We only need to implement the hardware-specific hooks below
+
+    fn restart_server_with_profile(&mut self, save_on_disconnect: bool) -> Result<()> {
+        // Update the device name during the profile configuration
         if let Some(name) = self.metadata.get_or_init_name(&mut self.ns) {
             set_device_name(name.as_str());
-            log::info!("Configured device name")
+            log::info!("Configured device name");
         }
 
-        log::info!("Configuring BLE profile: {:?}", cmd.profile);
-
-        match BleProfile::try_from(cmd.profile) {
-            Ok(BleProfile::Custom) => {
-                log::info!("Using custom profile with predefined services and characteristics");
-                // Get the server
-                let server = match self.server.as_mut() {
-                    Some(server) => server,
-                    None => {
-                        log::error!("No BLE server available. Configure peripheral first.");
-                        return Err(Error::InvalidBleConfiguration);
-                    }
-                };
-
-                // Restart the server with all predefined services and characteristics
-                server.restart(true).map_err(|source| {
-                    log::error!("Failed to restart BLE server: {:?}", source);
-                    Error::ServerRestartError(source)
-                })?;
-            }
-            Ok(other_profile) => {
-                log::warn!(
-                    "Predefined BLE profile {:?} is not implemented yet",
-                    other_profile
-                );
-            }
-            Err(_) => {
-                log::error!("Unknown BLE profile ID: {:?}", cmd.profile);
+        // Get the server
+        let server = match self.server.as_mut() {
+            Some(server) => server,
+            None => {
+                log::error!("No BLE server available. Configure peripheral first.");
                 return Err(Error::InvalidBleConfiguration);
             }
+        };
+
+        // Restart the server with the new profile configuration
+        server.restart(true).map_err(|source| {
+            log::error!("Failed to restart BLE server: {:?}", source);
+            Error::ServerRestartError(source)
+        })?;
+
+        // TODO: Implement NVS persistence if save_on_disconnect is true
+        if save_on_disconnect {
+            log::info!("Profile persistence requested but not yet implemented");
         }
 
-        log::info!("Successfully configured profile {:?} by restarting server with predefined configuration", cmd.profile);
+        log::info!("Successfully restarted server with profile configuration");
         Ok(())
+    }
+
+    fn handle_unknown_profile(&mut self) -> Result<()> {
+        log::error!("Unknown or unspecified BLE profile");
+        Err(Error::InvalidBleConfiguration)
     }
 
     fn handle_stop_advertisement(&mut self, _cmd: HostCommandStopAdvertisement) -> Result<()> {
