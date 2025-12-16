@@ -9,8 +9,13 @@
 //! BLE profiles that can be used by any BLE stack implementation.
 
 pub mod battery_service;
+pub mod current_time;
+pub mod cycling_speed_cadence;
 pub mod device_info;
+pub mod environmental_sensing;
+pub mod health_thermometer;
 pub mod heart_rate;
+pub mod proximity;
 
 /// A complete BLE profile definition containing one or more services.
 #[derive(Debug, Clone)]

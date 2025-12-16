@@ -575,6 +575,16 @@ pub enum BleProfile {
     BatteryService = 3,
     /// Device Information Service profile
     DeviceInformation = 4,
+    /// Environmental Sensing profile - Temperature, humidity, pressure sensors
+    EnvironmentalSensing = 5,
+    /// Proximity Profile - Item finders, asset tracking
+    ProximityProfile = 6,
+    /// Health Thermometer profile - Medical and consumer thermometers
+    HealthThermometer = 7,
+    /// Cycling Speed and Cadence profile - Bike computers, fitness apps
+    CyclingSpeedAndCadence = 8,
+    /// Current Time Service profile - Time synchronization for watches and devices
+    CurrentTimeService = 9,
 }
 impl BleProfile {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -588,6 +598,11 @@ impl BleProfile {
             Self::HeartRateMonitor => "HeartRateMonitor",
             Self::BatteryService => "BatteryService",
             Self::DeviceInformation => "DeviceInformation",
+            Self::EnvironmentalSensing => "EnvironmentalSensing",
+            Self::ProximityProfile => "ProximityProfile",
+            Self::HealthThermometer => "HealthThermometer",
+            Self::CyclingSpeedAndCadence => "CyclingSpeedAndCadence",
+            Self::CurrentTimeService => "CurrentTimeService",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -598,6 +613,11 @@ impl BleProfile {
             "HeartRateMonitor" => Some(Self::HeartRateMonitor),
             "BatteryService" => Some(Self::BatteryService),
             "DeviceInformation" => Some(Self::DeviceInformation),
+            "EnvironmentalSensing" => Some(Self::EnvironmentalSensing),
+            "ProximityProfile" => Some(Self::ProximityProfile),
+            "HealthThermometer" => Some(Self::HealthThermometer),
+            "CyclingSpeedAndCadence" => Some(Self::CyclingSpeedAndCadence),
+            "CurrentTimeService" => Some(Self::CurrentTimeService),
             _ => None,
         }
     }

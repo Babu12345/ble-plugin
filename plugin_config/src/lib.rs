@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-
 // Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
 //
 // This source code is proprietary and confidential. Unauthorized copying,
@@ -102,6 +101,11 @@ pub trait PluginConfig<ERROR: Debug> {
     /// - HeartRateMonitor: Standard Heart Rate Service (0x180D)
     /// - BatteryService: Standard Battery Service (0x180F)
     /// - DeviceInformation: Standard Device Information Service (0x180A)
+    /// - EnvironmentalSensing: Environmental Sensing Service (0x181A)
+    /// - ProximityProfile: Proximity Profile (0x1802/0x1803/0x1804)
+    /// - HealthThermometer: Health Thermometer Service (0x1809)
+    /// - CyclingSpeedAndCadence: Cycling Speed and Cadence Service (0x1816)
+    /// - CurrentTimeService: Current Time Service (0x1805)
     ///
     /// Implementations must provide:
     /// - `restart_server_with_profile()` to restart the BLE server
@@ -124,6 +128,26 @@ pub trait PluginConfig<ERROR: Debug> {
             }
             Ok(BleProfile::DeviceInformation) => {
                 let profile_def = profiles::device_info::device_info_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::EnvironmentalSensing) => {
+                let profile_def = profiles::environmental_sensing::environmental_sensing_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::ProximityProfile) => {
+                let profile_def = profiles::proximity::proximity_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::HealthThermometer) => {
+                let profile_def = profiles::health_thermometer::health_thermometer_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::CyclingSpeedAndCadence) => {
+                let profile_def = profiles::cycling_speed_cadence::cycling_speed_cadence_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::CurrentTimeService) => {
+                let profile_def = profiles::current_time::current_time_profile();
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::Unspecified) | Err(_) => {

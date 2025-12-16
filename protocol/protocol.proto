@@ -215,6 +215,16 @@ enum BleProfile {
   BatteryService = 3;
   // Device Information Service profile
   DeviceInformation = 4;
+  // Environmental Sensing profile - Temperature, humidity, pressure sensors
+  EnvironmentalSensing = 5;
+  // Proximity Profile - Item finders, asset tracking
+  ProximityProfile = 6;
+  // Health Thermometer profile - Medical and consumer thermometers
+  HealthThermometer = 7;
+  // Cycling Speed and Cadence profile - Bike computers, fitness apps
+  CyclingSpeedAndCadence = 8;
+  // Current Time Service profile - Time synchronization for watches and devices
+  CurrentTimeService = 9;
 }
 
 // Host command. Configure BLE profile
