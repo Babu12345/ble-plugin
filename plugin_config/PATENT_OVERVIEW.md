@@ -14,15 +14,16 @@ This profile library is part of a larger BLE plugin system that enables host dev
 
 ```
 ┌─────────────────┐     USB/Serial      ┌─────────────────────────────────────┐     BLE Radio      ┌─────────────┐
-│   Host Device   │ ─────────────────►  │      Plugin Device (ESP32)          │ ─────────────────► │ BLE Clients │
-│ (PC/Mobile/     │  Single Command     │                                     │   Full Profile     │ (Phones,    │
-│  Embedded)      │  "HeartRate"        │  ┌───────────────────────────────┐  │   Operational      │  Watches)   │
-│                 │                     │  │   plugin_config Library       │  │                    │             │
+│   Host Device   │ ◄──────────────────► │      Plugin Device (ESP32)          │ ◄────────────────► │ BLE Clients │
+│ (PC/Mobile/     │  Commands +         │                                     │   Full Profile     │ (Phones,    │
+│  Embedded)      │  Data Flow          │  ┌───────────────────────────────┐  │   Operational      │  Watches,   │
+│                 │                     │  │   plugin_config Library       │  │                    │  HR Monitor)│
 │                 │                     │  │  (Hardware-Agnostic Profiles) │  │                    │             │
 │                 │                     │  │                               │  │                    │             │
 │                 │                     │  │  • Receives profile commands  │  │                    │             │
 │                 │                     │  │  • Translates to BLE config   │  │                    │             │
 │                 │                     │  │  • Applies via PluginConfig   │  │                    │             │
+│                 │                     │  │  • Forwards BLE data to host  │  │                    │             │
 │                 │                     │  └───────────────┬───────────────┘  │                    │             │
 │                 │                     │                  │                   │                    │             │
 │                 │                     │                  ▼                   │                    │             │
@@ -39,6 +40,11 @@ This profile library is part of a larger BLE plugin system that enables host dev
 3. Translates the profile into a series of BLE stack operations
 4. Applies the configuration through the `PluginConfig` trait to the platform-specific BLE stack (ESP32-Nimble)
 5. Returns success/error status back to the host
+
+**Bidirectional Data Flow**: Once configured, the system enables full bidirectional data exchange:
+- **BLE Client → Host**: Data from BLE clients (e.g., heart rate measurements from a smartwatch) flows through the plugin device and is forwarded to the host over USB/Serial
+- **Host → BLE Client**: The host can send commands/data through the plugin to connected BLE clients (e.g., notifications, characteristic value updates)
+- **Example**: A heart rate monitor sends measurements → Plugin forwards via USB → Host receives and displays data. Conversely, host can update characteristic values that BLE clients can read
 
 **Key Product Differentiator**: A host device can issue a single command to configure an entire BLE profile on a remote plugin device:
 
