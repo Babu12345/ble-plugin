@@ -8,12 +8,14 @@
 //! This module provides hardware-agnostic profile definitions for standard
 //! BLE profiles that can be used by any BLE stack implementation.
 
+pub mod audio_stream_control;
 pub mod battery_service;
 pub mod blood_pressure;
 pub mod body_composition;
 pub mod bond_management;
 pub mod continuous_glucose_monitoring;
 pub mod current_time;
+pub mod cycling_power;
 pub mod cycling_speed_cadence;
 pub mod device_info;
 pub mod environmental_sensing;
@@ -24,9 +26,13 @@ pub mod heart_rate;
 pub mod hid_over_gatt;
 pub mod insulin_delivery;
 pub mod location_navigation;
+pub mod mesh_provisioning;
+pub mod mesh_proxy;
+pub mod object_transfer;
 pub mod phone_alert_status;
 pub mod proximity;
 pub mod pulse_oximeter;
+pub mod reconnection_configuration;
 pub mod running_speed_cadence;
 pub mod scan_parameters;
 pub mod user_data;

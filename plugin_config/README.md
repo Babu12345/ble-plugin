@@ -9,14 +9,14 @@ Hardware-agnostic BLE profile configuration library for the BLE Plugin system.
 ## Features
 
 - **Hardware Agnostic**: Profile definitions work with any BLE stack implementation
-- **Standard BLE Profiles**: Pre-configured implementations of 24 Bluetooth SIG standard profiles
+- **Standard BLE Profiles**: Pre-configured implementations of 30 Bluetooth SIG standard profiles
 - **Custom Profiles**: Support for user-defined services and characteristics
 - **Type-Safe**: Rust's type system ensures correct profile configuration
 - **Comprehensive Testing**: Each profile includes unit tests validating structure and default values
 
-## Supported BLE Profiles (24+)
+## Supported BLE Profiles (30+)
 
-### Health & Fitness (16 profiles)
+### Health & Fitness (17 profiles)
 - **Heart Rate Monitor** (0x180D) - Heart rate measurement and body sensor location
 - **Blood Pressure** (0x1810) - Blood pressure monitoring with measurement and feature characteristics
 - **Glucose Monitoring** (0x1808) - Basic glucose monitoring with context and record access
@@ -26,6 +26,7 @@ Hardware-agnostic BLE profile configuration library for the BLE Plugin system.
 - **Body Composition** (0x181B) - Smart scales with body fat, muscle mass, and impedance measurement
 - **Health Thermometer** (0x1809) - Temperature measurement with type and interval characteristics
 - **Cycling Speed and Cadence** (0x1816) - Bike computer data with sensor location
+- **Cycling Power** (0x1818) - Power meters, smart trainers, professional cycling with force/torque data
 - **Running Speed and Cadence** (0x1814) - Running shoes, fitness trackers, running pods with stride length and distance
 - **Pulse Oximeter** (0x1822) - SpO2 and pulse rate monitoring for medical and fitness applications
 - **Location and Navigation** (0x1819) - GPS tracking, asset tracking, indoor positioning with waypoints
@@ -46,8 +47,17 @@ Hardware-agnostic BLE profile configuration library for the BLE Plugin system.
 - **HID over GATT** (0x1812) - Keyboards, mice, game controllers, remote controls
 - **Phone Alert Status** (0x180E) - Smartwatch notifications and wearable alerts
 
-### Security (1 profile)
+### Security & Management (3 profiles)
 - **Bond Management** (0x181E) - Secure device pairing and bonding management
+- **Reconnection Configuration** (0x1829) - Optimized reconnection, power efficiency, LESC support
+- **Object Transfer** (0x1825) - OTA firmware updates, file transfer, remote device management
+
+### Mesh Networking (2 profiles)
+- **Mesh Provisioning** (0x1827) - BLE Mesh network onboarding, smart home/building automation
+- **Mesh Proxy** (0x1828) - BLE Mesh GATT bearer, mobile app control of mesh networks
+
+### Audio (1 profile)
+- **Audio Stream Control** (0x184E) - LE Audio streaming, wireless headphones, hearing aids, broadcast audio
 
 ### Custom (1 profile)
 - **Custom Profile** - User-defined services and characteristics configured via commands

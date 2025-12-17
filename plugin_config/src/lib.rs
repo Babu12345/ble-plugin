@@ -121,6 +121,12 @@ pub trait PluginConfig<ERROR: Debug> {
     /// - BodyComposition: Body Composition Service (0x181B)
     /// - ScanParameters: Scan Parameters Service (0x1813)
     /// - BondManagement: Bond Management Service (0x181E)
+    /// - CyclingPower: Cycling Power Service (0x1818)
+    /// - ReconnectionConfiguration: Reconnection Configuration Service (0x1829)
+    /// - ObjectTransfer: Object Transfer Service (0x1825)
+    /// - MeshProvisioning: Mesh Provisioning Service (0x1827)
+    /// - MeshProxy: Mesh Proxy Service (0x1828)
+    /// - AudioStreamControl: Audio Stream Control Service (0x184E)
     ///
     /// Implementations must provide:
     /// - `restart_server_with_profile()` to restart the BLE server
@@ -223,6 +229,30 @@ pub trait PluginConfig<ERROR: Debug> {
             }
             Ok(BleProfile::BondManagement) => {
                 let profile_def = profiles::bond_management::bond_management_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::CyclingPower) => {
+                let profile_def = profiles::cycling_power::cycling_power_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::ReconnectionConfiguration) => {
+                let profile_def = profiles::reconnection_configuration::reconnection_configuration_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::ObjectTransfer) => {
+                let profile_def = profiles::object_transfer::object_transfer_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::MeshProvisioning) => {
+                let profile_def = profiles::mesh_provisioning::mesh_provisioning_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::MeshProxy) => {
+                let profile_def = profiles::mesh_proxy::mesh_proxy_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::AudioStreamControl) => {
+                let profile_def = profiles::audio_stream_control::audio_stream_control_profile();
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::Unspecified) | Err(_) => {

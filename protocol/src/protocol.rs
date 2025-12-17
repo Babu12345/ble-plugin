@@ -615,6 +615,18 @@ pub enum BleProfile {
     ScanParameters = 23,
     /// Bond Management profile - Secure device pairing and bonding management
     BondManagement = 24,
+    /// Cycling Power profile - Power meters, smart trainers, professional cycling
+    CyclingPower = 25,
+    /// Reconnection Configuration profile - Optimized reconnection, power efficiency
+    ReconnectionConfiguration = 26,
+    /// Object Transfer Service profile - OTA updates, file transfer, firmware management
+    ObjectTransfer = 27,
+    /// Mesh Provisioning profile - BLE Mesh network onboarding, smart home/building automation
+    MeshProvisioning = 28,
+    /// Mesh Proxy profile - BLE Mesh GATT bearer, mobile app control of mesh networks
+    MeshProxy = 29,
+    /// Audio Stream Control Service profile - LE Audio streaming, wireless headphones, hearing aids
+    AudioStreamControl = 30,
 }
 impl BleProfile {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -648,6 +660,12 @@ impl BleProfile {
             Self::BodyComposition => "BodyComposition",
             Self::ScanParameters => "ScanParameters",
             Self::BondManagement => "BondManagement",
+            Self::CyclingPower => "CyclingPower",
+            Self::ReconnectionConfiguration => "ReconnectionConfiguration",
+            Self::ObjectTransfer => "ObjectTransfer",
+            Self::MeshProvisioning => "MeshProvisioning",
+            Self::MeshProxy => "MeshProxy",
+            Self::AudioStreamControl => "AudioStreamControl",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -678,6 +696,12 @@ impl BleProfile {
             "BodyComposition" => Some(Self::BodyComposition),
             "ScanParameters" => Some(Self::ScanParameters),
             "BondManagement" => Some(Self::BondManagement),
+            "CyclingPower" => Some(Self::CyclingPower),
+            "ReconnectionConfiguration" => Some(Self::ReconnectionConfiguration),
+            "ObjectTransfer" => Some(Self::ObjectTransfer),
+            "MeshProvisioning" => Some(Self::MeshProvisioning),
+            "MeshProxy" => Some(Self::MeshProxy),
+            "AudioStreamControl" => Some(Self::AudioStreamControl),
             _ => None,
         }
     }
