@@ -40,6 +40,7 @@ test_rust_crates() {
         "protocol"
         "protocol_io"
         "plugin_state_machine_std"
+        "plugin_config"
     )
     
     local failed_crates=()

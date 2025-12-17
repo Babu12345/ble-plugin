@@ -106,6 +106,11 @@ pub trait PluginConfig<ERROR: Debug> {
     /// - HealthThermometer: Health Thermometer Service (0x1809)
     /// - CyclingSpeedAndCadence: Cycling Speed and Cadence Service (0x1816)
     /// - CurrentTimeService: Current Time Service (0x1805)
+    /// - HidOverGatt: HID over GATT Profile (0x1812)
+    /// - GlucoseMonitoring: Glucose Service (0x1808)
+    /// - BloodPressure: Blood Pressure Service (0x1810)
+    /// - WeightScale: Weight Scale Service (0x181D)
+    /// - PhoneAlertStatus: Phone Alert Status Service (0x180E)
     ///
     /// Implementations must provide:
     /// - `restart_server_with_profile()` to restart the BLE server
@@ -148,6 +153,26 @@ pub trait PluginConfig<ERROR: Debug> {
             }
             Ok(BleProfile::CurrentTimeService) => {
                 let profile_def = profiles::current_time::current_time_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::HidOverGatt) => {
+                let profile_def = profiles::hid_over_gatt::hid_over_gatt_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::GlucoseMonitoring) => {
+                let profile_def = profiles::glucose_monitoring::glucose_monitoring_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::BloodPressure) => {
+                let profile_def = profiles::blood_pressure::blood_pressure_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::WeightScale) => {
+                let profile_def = profiles::weight_scale::weight_scale_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::PhoneAlertStatus) => {
+                let profile_def = profiles::phone_alert_status::phone_alert_status_profile();
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::Unspecified) | Err(_) => {

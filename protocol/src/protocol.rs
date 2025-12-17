@@ -585,6 +585,16 @@ pub enum BleProfile {
     CyclingSpeedAndCadence = 8,
     /// Current Time Service profile - Time synchronization for watches and devices
     CurrentTimeService = 9,
+    /// HID over GATT profile - Keyboards, mice, game controllers
+    HidOverGatt = 10,
+    /// Glucose Monitoring profile - Continuous glucose monitors, diabetes management
+    GlucoseMonitoring = 11,
+    /// Blood Pressure profile - Blood pressure monitors, home health monitoring
+    BloodPressure = 12,
+    /// Weight Scale profile - Smart scales, body composition monitors
+    WeightScale = 13,
+    /// Phone Alert Status profile - Smartwatch notifications, wearable alerts
+    PhoneAlertStatus = 14,
 }
 impl BleProfile {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -603,6 +613,11 @@ impl BleProfile {
             Self::HealthThermometer => "HealthThermometer",
             Self::CyclingSpeedAndCadence => "CyclingSpeedAndCadence",
             Self::CurrentTimeService => "CurrentTimeService",
+            Self::HidOverGatt => "HidOverGatt",
+            Self::GlucoseMonitoring => "GlucoseMonitoring",
+            Self::BloodPressure => "BloodPressure",
+            Self::WeightScale => "WeightScale",
+            Self::PhoneAlertStatus => "PhoneAlertStatus",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -618,6 +633,11 @@ impl BleProfile {
             "HealthThermometer" => Some(Self::HealthThermometer),
             "CyclingSpeedAndCadence" => Some(Self::CyclingSpeedAndCadence),
             "CurrentTimeService" => Some(Self::CurrentTimeService),
+            "HidOverGatt" => Some(Self::HidOverGatt),
+            "GlucoseMonitoring" => Some(Self::GlucoseMonitoring),
+            "BloodPressure" => Some(Self::BloodPressure),
+            "WeightScale" => Some(Self::WeightScale),
+            "PhoneAlertStatus" => Some(Self::PhoneAlertStatus),
             _ => None,
         }
     }
