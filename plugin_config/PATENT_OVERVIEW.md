@@ -13,25 +13,19 @@
 This profile library is part of a larger BLE plugin system that enables host devices to remotely configure and control BLE peripherals through a command-based protocol:
 
 ```
-┌─────────────────┐     USB/Serial      ┌─────────────────────────────────────┐     BLE Radio      ┌─────────────┐
-│   Host Device   │ ◄──────────────────► │      Plugin Device (ESP32)          │ ◄────────────────► │ BLE Clients │
-│ (PC/Mobile/     │  Commands +         │                                     │   Full Profile     │ (Phones,    │
-│  Embedded)      │  Data Flow          │  ┌───────────────────────────────┐  │   Operational      │  Watches,   │
-│                 │                     │  │   plugin_config Library       │  │                    │  HR Monitor)│
-│                 │                     │  │  (Hardware-Agnostic Profiles) │  │                    │             │
-│                 │                     │  │                               │  │                    │             │
-│                 │                     │  │  • Receives profile commands  │  │                    │             │
-│                 │                     │  │  • Translates to BLE config   │  │                    │             │
-│                 │                     │  │  • Applies via PluginConfig   │  │                    │             │
-│                 │                     │  │  • Forwards BLE data to host  │  │                    │             │
-│                 │                     │  └───────────────┬───────────────┘  │                    │             │
-│                 │                     │                  │                   │                    │             │
-│                 │                     │                  ▼                   │                    │             │
-│                 │                     │  ┌───────────────────────────────┐  │                    │             │
-│                 │                     │  │   BLE Stack (ESP32-Nimble)    │  │                    │             │
-│                 │                     │  │  (Platform-Specific)          │  │                    │             │
-│                 │                     │  └───────────────────────────────┘  │                    │             │
-└─────────────────┘                     └─────────────────────────────────────┘                    └─────────────┘
+HOST          PLUGIN DEVICE       BLE CLIENTS
+(PC/Mobile)   (ESP32)             (Phones/Watches)
+    │             │                    │
+    ├─USB/Serial─┤                    │
+    │             │                    │
+    │         ┌───┴───┐                │
+    │         │Library│────BLE─────────┤
+    │         │Config │                │
+    │         └───┬───┘                │
+    │             │                    │
+    │         ┌───┴───┐                │
+    │         │ Stack │                │
+    │         └───────┘                │
 ```
 
 **Library Integration Point**: The `plugin_config` library runs on the plugin device (ESP32), sitting between the protocol layer (USB/Serial commands) and the BLE stack implementation. When a host sends a profile configuration command, the library:
@@ -290,31 +284,24 @@ This system provides:
 ### 4.1 Three-Layer Design
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│         Application Layer (Protocol Buffers)            │
-│  HostCommandConfigureProfile { profile: HeartRate }     │
-└─────────────────────────────────────────────────────────┘
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│      Hardware-Agnostic Profile Library                  │
-│                                                          │
-│  ProfileDefinition {                                    │
-│    services: [                                          │
-│      ServiceDefinition {                                │
-│        uuid: 0x180D,  // Heart Rate Service             │
-│        characteristics: [...]                           │
-│      }                                                   │
-│    ]                                                     │
-│  }                                                       │
-│                                                          │
-│  PluginConfig Trait (Default Implementation)            │
-└─────────────────────────────────────────────────────────┘
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│     BLE Stack Implementation Layer                      │
-│                                                          │
-│  ESP32-Nimble  │  BlueZ  │  nRF  │  Windows  │  ...     │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│   Application Layer (Protocol Buffers)   │
+│   HostCommandConfigureProfile            │
+└──────────────────┬───────────────────────┘
+                   ▼
+┌──────────────────────────────────────────┐
+│   Hardware-Agnostic Profile Library      │
+│                                          │
+│   ProfileDefinition                      │
+│   • Services: [Heart Rate: 0x180D]      │
+│   • Characteristics: [...]               │
+│   • PluginConfig Trait                   │
+└──────────────────┬───────────────────────┘
+                   ▼
+┌──────────────────────────────────────────┐
+│   BLE Stack Implementation Layer         │
+│   ESP32-Nimble | BlueZ | nRF | Windows   │
+└──────────────────────────────────────────┘
 ```
 
 ### 4.2 Trait-Based Abstraction
@@ -813,7 +800,3 @@ pub struct CharacteristicDefinition {
 3. Generic Attribute Profile (GATT) Specification
 4. Protocol Buffers Language Guide: https://protobuf.dev/
 5. Rust Trait System: https://doc.rust-lang.org/book/ch10-02-traits.html
-
----
-
-Copyright © 2025 Wanyeki Technologies LLC. All rights reserved.
