@@ -13,12 +13,32 @@
 This profile library is part of a larger BLE plugin system that enables host devices to remotely configure and control BLE peripherals through a command-based protocol:
 
 ```
-┌─────────────────┐     USB/Serial      ┌─────────────────┐     BLE Radio      ┌─────────────┐
-│   Host Device   │ ─────────────────►  │  Plugin Device  │ ─────────────────► │ BLE Clients │
-│ (PC/Mobile/     │  Single Command     │  (ESP32 + BLE)  │   Full Profile     │ (Phones,    │
-│  Embedded)      │  "HeartRate"        │  Configured     │   Operational      │  Watches)   │
-└─────────────────┘                     └─────────────────┘                    └─────────────┘
+┌─────────────────┐     USB/Serial      ┌─────────────────────────────────────┐     BLE Radio      ┌─────────────┐
+│   Host Device   │ ─────────────────►  │      Plugin Device (ESP32)          │ ─────────────────► │ BLE Clients │
+│ (PC/Mobile/     │  Single Command     │                                     │   Full Profile     │ (Phones,    │
+│  Embedded)      │  "HeartRate"        │  ┌───────────────────────────────┐  │   Operational      │  Watches)   │
+│                 │                     │  │   plugin_config Library       │  │                    │             │
+│                 │                     │  │  (Hardware-Agnostic Profiles) │  │                    │             │
+│                 │                     │  │                               │  │                    │             │
+│                 │                     │  │  • Receives profile commands  │  │                    │             │
+│                 │                     │  │  • Translates to BLE config   │  │                    │             │
+│                 │                     │  │  • Applies via PluginConfig   │  │                    │             │
+│                 │                     │  └───────────────┬───────────────┘  │                    │             │
+│                 │                     │                  │                   │                    │             │
+│                 │                     │                  ▼                   │                    │             │
+│                 │                     │  ┌───────────────────────────────┐  │                    │             │
+│                 │                     │  │   BLE Stack (ESP32-Nimble)    │  │                    │             │
+│                 │                     │  │  (Platform-Specific)          │  │                    │             │
+│                 │                     │  └───────────────────────────────┘  │                    │             │
+└─────────────────┘                     └─────────────────────────────────────┘                    └─────────────┘
 ```
+
+**Library Integration Point**: The `plugin_config` library runs on the plugin device (ESP32), sitting between the protocol layer (USB/Serial commands) and the BLE stack implementation. When a host sends a profile configuration command, the library:
+1. Receives the command via the protocol layer
+2. Looks up the corresponding profile definition (e.g., Heart Rate Monitor)
+3. Translates the profile into a series of BLE stack operations
+4. Applies the configuration through the `PluginConfig` trait to the platform-specific BLE stack (ESP32-Nimble)
+5. Returns success/error status back to the host
 
 **Key Product Differentiator**: A host device can issue a single command to configure an entire BLE profile on a remote plugin device:
 
@@ -681,16 +701,16 @@ The inversion (trait provides algorithm, implementer provides primitives) differ
 
 ---
 
-## 9. Implementation
+## 10. Implementation
 
-### 9.1 Current Status
+### 10.1 Current Status
 
 - 14 standard profiles implemented
 - 45 unit tests (all passing)
 - 1 production BLE stack implementation (ESP32-Nimble)
 - Zero platform-specific code in profile definitions
 
-### 9.2 Test Coverage
+### 10.2 Test Coverage
 
 Each profile includes tests for:
 - Profile structure (service/characteristic UUIDs)
@@ -716,7 +736,7 @@ fn test_blood_pressure_profile_structure() {
 }
 ```
 
-### 9.3 Production Deployment
+### 10.3 Production Deployment
 
 ESP32-Nimble integration:
 - Embedded platform (Espressif ESP32)
@@ -728,9 +748,9 @@ Same profile definitions used in development (desktop) and production (embedded)
 
 ---
 
-## 10. Technical Specifications
+## 11. Technical Specifications
 
-### 10.1 Profile Definition Schema
+### 11.1 Profile Definition Schema
 
 ```rust
 pub struct ProfileDefinition {
@@ -749,7 +769,7 @@ pub struct CharacteristicDefinition {
 }
 ```
 
-### 10.2 BLE Property Flags
+### 11.2 BLE Property Flags
 
 | Property | Value | Description |
 |----------|-------|-------------|
@@ -759,7 +779,7 @@ pub struct CharacteristicDefinition {
 | Indicate | 8 | Indications (with acknowledgment) |
 | WriteWithoutResponse | 16 | Write without response |
 
-### 10.3 Profile Summary
+### 11.3 Profile Summary
 
 | Profile | Service UUID | Characteristics | Application |
 |---------|--------------|-----------------|-------------|
