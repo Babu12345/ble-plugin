@@ -24,11 +24,11 @@ HOST          PLUGIN DEVICE       BLE CLIENTS
     │         └───────┘                │
 ```
 
-**Library Integration Point**: The `plugin_config` library runs on the plugin device (ESP32), sitting between the protocol layer (USB/Serial commands) and the BLE stack implementation. When a host sends a profile configuration command, the library:
+**Library Integration Point**: The `plugin_config` library runs on the plugin device, sitting between the protocol layer (USB/Serial commands) and the BLE stack implementation. When a host sends a profile configuration command, the library:
 1. Receives the command via the protocol layer
 2. Looks up the corresponding profile definition (e.g., Heart Rate Monitor)
 3. Translates the profile into a series of BLE stack operations
-4. Applies the configuration through the `PluginConfig` trait to the platform-specific BLE stack (ESP32-Nimble)
+4. Applies the configuration through the `PluginConfig` trait to the platform-specific BLE stack
 5. Returns success/error status back to the host
 
 **Bidirectional Data Flow**: Once configured, the system enables full bidirectional data exchange:
