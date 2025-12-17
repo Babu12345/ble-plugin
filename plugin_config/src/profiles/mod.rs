@@ -18,8 +18,12 @@ pub mod glucose_monitoring;
 pub mod health_thermometer;
 pub mod heart_rate;
 pub mod hid_over_gatt;
+pub mod location_navigation;
 pub mod phone_alert_status;
 pub mod proximity;
+pub mod pulse_oximeter;
+pub mod running_speed_cadence;
+pub mod user_data;
 pub mod weight_scale;
 
 /// A complete BLE profile definition containing one or more services.

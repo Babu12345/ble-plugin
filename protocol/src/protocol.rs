@@ -595,6 +595,14 @@ pub enum BleProfile {
     WeightScale = 13,
     /// Phone Alert Status profile - Smartwatch notifications, wearable alerts
     PhoneAlertStatus = 14,
+    /// Running Speed and Cadence profile - Running shoes, fitness trackers, running pods
+    RunningSpeedCadence = 15,
+    /// Pulse Oximeter profile - Medical monitors, SpO2 sensors, health tracking
+    PulseOximeter = 16,
+    /// Location and Navigation profile - Asset tracking, GPS devices, indoor positioning
+    LocationNavigation = 17,
+    /// User Data profile - Multi-user devices, personalized health data, fitness equipment
+    UserData = 18,
 }
 impl BleProfile {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -618,6 +626,10 @@ impl BleProfile {
             Self::BloodPressure => "BloodPressure",
             Self::WeightScale => "WeightScale",
             Self::PhoneAlertStatus => "PhoneAlertStatus",
+            Self::RunningSpeedCadence => "RunningSpeedCadence",
+            Self::PulseOximeter => "PulseOximeter",
+            Self::LocationNavigation => "LocationNavigation",
+            Self::UserData => "UserData",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -638,6 +650,10 @@ impl BleProfile {
             "BloodPressure" => Some(Self::BloodPressure),
             "WeightScale" => Some(Self::WeightScale),
             "PhoneAlertStatus" => Some(Self::PhoneAlertStatus),
+            "RunningSpeedCadence" => Some(Self::RunningSpeedCadence),
+            "PulseOximeter" => Some(Self::PulseOximeter),
+            "LocationNavigation" => Some(Self::LocationNavigation),
+            "UserData" => Some(Self::UserData),
             _ => None,
         }
     }

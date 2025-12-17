@@ -235,6 +235,14 @@ enum BleProfile {
   WeightScale = 13;
   // Phone Alert Status profile - Smartwatch notifications, wearable alerts
   PhoneAlertStatus = 14;
+  // Running Speed and Cadence profile - Running shoes, fitness trackers, running pods
+  RunningSpeedCadence = 15;
+  // Pulse Oximeter profile - Medical monitors, SpO2 sensors, health tracking
+  PulseOximeter = 16;
+  // Location and Navigation profile - Asset tracking, GPS devices, indoor positioning
+  LocationNavigation = 17;
+  // User Data profile - Multi-user devices, personalized health data, fitness equipment
+  UserData = 18;
 }
 
 // Host command. Configure BLE profile

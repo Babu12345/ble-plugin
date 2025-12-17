@@ -111,6 +111,10 @@ pub trait PluginConfig<ERROR: Debug> {
     /// - BloodPressure: Blood Pressure Service (0x1810)
     /// - WeightScale: Weight Scale Service (0x181D)
     /// - PhoneAlertStatus: Phone Alert Status Service (0x180E)
+    /// - RunningSpeedCadence: Running Speed and Cadence Service (0x1814)
+    /// - PulseOximeter: Pulse Oximeter Service (0x1822)
+    /// - LocationNavigation: Location and Navigation Service (0x1819)
+    /// - UserData: User Data Service (0x181C)
     ///
     /// Implementations must provide:
     /// - `restart_server_with_profile()` to restart the BLE server
@@ -173,6 +177,22 @@ pub trait PluginConfig<ERROR: Debug> {
             }
             Ok(BleProfile::PhoneAlertStatus) => {
                 let profile_def = profiles::phone_alert_status::phone_alert_status_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::RunningSpeedCadence) => {
+                let profile_def = profiles::running_speed_cadence::running_speed_cadence_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::PulseOximeter) => {
+                let profile_def = profiles::pulse_oximeter::pulse_oximeter_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::LocationNavigation) => {
+                let profile_def = profiles::location_navigation::location_navigation_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::UserData) => {
+                let profile_def = profiles::user_data::user_data_profile();
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::Unspecified) | Err(_) => {

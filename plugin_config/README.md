@@ -14,30 +14,34 @@ Hardware-agnostic BLE profile configuration library for the BLE Plugin system.
 - **Type-Safe**: Rust's type system ensures correct profile configuration
 - **Comprehensive Testing**: Each profile includes unit tests validating structure and default values
 
-## Supported BLE Profiles
+## Supported BLE Profiles (18+)
 
-### Health & Fitness
+### Health & Fitness (10 profiles)
 - **Heart Rate Monitor** (0x180D) - Heart rate measurement and body sensor location
 - **Blood Pressure** (0x1810) - Blood pressure monitoring with measurement and feature characteristics
 - **Glucose Monitoring** (0x1808) - Continuous glucose monitoring with context and record access
 - **Weight Scale** (0x181D) - Weight measurements with BMI support and multi-user capability
 - **Health Thermometer** (0x1809) - Temperature measurement with type and interval characteristics
 - **Cycling Speed and Cadence** (0x1816) - Bike computer data with sensor location
+- **Running Speed and Cadence** (0x1814) - Running shoes, fitness trackers, running pods with stride length and distance
+- **Pulse Oximeter** (0x1822) - SpO2 and pulse rate monitoring for medical and fitness applications
+- **Location and Navigation** (0x1819) - GPS tracking, asset tracking, indoor positioning with waypoints
+- **User Data** (0x181C) - Multi-user support for personalized health and fitness data
 
-### IoT & Sensors
+### IoT & Sensors (3 profiles)
 - **Environmental Sensing** (0x181A) - Temperature, humidity, and pressure sensors
 - **Battery Service** (0x180F) - Battery level monitoring
 - **Proximity Profile** (0x1802/0x1803/0x1804) - Item finders and asset tracking
 
-### Device Information & Time
+### Device Information & Time (2 profiles)
 - **Device Information** (0x180A) - Manufacturer name, model number, firmware revision
 - **Current Time Service** (0x1805) - Time synchronization for watches and devices
 
-### User Interface
+### User Interface (2 profiles)
 - **HID over GATT** (0x1812) - Keyboards, mice, game controllers, remote controls
 - **Phone Alert Status** (0x180E) - Smartwatch notifications and wearable alerts
 
-### Custom
+### Custom (1 profile)
 - **Custom Profile** - User-defined services and characteristics configured via commands
 
 ## Architecture
