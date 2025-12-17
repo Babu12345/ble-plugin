@@ -1,9 +1,5 @@
 # BLE Profile Library - Technical Documentation
 
-**Document Purpose**: Technical overview of the hardware-agnostic BLE profile library system for patent evaluation.
-
-**Date**: December 2025
-
 ---
 
 ## 1. System Context
