@@ -257,6 +257,35 @@ pub trait PluginConfig<ERROR: Debug> {
     fn handle_unknown_profile(&mut self) -> Result<(), ERROR> {
         unimplemented!("Please implement handle_unknown_profile to handle unknown profile errors")
     }
+
+    /// Clear all services and associated metadata.
+    ///
+    /// This method removes all configured BLE services and resets internal metadata
+    /// tracking (service-to-characteristic mappings, etc.). This is useful when you need
+    /// to reconfigure the device from scratch without restarting.
+    ///
+    /// # Implementation Notes
+    /// Implementations should:
+    /// 1. Clear all BLE services from the underlying stack
+    /// 2. Reset internal metadata tracking structures
+    /// 3. Ensure atomic operation (clear services first, then metadata)
+    /// 4. Maintain peripheral-level configuration (name, address, etc.)
+    ///
+    /// # Returns
+    /// Result indicating success or failure
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Clear existing configuration before applying a new profile
+    /// device.handle_clear_all_services()?;
+    /// device.handle_configure_profile(ConfigureProfile {
+    ///     profile: BleProfile::HeartRateMonitor,
+    ///     save_on_disconnect: false,
+    /// })?;
+    /// ```
+    fn handle_clear_all_services(&mut self) -> Result<(), ERROR> {
+        unimplemented!("Please implement handle_clear_all_services to clear all BLE services and metadata")
+    }
 }
 
 /// Enum representing the possible states of the blink indication

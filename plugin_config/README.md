@@ -131,10 +131,16 @@ impl PluginConfig<MyError> for MyBleStack {
     fn handle_unknown_profile(&mut self) -> Result<(), MyError> {
         Err(MyError::UnknownProfile)
     }
+
+    fn handle_clear_all_services(&mut self) -> Result<(), MyError> {
+        // Clear all services from your BLE stack
+        // Reset internal metadata tracking
+        Ok(())
+    }
 }
 ```
 
-The `handle_configure_profile` method has a default implementation that automatically handles all standard profiles. You only need to implement the low-level methods and the two hooks.
+The `handle_configure_profile` method has a default implementation that automatically handles all standard profiles. You only need to implement the low-level methods and the hooks.
 
 ### Using a Standard Profile
 
@@ -170,6 +176,27 @@ ble_stack.handle_configure_profile(HostCommandConfigureProfile {
     save_on_disconnect: false,
 })?;
 ```
+
+### Clearing Services
+
+Clear all configured services and metadata to start fresh:
+
+```rust
+// Clear all existing services and metadata
+ble_stack.handle_clear_all_services()?;
+
+// Now configure a new profile from scratch
+ble_stack.handle_configure_profile(HostCommandConfigureProfile {
+    profile: BleProfile::HeartRateMonitor,
+    save_on_disconnect: false,
+})?;
+```
+
+This is useful when:
+- Switching between different profiles dynamically
+- Recovering from configuration errors
+- Implementing profile hot-swapping without device restart
+- Testing different configurations during development
 
 ## Profile Definitions Module
 

@@ -249,7 +249,7 @@ where
                 .clear_services(),
         );
 
-        self.clear_all_services_and_metadata();
+        self.handle_clear_all_services()?;
         log::info!("Successfully configured peripheral '{}'", cmd.name);
         Ok(())
     }
@@ -854,6 +854,13 @@ where
         })?;
 
         log::info!("Successfully stopped BLE advertisement");
+        Ok(())
+    }
+
+    fn handle_clear_all_services(&mut self) -> Result<()> {
+        log::info!("Clearing all BLE services and metadata");
+        self.clear_all_services_and_metadata();
+        log::info!("Successfully cleared all services and metadata");
         Ok(())
     }
 }
