@@ -6,9 +6,94 @@
 
 ---
 
-## 1. Technical Problem
+## 1. System Context
 
-### 1.1 BLE Development Fragmentation
+### 1.1 BLE Plugin Architecture
+
+This profile library is part of a larger BLE plugin system that enables host devices to remotely configure and control BLE peripherals through a command-based protocol:
+
+```
+┌─────────────────┐     USB/Serial      ┌─────────────────┐     BLE Radio      ┌─────────────┐
+│   Host Device   │ ─────────────────►  │  Plugin Device  │ ─────────────────► │ BLE Clients │
+│ (PC/Mobile/     │  Single Command     │  (ESP32 + BLE)  │   Full Profile     │ (Phones,    │
+│  Embedded)      │  "HeartRate"        │  Configured     │   Operational      │  Watches)   │
+└─────────────────┘                     └─────────────────┘                    └─────────────┘
+```
+
+**Key Product Differentiator**: A host device can issue a single command to configure an entire BLE profile on a remote plugin device:
+
+```rust
+// Host sends one command over USB/Serial
+HostCommandConfigureProfile {
+    profile: BleProfile::HeartRateMonitor,
+    save_on_disconnect: true,
+}
+
+// Plugin device automatically:
+// 1. Creates Heart Rate Service (0x180D)
+// 2. Adds Heart Rate Measurement characteristic (Notify)
+// 3. Adds Body Sensor Location characteristic (Read, default: Chest)
+// 4. Restarts BLE server
+// 5. Begins advertising as Heart Rate Monitor
+```
+
+This eliminates the need for hosts to:
+- Send individual commands for each service
+- Send individual commands for each characteristic
+- Manage configuration sequence and dependencies
+- Understand BLE stack implementation details
+
+(Note: Hosts can still use individual commands for custom profiles if needed, providing full flexibility alongside convenience)
+
+**Traditional Approach** (requires 5+ commands):
+```
+1. ConfigureService(0x180D)
+2. ConfigureCharacteristic(0x2A37, properties: Notify)
+3. ConfigureCharacteristic(0x2A38, properties: Read)
+4. SetCharacteristicValue(0x2A38, value: [1])  // Body Sensor Location
+5. RestartServer()
+```
+
+**This System** (single command):
+```
+1. ConfigureProfile(HeartRateMonitor)  // Done
+```
+
+**Alternative: Custom Profile Approach**
+
+Users can also build custom profiles using individual commands if standard profiles don't meet their needs:
+
+```rust
+// Flexibility: Build custom BLE profile step-by-step
+1. ConfigureService(0x1234)                    // Custom service UUID
+2. ConfigureCharacteristic(0x5678, Notify)      // Custom characteristic
+3. ConfigureCharacteristic(0x9ABC, Read|Write)  // Another characteristic
+4. SetCharacteristicValue(0x9ABC, [1, 2, 3])   // Set default value
+5. ConfigureProfile(Custom)                     // Apply custom configuration
+```
+
+This dual approach provides:
+- **Standardized Profiles**: One-command deployment for common use cases
+- **Custom Profiles**: Full flexibility for proprietary or specialized applications
+- **Hybrid Approach**: Combine standard profiles with custom characteristics
+
+### 1.2 Protocol Integration
+
+The profile library integrates with a USB-BLE bridge protocol:
+
+- **Protocol Buffers**: Cross-language message serialization (Rust, Python, JavaScript)
+- **Type-Safe Commands**: Compile-time verification of message structure
+- **5-Byte Message Header**: Magic number, type ID, payload length
+- **Bidirectional**: Host commands to plugin, plugin responses/data to host
+- **Extensible**: New profiles added without protocol changes
+
+This enables diverse host platforms (Linux, Windows, macOS, mobile) to configure BLE plugins using their native languages while the plugin firmware (Rust/embedded) handles implementation details.
+
+---
+
+## 2. Technical Problem
+
+### 2.1 BLE Development Fragmentation
 
 Current BLE development requires separate implementations for each BLE stack:
 
@@ -18,7 +103,7 @@ Current BLE development requires separate implementations for each BLE stack:
 - **Testing**: Profile behavior validated independently on each platform
 - **Portability**: Applications tied to specific hardware/stack combinations
 
-### 1.2 Implementation Overhead
+### 2.2 Implementation Overhead
 
 Implementing a Heart Rate Monitor profile across platforms:
 - ESP32-Nimble: ~200 lines of stack-specific code
@@ -28,19 +113,20 @@ Implementing a Heart Rate Monitor profile across platforms:
 
 Total: ~930 lines of duplicated logic for a single profile.
 
-### 1.3 Solution Approach
+### 2.3 Solution Approach
 
 This system provides:
 1. Single profile definition (~50 lines) works across all stacks
 2. Trait implementation automatically applies profile to any BLE stack
 3. Compile-time verification of profile correctness
 4. Hardware-independent profile definitions
+5. Single command configuration from host devices
 
 ---
 
-## 2. System Architecture
+## 3. System Architecture
 
-### 2.1 Three-Layer Design
+### 3.1 Three-Layer Design
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -70,7 +156,7 @@ This system provides:
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Trait-Based Abstraction
+### 3.2 Trait-Based Abstraction
 
 **PluginConfig Trait** with default profile handling:
 
@@ -120,9 +206,9 @@ pub trait PluginConfig<ERROR: Debug> {
 
 ---
 
-## 3. Implemented Profiles
+## 4. Implemented Profiles
 
-### 3.1 Profile Coverage (14 Total)
+### 4.1 Profile Coverage (14 Total)
 
 #### Medical & Health (6 profiles)
 
@@ -225,7 +311,7 @@ pub trait PluginConfig<ERROR: Debug> {
     - Applications: Proprietary devices, research, prototyping
     - Use: Innovation beyond standard profiles
 
-### 3.2 Profile Definition Structure
+### 4.2 Profile Definition Structure
 
 ```rust
 pub struct ProfileDefinition {
@@ -246,9 +332,9 @@ pub struct CharacteristicDefinition {
 
 ---
 
-## 4. Hardware Abstraction
+## 5. Hardware Abstraction
 
-### 4.1 Platform Independence
+### 5.1 Platform Independence
 
 Profile definitions contain no platform-specific code.
 
@@ -313,9 +399,9 @@ Enables integration with:
 
 ---
 
-## 5. Technical Differentiators
+## 6. Technical Differentiators
 
-### 5.1 Type Safety
+### 6.1 Type Safety
 
 Compile-time verification of profile implementation:
 
@@ -330,7 +416,7 @@ impl PluginConfig<Error> for MyBleStack {
 
 Missing implementations cause compilation errors.
 
-### 5.2 Default Trait Implementation Pattern
+### 6.2 Default Trait Implementation Pattern
 
 Trait provides algorithm, implementations provide primitives:
 
@@ -350,7 +436,7 @@ trait PluginConfig {
 
 Profile application logic written once, shared across all implementations.
 
-### 5.3 Declarative Profile Definition
+### 6.3 Declarative Profile Definition
 
 Profiles as immutable data structures:
 
@@ -378,9 +464,9 @@ Properties:
 
 ---
 
-## 6. Applications
+## 7. Applications
 
-### 6.1 Medical Device Development
+### 7.1 Medical Device Development
 
 Multi-platform medical devices (e.g., continuous glucose monitor):
 - Define glucose profile once
@@ -388,7 +474,7 @@ Multi-platform medical devices (e.g., continuous glucose monitor):
 - Profile logic identical across platforms
 - Regulatory testing simplified
 
-### 6.2 Consumer Electronics
+### 7.2 Consumer Electronics
 
 Product lifecycle example (smart fitness tracker):
 - Phase 1: Prototype on ESP32
@@ -397,7 +483,7 @@ Product lifecycle example (smart fitness tracker):
 
 Profile definitions remain unchanged across phases.
 
-### 6.3 IoT Platform Providers
+### 7.3 IoT Platform Providers
 
 Platform supporting heterogeneous devices:
 - Devices use different BLE stacks
@@ -405,7 +491,7 @@ Platform supporting heterogeneous devices:
 - Reduced integration testing
 - Automated profile validation
 
-### 6.4 Testing & Certification
+### 7.4 Testing & Certification
 
 BLE qualification testing:
 - Reference implementation for each profile
@@ -414,9 +500,9 @@ BLE qualification testing:
 
 ---
 
-## 7. Prior Art Analysis
+## 8. Prior Art Analysis
 
-### 7.1 Existing Systems
+### 8.1 Existing Systems
 
 **Bluetooth SIG Specifications**:
 - Define profile behavior and characteristics
@@ -431,7 +517,7 @@ BLE qualification testing:
 - Do not provide profile-level abstraction
 - Do not support multi-stack on same platform
 
-### 7.2 Technical Novelty
+### 8.2 Technical Novelty
 
 1. **Hardware-Agnostic Profile Definition**: Using Rust data structures to define profiles independently of BLE stack
 
@@ -443,7 +529,7 @@ BLE qualification testing:
 
 5. **Protocol Buffer Integration**: Cross-language profile configuration
 
-### 7.3 Non-Obvious Aspects
+### 8.3 Non-Obvious Aspects
 
 Standard abstraction approach:
 - Wrapper around each BLE stack API
@@ -460,16 +546,16 @@ The inversion (trait provides algorithm, implementer provides primitives) differ
 
 ---
 
-## 8. Implementation
+## 9. Implementation
 
-### 8.1 Current Status
+### 9.1 Current Status
 
 - 14 standard profiles implemented
 - 45 unit tests (all passing)
 - 1 production BLE stack implementation (ESP32-Nimble)
 - Zero platform-specific code in profile definitions
 
-### 8.2 Test Coverage
+### 9.2 Test Coverage
 
 Each profile includes tests for:
 - Profile structure (service/characteristic UUIDs)
@@ -495,7 +581,7 @@ fn test_blood_pressure_profile_structure() {
 }
 ```
 
-### 8.3 Production Deployment
+### 9.3 Production Deployment
 
 ESP32-Nimble integration:
 - Embedded platform (Espressif ESP32)
@@ -507,9 +593,9 @@ Same profile definitions used in development (desktop) and production (embedded)
 
 ---
 
-## 9. Technical Specifications
+## 10. Technical Specifications
 
-### 9.1 Profile Definition Schema
+### 10.1 Profile Definition Schema
 
 ```rust
 pub struct ProfileDefinition {
@@ -528,7 +614,7 @@ pub struct CharacteristicDefinition {
 }
 ```
 
-### 9.2 BLE Property Flags
+### 10.2 BLE Property Flags
 
 | Property | Value | Description |
 |----------|-------|-------------|
@@ -538,7 +624,7 @@ pub struct CharacteristicDefinition {
 | Indicate | 8 | Indications (with acknowledgment) |
 | WriteWithoutResponse | 16 | Write without response |
 
-### 9.3 Profile Summary
+### 10.3 Profile Summary
 
 | Profile | Service UUID | Characteristics | Application |
 |---------|--------------|-----------------|-------------|
