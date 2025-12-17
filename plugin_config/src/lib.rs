@@ -115,6 +115,12 @@ pub trait PluginConfig<ERROR: Debug> {
     /// - PulseOximeter: Pulse Oximeter Service (0x1822)
     /// - LocationNavigation: Location and Navigation Service (0x1819)
     /// - UserData: User Data Service (0x181C)
+    /// - ContinuousGlucoseMonitoring: Continuous Glucose Monitoring Service (0x181F)
+    /// - InsulinDelivery: Insulin Delivery Service (0x183A)
+    /// - FitnessMachine: Fitness Machine Service (0x1826)
+    /// - BodyComposition: Body Composition Service (0x181B)
+    /// - ScanParameters: Scan Parameters Service (0x1813)
+    /// - BondManagement: Bond Management Service (0x181E)
     ///
     /// Implementations must provide:
     /// - `restart_server_with_profile()` to restart the BLE server
@@ -193,6 +199,30 @@ pub trait PluginConfig<ERROR: Debug> {
             }
             Ok(BleProfile::UserData) => {
                 let profile_def = profiles::user_data::user_data_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::ContinuousGlucoseMonitoring) => {
+                let profile_def = profiles::continuous_glucose_monitoring::continuous_glucose_monitoring_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::InsulinDelivery) => {
+                let profile_def = profiles::insulin_delivery::insulin_delivery_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::FitnessMachine) => {
+                let profile_def = profiles::fitness_machine::fitness_machine_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::BodyComposition) => {
+                let profile_def = profiles::body_composition::body_composition_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::ScanParameters) => {
+                let profile_def = profiles::scan_parameters::scan_parameters_profile();
+                self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
+            }
+            Ok(BleProfile::BondManagement) => {
+                let profile_def = profiles::bond_management::bond_management_profile();
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::Unspecified) | Err(_) => {

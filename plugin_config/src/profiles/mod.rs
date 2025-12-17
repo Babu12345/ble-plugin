@@ -10,19 +10,25 @@
 
 pub mod battery_service;
 pub mod blood_pressure;
+pub mod body_composition;
+pub mod bond_management;
+pub mod continuous_glucose_monitoring;
 pub mod current_time;
 pub mod cycling_speed_cadence;
 pub mod device_info;
 pub mod environmental_sensing;
+pub mod fitness_machine;
 pub mod glucose_monitoring;
 pub mod health_thermometer;
 pub mod heart_rate;
 pub mod hid_over_gatt;
+pub mod insulin_delivery;
 pub mod location_navigation;
 pub mod phone_alert_status;
 pub mod proximity;
 pub mod pulse_oximeter;
 pub mod running_speed_cadence;
+pub mod scan_parameters;
 pub mod user_data;
 pub mod weight_scale;
 

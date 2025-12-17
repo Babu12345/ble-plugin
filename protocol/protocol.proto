@@ -243,6 +243,18 @@ enum BleProfile {
   LocationNavigation = 17;
   // User Data profile - Multi-user devices, personalized health data, fitness equipment
   UserData = 18;
+  // Continuous Glucose Monitoring (CGM) profile - Advanced glucose monitors with trend data
+  ContinuousGlucoseMonitoring = 19;
+  // Insulin Delivery profile - Insulin pumps, diabetes management devices
+  InsulinDelivery = 20;
+  // Fitness Machine profile - Gym equipment, treadmills, bikes, rowers
+  FitnessMachine = 21;
+  // Body Composition profile - Smart scales with body analysis, impedance measurement
+  BodyComposition = 22;
+  // Scan Parameters profile - Power-efficient BLE scanning optimization
+  ScanParameters = 23;
+  // Bond Management profile - Secure device pairing and bonding management
+  BondManagement = 24;
 }
 
 // Host command. Configure BLE profile

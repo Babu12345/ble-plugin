@@ -603,6 +603,18 @@ pub enum BleProfile {
     LocationNavigation = 17,
     /// User Data profile - Multi-user devices, personalized health data, fitness equipment
     UserData = 18,
+    /// Continuous Glucose Monitoring (CGM) profile - Advanced glucose monitors with trend data
+    ContinuousGlucoseMonitoring = 19,
+    /// Insulin Delivery profile - Insulin pumps, diabetes management devices
+    InsulinDelivery = 20,
+    /// Fitness Machine profile - Gym equipment, treadmills, bikes, rowers
+    FitnessMachine = 21,
+    /// Body Composition profile - Smart scales with body analysis, impedance measurement
+    BodyComposition = 22,
+    /// Scan Parameters profile - Power-efficient BLE scanning optimization
+    ScanParameters = 23,
+    /// Bond Management profile - Secure device pairing and bonding management
+    BondManagement = 24,
 }
 impl BleProfile {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -630,6 +642,12 @@ impl BleProfile {
             Self::PulseOximeter => "PulseOximeter",
             Self::LocationNavigation => "LocationNavigation",
             Self::UserData => "UserData",
+            Self::ContinuousGlucoseMonitoring => "ContinuousGlucoseMonitoring",
+            Self::InsulinDelivery => "InsulinDelivery",
+            Self::FitnessMachine => "FitnessMachine",
+            Self::BodyComposition => "BodyComposition",
+            Self::ScanParameters => "ScanParameters",
+            Self::BondManagement => "BondManagement",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -654,6 +672,12 @@ impl BleProfile {
             "PulseOximeter" => Some(Self::PulseOximeter),
             "LocationNavigation" => Some(Self::LocationNavigation),
             "UserData" => Some(Self::UserData),
+            "ContinuousGlucoseMonitoring" => Some(Self::ContinuousGlucoseMonitoring),
+            "InsulinDelivery" => Some(Self::InsulinDelivery),
+            "FitnessMachine" => Some(Self::FitnessMachine),
+            "BodyComposition" => Some(Self::BodyComposition),
+            "ScanParameters" => Some(Self::ScanParameters),
+            "BondManagement" => Some(Self::BondManagement),
             _ => None,
         }
     }
