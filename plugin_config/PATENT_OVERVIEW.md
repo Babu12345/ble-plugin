@@ -118,7 +118,7 @@ This enables diverse host platforms (Linux, Windows, macOS, mobile) to configure
 - Cost savings: $50,000-$200,000 per profile across typical product lifecycle
 
 **Faster Time-to-Market**:
-- Pre-built library of 14 production-ready profiles
+- Pre-built library of 14+ production-ready profiles
 - Zero BLE stack API learning curve for standard profiles
 - Immediate cross-platform deployment
 - Competitive advantage: months faster than custom implementations
@@ -196,7 +196,7 @@ impl PluginConfig<MyError> for MyBleStack {
     fn handle_configure_characteristic(&mut self, cmd) -> Result<(), MyError> { ... }
     fn restart_server_with_profile(&mut self, save: bool) -> Result<(), MyError> { ... }
 
-    // Get 14 standard profiles automatically via default trait implementation
+    // Get 14+ standard profiles automatically via default trait implementation
 }
 
 // Use any profile:
@@ -352,7 +352,7 @@ pub trait PluginConfig<ERROR: Debug> {
 
 ## 5. Implemented Profiles
 
-### 5.1 Profile Coverage (14 Total)
+### 5.1 Profile Coverage
 
 #### Medical & Health (6 profiles)
 
