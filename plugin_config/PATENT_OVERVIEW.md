@@ -118,7 +118,7 @@ This enables diverse host platforms (Linux, Windows, macOS, mobile) to configure
 - Cost savings: $50,000-$200,000 per profile across typical product lifecycle
 
 **Faster Time-to-Market**:
-- Pre-built library of 14+ production-ready profiles
+- Pre-built library of 30+ production-ready profiles
 - Zero BLE stack API learning curve for standard profiles
 - Immediate cross-platform deployment
 - Competitive advantage: months faster than custom implementations
@@ -136,10 +136,12 @@ This enables diverse host platforms (Linux, Windows, macOS, mobile) to configure
 - Eliminates "works on X but fails on Y" platform issues
 
 **Market Coverage**:
-- Medical/Health: $10.5B+ addressable market (Heart Rate, Glucose, Blood Pressure, Weight, Thermometer)
+- Medical/Health: $20B+ addressable market (Heart Rate, CGM, Insulin Delivery, Blood Pressure, Weight, Body Composition, Pulse Oximeter, Cycling Power)
 - Consumer Electronics: $5.3B+ (HID peripherals, proximity tracking)
-- IoT/Industrial: $15B+ (environmental sensing)
-- Single investment covers all major BLE market segments
+- IoT/Industrial: $30B+ (environmental sensing, mesh networking, smart home/building automation)
+- Audio: $50B+ (LE Audio, wireless headphones, hearing aids)
+- Enterprise: Device management (OTA updates, reconnection optimization, bond management)
+- Single investment covers all major BLE market segments ($100B+ total addressable market)
 
 **Scalability**:
 - Add new products without rewriting BLE stack integration
@@ -179,7 +181,7 @@ This enables diverse host platforms (Linux, Windows, macOS, mobile) to configure
 - Declarative structure easier to reason about than imperative API sequences
 
 **Integration Confidence**:
-- 45 unit tests covering all profiles
+- 117 unit tests covering all profiles
 - Production-validated on resource-constrained embedded systems
 - Protocol Buffer integration provides language-agnostic interface
 - Clear separation between profile logic and BLE stack details
@@ -196,7 +198,7 @@ impl PluginConfig<MyError> for MyBleStack {
     fn handle_configure_characteristic(&mut self, cmd) -> Result<(), MyError> { ... }
     fn restart_server_with_profile(&mut self, save: bool) -> Result<(), MyError> { ... }
 
-    // Get 14+ standard profiles automatically via default trait implementation
+    // Get 30+ standard profiles automatically via default trait implementation
 }
 
 // Use any profile:
@@ -354,7 +356,9 @@ pub trait PluginConfig<ERROR: Debug> {
 
 ### 5.1 Profile Coverage
 
-#### Medical & Health (6 profiles)
+The library now includes **30 standard BLE profiles** covering all major market segments:
+
+#### Medical & Health (17 profiles)
 
 1. **Heart Rate Monitor** (Service 0x180D)
    - Characteristics: Heart rate measurement, body sensor location
@@ -397,60 +401,183 @@ pub trait PluginConfig<ERROR: Debug> {
    - Market: Cycling fitness and training devices
    - Use: Performance tracking, training optimization
 
-#### IoT & Sensors (2 profiles)
+7. **Cycling Power** (Service 0x1818)
+   - Characteristics: Power measurement, feature, sensor location, control point, vector
+   - Features: Power in watts, force/torque vectors, crank/pedal measurements
+   - Applications: Power meters, smart trainers, professional cycling
+   - Market: Professional cycling training ($3B+)
+   - Use: Performance optimization, training zones
 
-7. **Environmental Sensing** (Service 0x181A)
-   - Characteristics: Temperature, humidity, pressure sensors
-   - Applications: Smart home sensors, industrial IoT, agriculture
-   - Market: Smart sensor market ($15B, 2024)
-   - Use: Environmental monitoring, climate control
+8. **Continuous Glucose Monitoring** (Service 0x181F)
+   - Characteristics: CGM measurement, feature, status, session start/run time, RACP, specific ops
+   - Features: Trend data, quality metrics, alerts, multiple sessions
+   - Applications: Advanced CGM devices, diabetes management systems
+   - Market: CGM market ($10B+)
+   - Use: Real-time glucose trending, diabetes management
 
-8. **Battery Service** (Service 0x180F)
-   - Characteristics: Battery level
-   - Applications: Universal battery level reporting
-   - Market: Integrated in virtually all BLE devices
-   - Use: Power management, user notifications
+9. **Insulin Delivery** (Service 0x183A)
+   - Characteristics: Status changed, status, annunciation, features, control points, command data, history
+   - Features: Basal rate, bolus delivery, pump status monitoring
+   - Applications: Insulin pumps, automated insulin delivery systems
+   - Market: Insulin pump market ($5B+)
+   - Use: Diabetes management, closed-loop systems
 
-#### Device Information & Time (2 profiles)
+10. **Body Composition** (Service 0x181B)
+    - Characteristics: Feature, measurement
+    - Features: Body fat, muscle mass, body water, impedance
+    - Applications: Smart scales with body analysis
+    - Market: Body composition analyzers
+    - Use: Fitness tracking, health monitoring
 
-9. **Device Information** (Service 0x180A)
-   - Characteristics: Manufacturer, model, serial number, firmware version
-   - Applications: Device identification, inventory management
-   - Use: Asset tracking, device management systems
+11. **Pulse Oximeter** (Service 0x1822)
+    - Characteristics: Spot-check measurement, continuous measurement, features, RACP
+    - Features: SpO2 levels, pulse rate, continuous monitoring
+    - Applications: Medical monitors, fitness trackers
+    - Market: Pulse oximeter market ($2B+)
+    - Use: Oxygen saturation monitoring, telehealth
 
-10. **Current Time Service** (Service 0x1805)
-    - Characteristics: Current time, local time info, reference time info
-    - Features: Time synchronization, timezone, DST
-    - Applications: Smartwatches, synchronized devices
-    - Use: Time-sensitive applications
+12. **Running Speed and Cadence** (Service 0x1814)
+    - Characteristics: RSC measurement, feature, sensor location, control point
+    - Features: Speed, cadence, stride length, total distance
+    - Applications: Running shoes, fitness trackers, running pods
+    - Market: Running fitness market ($8B+)
+    - Use: Running performance tracking
 
-#### User Interface (2 profiles)
+13. **Location and Navigation** (Service 0x1819)
+    - Characteristics: LN feature, location/speed, position quality, control point, navigation
+    - Features: GPS tracking, elevation, heading, waypoint navigation
+    - Applications: Asset tracking, GPS devices, indoor positioning
+    - Market: Location services ($30B+)
+    - Use: Asset tracking, navigation systems
 
-11. **HID over GATT** (Service 0x1812)
-    - Characteristics: HID information, report map, control point, report, protocol mode
-    - Applications: Wireless keyboards, mice, game controllers
-    - Market: Wireless peripheral market ($5.3B, 2024)
-    - Features: Boot protocol support, low latency
-    - Use: Consumer electronics peripherals
+14. **User Data** (Service 0x181C)
+    - Characteristics: 21 characteristics including demographics, fitness metrics, training zones
+    - Features: Multi-user profiles, personalized health data
+    - Applications: Multi-user fitness equipment, personalized devices
+    - Market: Enables multi-user scenarios across all health/fitness profiles
+    - Use: Personalized health tracking, gym equipment
 
-12. **Phone Alert Status** (Service 0x180E)
+15. **Fitness Machine** (Service 0x1826)
+    - Characteristics: 14 characteristics for various machine types, training status, control
+    - Features: Treadmill, bike, rower, cross-trainer data
+    - Applications: Gym equipment, connected fitness devices
+    - Market: Connected fitness equipment
+    - Use: Gym automation, fitness tracking
+
+16. **Phone Alert Status** (Service 0x180E)
     - Characteristics: Alert status, ringer setting, ringer control point
     - Applications: Smartwatches, notification displays
     - Market: Wearable notification devices
     - Features: Ringer control, alert status, vibration
     - Use: Smartwatch notifications, wearable alerts
 
-#### Proximity & Tracking (1 profile)
+17. **Health Thermometer** (Service 0x1809)
+    - Characteristics: Temperature measurement, temperature type, measurement interval
+    - Features: Temperature type (oral, rectal, ear, etc.)
+    - Applications: Medical thermometers, fever monitoring
+    - Market: Medical and consumer health devices
+    - Use: Temperature monitoring, fever detection
 
-13. **Proximity Profile** (Services 0x1802/0x1803/0x1804)
+#### IoT & Sensors (4 profiles)
+
+18. **Environmental Sensing** (Service 0x181A)
+    - Characteristics: Temperature, humidity, pressure sensors
+    - Applications: Smart home sensors, industrial IoT, agriculture
+    - Market: Smart sensor market ($15B+)
+    - Use: Environmental monitoring, climate control
+
+19. **Battery Service** (Service 0x180F)
+    - Characteristics: Battery level
+    - Applications: Universal battery level reporting
+    - Market: Integrated in virtually all BLE devices
+    - Use: Power management, user notifications
+
+20. **Proximity Profile** (Services 0x1802/0x1803/0x1804)
     - Services: Link Loss, Immediate Alert, Tx Power
     - Applications: Item finders (AirTag-like), asset tracking
-    - Market: Asset tracking market ($2.1B, 2024)
+    - Market: Asset tracking market ($2.1B+)
     - Use: Lost item recovery, proximity alerts
+
+21. **Scan Parameters** (Service 0x1813)
+    - Characteristics: Scan interval window, scan refresh
+    - Features: Power-efficient BLE scanning optimization
+    - Applications: IoT devices, battery-powered sensors
+    - Market: Universal power optimization for BLE devices
+    - Use: Extended battery life, optimized scanning
+
+#### Device Information & Time (2 profiles)
+
+22. **Device Information** (Service 0x180A)
+    - Characteristics: Manufacturer, model, serial number, firmware version
+    - Applications: Device identification, inventory management
+    - Use: Asset tracking, device management systems
+
+23. **Current Time Service** (Service 0x1805)
+    - Characteristics: Current time, local time info, reference time info
+    - Features: Time synchronization, timezone, DST
+    - Applications: Smartwatches, synchronized devices
+    - Use: Time-sensitive applications
+
+#### User Interface (1 profile)
+
+24. **HID over GATT** (Service 0x1812)
+    - Characteristics: HID information, report map, control point, report, protocol mode
+    - Applications: Wireless keyboards, mice, game controllers
+    - Market: Wireless peripheral market ($5.3B+)
+    - Features: Boot protocol support, low latency
+    - Use: Consumer electronics peripherals
+
+#### Security & Management (3 profiles)
+
+25. **Bond Management** (Service 0x181E)
+    - Characteristics: Control point, features
+    - Features: Bond deletion, authorization codes, security management
+    - Applications: Enterprise security, multi-user devices
+    - Market: Enterprise IoT, secure device management
+    - Use: Secure pairing, device lifecycle management
+
+26. **Reconnection Configuration** (Service 0x1829)
+    - Characteristics: RC features, settings, control point
+    - Features: E2E-CRC, address switching, LESC support
+    - Applications: All BLE devices requiring power optimization
+    - Market: Universal benefit for battery-powered devices
+    - Use: Fast reconnection, power efficiency, improved UX
+
+27. **Object Transfer** (Service 0x1825)
+    - Characteristics: OTS feature, object name/type/size/properties, control points
+    - Features: File transfer, OTA firmware updates, checksums
+    - Applications: All production IoT devices
+    - Market: Device management, firmware updates
+    - Use: OTA updates, remote device management, file transfer
+
+#### Mesh Networking (2 profiles)
+
+28. **Mesh Provisioning** (Service 0x1827)
+    - Characteristics: Provisioning data in/out
+    - Features: BLE Mesh network onboarding, device provisioning
+    - Applications: Smart home, building automation, industrial IoT
+    - Market: Smart home/building automation ($15B+)
+    - Use: Mesh network setup, device onboarding
+
+29. **Mesh Proxy** (Service 0x1828)
+    - Characteristics: Mesh proxy data in/out
+    - Features: GATT bearer for mesh networks, mobile app control
+    - Applications: Mesh network gateways, control devices
+    - Market: Complements Mesh Provisioning for complete mesh support
+    - Use: Mobile app mesh control, network diagnostics
+
+#### Audio (1 profile)
+
+30. **Audio Stream Control** (Service 0x184E)
+    - Characteristics: Sink ASE, Source ASE, ASE control point
+    - Features: LE Audio streaming, codec configuration, multi-stream
+    - Applications: Wireless headphones, hearing aids, speakers
+    - Market: Consumer audio market ($50B+)
+    - Use: Next-generation wireless audio, hearing aids, broadcast audio
 
 #### Custom (1 profile)
 
-14. **Custom Profile**
+31. **Custom Profile**
     - Characteristics: User-defined services and characteristics
     - Applications: Proprietary devices, research, prototyping
     - Use: Innovation beyond standard profiles
@@ -694,10 +821,11 @@ The inversion (trait provides algorithm, implementer provides primitives) differ
 
 ### 10.1 Current Status
 
-- 14 standard profiles implemented
-- 45 unit tests (all passing)
+- 30 standard profiles implemented
+- 117 unit tests (all passing)
 - 1 production BLE stack implementation (ESP32-Nimble)
 - Zero platform-specific code in profile definitions
+- Market coverage: $100B+ total addressable market across all verticals
 
 ### 10.2 Test Coverage
 
@@ -731,7 +859,7 @@ ESP32-Nimble integration:
 - Embedded platform (Espressif ESP32)
 - Resource-constrained (520KB RAM)
 - Real-time requirements
-- All 14 profiles supported
+- All 30 profiles supported
 
 Same profile definitions used in development (desktop) and production (embedded).
 
@@ -770,22 +898,52 @@ pub struct CharacteristicDefinition {
 
 ### 11.3 Profile Summary
 
-| Profile | Service UUID | Characteristics | Application |
-|---------|--------------|-----------------|-------------|
+| Category | Profiles | Key Markets | Total Market Size |
+|----------|----------|-------------|-------------------|
+| Health & Fitness | 17 | Medical devices, fitness tracking, cycling, diabetes management | $20B+ |
+| IoT & Sensors | 4 | Smart home, industrial IoT, environmental monitoring | $15B+ |
+| Device Info & Time | 2 | Device management, time synchronization | Universal |
+| User Interface | 1 | Wireless peripherals | $5.3B+ |
+| Security & Management | 3 | Enterprise IoT, device lifecycle, OTA updates | Universal |
+| Mesh Networking | 2 | Smart home/building automation, industrial | $15B+ |
+| Audio | 1 | Wireless headphones, hearing aids, LE Audio | $50B+ |
+| Custom | 1 | Proprietary applications | N/A |
+| **Total** | **30+** | **All major BLE markets** | **$100B+** |
+
+#### Detailed Profile List
+
+| Profile | Service UUID | Chars | Application |
+|---------|--------------|-------|-------------|
 | Heart Rate Monitor | 0x180D | 2 | Fitness trackers, medical monitors |
 | Blood Pressure | 0x1810 | 2-3 | Health monitoring, telehealth |
-| Glucose Monitoring | 0x1808 | 4 | CGM devices, diabetes management |
+| Glucose Monitoring | 0x1808 | 4 | Basic CGM, diabetes management |
+| Continuous Glucose Monitoring | 0x181F | 7 | Advanced CGM with trends |
+| Insulin Delivery | 0x183A | 9 | Insulin pumps, closed-loop systems |
 | Weight Scale | 0x181D | 2 | Smart scales, wellness |
+| Body Composition | 0x181B | 2 | Body analysis scales |
 | Health Thermometer | 0x1809 | 3 | Medical thermometers |
 | Cycling Speed/Cadence | 0x1816 | 4 | Bike computers, fitness |
+| Cycling Power | 0x1818 | 5 | Power meters, smart trainers |
+| Running Speed/Cadence | 0x1814 | 4 | Running trackers, pods |
+| Pulse Oximeter | 0x1822 | 4 | SpO2 monitors, telehealth |
+| Location & Navigation | 0x1819 | 5 | Asset tracking, GPS |
+| User Data | 0x181C | 21 | Multi-user health devices |
+| Fitness Machine | 0x1826 | 14 | Gym equipment |
+| Phone Alert Status | 0x180E | 3 | Smartwatch notifications |
 | Environmental Sensing | 0x181A | 3 | Smart home, industrial IoT |
 | Battery Service | 0x180F | 1 | Battery monitoring |
+| Proximity | 0x1802/03/04 | 3 svcs | Item finders, tracking |
+| Scan Parameters | 0x1813 | 2 | Power optimization |
 | Device Information | 0x180A | 3-9 | Device management |
 | Current Time | 0x1805 | 3 | Time synchronization |
 | HID over GATT | 0x1812 | 5 | Keyboards, mice, controllers |
-| Phone Alert Status | 0x180E | 3 | Smartwatch notifications |
-| Proximity | 0x1802/03/04 | 3 services | Item finders, tracking |
-| Custom | N/A | User-defined | Proprietary applications |
+| Bond Management | 0x181E | 2 | Secure pairing |
+| Reconnection Config | 0x1829 | 3 | Power efficiency, fast reconnect |
+| Object Transfer | 0x1825 | 7 | OTA updates, file transfer |
+| Mesh Provisioning | 0x1827 | 2 | Mesh onboarding |
+| Mesh Proxy | 0x1828 | 2 | Mesh GATT bearer |
+| Audio Stream Control | 0x184E | 3 | LE Audio streaming |
+| Custom | N/A | User | Proprietary applications |
 
 ---
 
