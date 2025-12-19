@@ -94,6 +94,62 @@ pub trait PluginConfig<ERROR: Debug> {
         unimplemented!("Please implement handle_get_characteristic_info to retrieve characteristic information")
     }
 
+    /// Restart the BLE server with the configured profile.
+    ///
+    /// This method should restart the BLE server to apply the new profile configuration.
+    /// Implementations may also handle NVS persistence if `save_on_disconnect` is true.
+    ///
+    /// # Arguments
+    /// * `save_on_disconnect` - Whether to save the profile configuration to NVS
+    ///
+    /// # Returns
+    /// Result indicating success or failure
+    fn restart_server_with_profile(&mut self, _save_on_disconnect: bool) -> Result<(), ERROR> {
+        unimplemented!("Please implement restart_server_with_profile to restart the BLE server")
+    }
+
+    /// Handle unknown or unspecified profile.
+    ///
+    /// This method is called when an unknown profile ID is received.
+    /// Implementations should return an appropriate error.
+    ///
+    /// # Returns
+    /// Result indicating failure with appropriate error
+    fn handle_unknown_profile(&mut self) -> Result<(), ERROR> {
+        unimplemented!("Please implement handle_unknown_profile to handle unknown profile errors")
+    }
+
+    /// Clear all services and associated metadata.
+    ///
+    /// This method removes all configured BLE services and resets internal metadata
+    /// tracking (service-to-characteristic mappings, etc.). This is useful when you need
+    /// to reconfigure the device from scratch without restarting.
+    ///
+    /// # Implementation Notes
+    /// Implementations should:
+    /// 1. Clear all BLE services from the underlying stack
+    /// 2. Reset internal metadata tracking structures
+    /// 3. Ensure atomic operation (clear services first, then metadata)
+    /// 4. Maintain peripheral-level configuration (name, address, etc.)
+    ///
+    /// # Returns
+    /// Result indicating success or failure
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Clear existing configuration before applying a new profile
+    /// device.handle_clear_all_services()?;
+    /// device.handle_configure_profile(ConfigureProfile {
+    ///     profile: BleProfile::HeartRateMonitor,
+    ///     save_on_disconnect: false,
+    /// })?;
+    /// ```
+    fn handle_clear_all_services(&mut self) -> Result<(), ERROR> {
+        unimplemented!(
+            "Please implement handle_clear_all_services to clear all BLE services and metadata"
+        )
+    }
+
     /// Handle configure profile
     ///
     /// Default implementation that handles standard BLE profiles:
@@ -208,7 +264,9 @@ pub trait PluginConfig<ERROR: Debug> {
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::ContinuousGlucoseMonitoring) => {
-                let profile_def = profiles::continuous_glucose_monitoring::continuous_glucose_monitoring_profile();
+                let profile_def =
+                    profiles::continuous_glucose_monitoring::continuous_glucose_monitoring_profile(
+                    );
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::InsulinDelivery) => {
@@ -236,7 +294,8 @@ pub trait PluginConfig<ERROR: Debug> {
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::ReconnectionConfiguration) => {
-                let profile_def = profiles::reconnection_configuration::reconnection_configuration_profile();
+                let profile_def =
+                    profiles::reconnection_configuration::reconnection_configuration_profile();
                 self.apply_profile_definition(profile_def, cmd.save_on_disconnect)?;
             }
             Ok(BleProfile::ObjectTransfer) => {
@@ -311,60 +370,6 @@ pub trait PluginConfig<ERROR: Debug> {
         self.restart_server_with_profile(save_on_disconnect)?;
 
         Ok(())
-    }
-
-    /// Restart the BLE server with the configured profile.
-    ///
-    /// This method should restart the BLE server to apply the new profile configuration.
-    /// Implementations may also handle NVS persistence if `save_on_disconnect` is true.
-    ///
-    /// # Arguments
-    /// * `save_on_disconnect` - Whether to save the profile configuration to NVS
-    ///
-    /// # Returns
-    /// Result indicating success or failure
-    fn restart_server_with_profile(&mut self, _save_on_disconnect: bool) -> Result<(), ERROR> {
-        unimplemented!("Please implement restart_server_with_profile to restart the BLE server")
-    }
-
-    /// Handle unknown or unspecified profile.
-    ///
-    /// This method is called when an unknown profile ID is received.
-    /// Implementations should return an appropriate error.
-    ///
-    /// # Returns
-    /// Result indicating failure with appropriate error
-    fn handle_unknown_profile(&mut self) -> Result<(), ERROR> {
-        unimplemented!("Please implement handle_unknown_profile to handle unknown profile errors")
-    }
-
-    /// Clear all services and associated metadata.
-    ///
-    /// This method removes all configured BLE services and resets internal metadata
-    /// tracking (service-to-characteristic mappings, etc.). This is useful when you need
-    /// to reconfigure the device from scratch without restarting.
-    ///
-    /// # Implementation Notes
-    /// Implementations should:
-    /// 1. Clear all BLE services from the underlying stack
-    /// 2. Reset internal metadata tracking structures
-    /// 3. Ensure atomic operation (clear services first, then metadata)
-    /// 4. Maintain peripheral-level configuration (name, address, etc.)
-    ///
-    /// # Returns
-    /// Result indicating success or failure
-    ///
-    /// # Example
-    /// ```ignore
-    /// // Clear existing configuration before applying a new profile
-    /// device.handle_clear_all_services()?;
-    /// device.handle_configure_profile(ConfigureProfile {
-    ///     profile: BleProfile::HeartRateMonitor,
-    ///     save_on_disconnect: false,
-    /// })?;
-    /// ```
-    fn handle_clear_all_services(&mut self) -> Result<(), ERROR> {
-        unimplemented!("Please implement handle_clear_all_services to clear all BLE services and metadata")
     }
 }
 
