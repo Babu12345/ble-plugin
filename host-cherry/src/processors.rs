@@ -450,7 +450,6 @@ unsafe fn send_usb_data(
                     reconnect_attempts = 0; // Reset on successful reconnection
                 } else {
                     log::warn!("CDC device verification failed in send thread, retrying...");
-                    continue;
                 }
                 continue;
             }
