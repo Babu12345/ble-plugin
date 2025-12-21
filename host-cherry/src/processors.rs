@@ -5,7 +5,8 @@
 
 use std::{
     sync::{
-        RwLock,
+        Condvar, Mutex as StdMutex, RwLock,
+        atomic::Ordering,
         mpsc::{Receiver, SyncSender},
     },
     time::Duration,
@@ -36,20 +37,92 @@ use crate::utils::{TSenderAndReceiver, ThreadSafeCDCWrapper};
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
+// Synchronization primitive for CDC device readiness
+struct CdcReadySignal {
+    ready: StdMutex<bool>,
+    condvar: Condvar,
+    configured: AtomicBool,
+    generation: AtomicBool, // Toggle on each connect/disconnect to force new waits
+}
+
+impl CdcReadySignal {
+    const fn new() -> Self {
+        Self {
+            ready: StdMutex::new(false),
+            condvar: Condvar::new(),
+            configured: AtomicBool::new(false),
+            generation: AtomicBool::new(false),
+        }
+    }
+
+    fn signal(&self) {
+        let mut ready = self.ready.lock().unwrap();
+        *ready = true;
+        // Mark as not configured when device reconnects
+        self.configured.store(false, Ordering::Release);
+        // Toggle generation to invalidate stale waits
+        self.generation.fetch_xor(true, Ordering::Release);
+        self.condvar.notify_all();
+    }
+
+    fn wait_ready(&self, timeout: Duration) -> bool {
+        let mut ready = self.ready.lock().unwrap();
+
+        // If already ready, return immediately
+        if *ready {
+            return true;
+        }
+
+        // Otherwise wait for signal with timeout
+        let result = self.condvar.wait_timeout(ready, timeout).unwrap();
+        *result.0
+    }
+
+    fn reset(&self) {
+        let mut ready = self.ready.lock().unwrap();
+        *ready = false;
+        self.configured.store(false, Ordering::Release);
+        // Toggle generation on disconnect too
+        self.generation.fetch_xor(true, Ordering::Release);
+    }
+
+    fn mark_configured(&self) -> bool {
+        // Returns true if we were the first to configure
+        self.configured
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+    }
+
+    fn is_configured(&self) -> bool {
+        self.configured.load(Ordering::Acquire)
+    }
+}
+
+static CDC_READY_SIGNAL: CdcReadySignal = CdcReadySignal::new();
+
 /// Strong reference to the cdc runner defined in C
+/// This callback is invoked asynchronously by the USB stack when the CDC device is enumerated.
 #[unsafe(no_mangle)]
 extern "C" fn usbh_cdc_acm_run(cdc_acm_class: *mut usbh_cdc_acm) {
+    // Ensure proper memory ordering: Release guarantees that the pointer write
+    // is visible to all threads that subsequently Acquire the lock
+    std::sync::atomic::fence(Ordering::Release);
+
     *CDC_LOCKER.write().unwrap() = Some(ThreadSafeCDCWrapper(cdc_acm_class));
-    // TODO: Investigate if setting the line state here causes any issues epecially during the
-    // connection setup stage
-    unsafe { usbh_cdc_acm_set_line_state(cdc_acm_class, true, false) };
+
+    // Signal waiting threads that CDC device is available
+    CDC_READY_SIGNAL.signal();
+
+    log::info!("CDC ACM device enumerated and ready");
 }
 
 /// Strong reference to the cdc acm stopper defined in C
 #[unsafe(no_mangle)]
 #[allow(unused_variables)]
 extern "C" fn usbh_cdc_acm_stop(cdc_acm_class: *mut usbh_cdc_acm) {
+    log::info!("CDC ACM device disconnected");
     *CDC_LOCKER.write().unwrap() = None;
+    CDC_READY_SIGNAL.reset();
 }
 
 /// Initialize the usb host and send out receivers and senders to process and send information to the connected usb device via the cdc acm driver class.
@@ -75,18 +148,33 @@ impl CdcAcmHost<PREINIT> {
     }
     /// Initialize the device
     pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmHost<POSTINIT>, ()> {
-        match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
+        // Use Acquire ordering to ensure we see any previous initialization
+        match IS_INITIALIZED.load(Ordering::Acquire) {
             true => {
+                log::error!("USB host already initialized");
                 return Err(());
             }
             false => {}
         }
 
+        // Reset the ready signal in case of previous failed initialization
+        CDC_READY_SIGNAL.reset();
+
         match unsafe { usbh_initialize(busid, reg_base as usize) } {
             x if x < 0 => {
+                log::error!("USB host initialization failed with code: {}", x);
                 return Err(());
             }
-            _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
+            _ => {
+                // Use Release ordering to ensure initialization is visible to other threads
+                IS_INITIALIZED.store(true, Ordering::Release);
+
+                // Memory fence to ensure all hardware register writes complete
+                // before we proceed with device operations
+                std::sync::atomic::fence(Ordering::SeqCst);
+
+                log::info!("USB host initialized successfully");
+            }
         }
 
         Ok(CdcAcmHost {
@@ -117,6 +205,8 @@ impl HostProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHost<POSTINIT> {
         ),
         (),
     > {
+        log::info!("Spawning processor threads (will wait for CDC device in background)");
+
         let to_usb = sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
@@ -142,18 +232,33 @@ impl CdcAcmHostDevice<PREINIT> {
     }
     /// Initialize the device
     pub fn init(self, busid: u8, reg_base: u32) -> Result<CdcAcmHostDevice<POSTINIT>, ()> {
-        match IS_INITIALIZED.load(std::sync::atomic::Ordering::Relaxed) {
+        // Use Acquire ordering to ensure we see any previous initialization
+        match IS_INITIALIZED.load(Ordering::Acquire) {
             true => {
+                log::error!("USB host already initialized");
                 return Err(());
             }
             false => {}
         }
 
+        // Reset the ready signal in case of previous failed initialization
+        CDC_READY_SIGNAL.reset();
+
         match unsafe { usbh_initialize(busid, reg_base as usize) } {
             x if x < 0 => {
+                log::error!("USB host initialization failed with code: {}", x);
                 return Err(());
             }
-            _ => IS_INITIALIZED.store(true, std::sync::atomic::Ordering::Relaxed),
+            _ => {
+                // Use Release ordering to ensure initialization is visible to other threads
+                IS_INITIALIZED.store(true, Ordering::Release);
+
+                // Memory fence to ensure all hardware register writes complete
+                // before we proceed with device operations
+                std::sync::atomic::fence(Ordering::SeqCst);
+
+                log::info!("USB host initialized successfully");
+            }
         }
 
         Ok(CdcAcmHostDevice {
@@ -184,6 +289,8 @@ impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
         ),
         (),
     > {
+        log::info!("Spawning processor threads (will wait for CDC device in background)");
+
         let to_usb = sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
@@ -194,17 +301,84 @@ impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
     }
 }
 
+/// Verify that the CDC device is ready for communication
+fn verify_cdc_device_ready() -> bool {
+    match CDC_LOCKER.read().unwrap().as_ref() {
+        Some(_) => {
+            log::info!("CDC device pointer verified");
+            true
+        }
+        None => {
+            log::error!("CDC device pointer is null after enumeration signal");
+            false
+        }
+    }
+}
+
+/// Configure the CDC line state after device verification
+fn configure_cdc_line_state() {
+    if let Some(wrapper) = CDC_LOCKER.read().unwrap().as_ref() {
+        unsafe {
+            usbh_cdc_acm_set_line_state(wrapper.0, true, false);
+        }
+        log::info!("CDC line state configured (DTR=true, RTS=false)");
+    }
+}
+
 unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
     let mut aligned_buffer = AlignedBuffer::<{ size_of::<TSenderAndReceiver>() }>::new();
+    let mut reconnect_attempts = 0;
+
     loop {
+        // Device should already be ready, but handle disconnection gracefully
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
             None => {
-                std::thread::sleep(Duration::from_millis(10));
+                reconnect_attempts += 1;
+                if reconnect_attempts == 1 {
+                    log::warn!("CDC device not connected, waiting for device...");
+                }
+
+                // Wait for device with longer timeout to allow USB enumeration
+                // USB enumeration can take 3-5 seconds
+                let timeout = Duration::from_secs(10);
+
+                if !CDC_READY_SIGNAL.wait_ready(timeout) {
+                    if reconnect_attempts % 6 == 0 {
+                        // Log every minute (6 * 10 seconds)
+                        log::info!("Still waiting for CDC device... ({} attempts)", reconnect_attempts);
+                    }
+                    continue;
+                }
+
+                log::info!("CDC device signal received, verifying...");
+
+                // Small delay to let device settle
+                std::thread::sleep(Duration::from_millis(100));
+
+                // Device reconnected - use atomic to ensure only one thread configures
+                std::sync::atomic::fence(Ordering::Acquire);
+                if verify_cdc_device_ready() {
+                    // Atomically check and mark as configured
+                    if CDC_READY_SIGNAL.mark_configured() {
+                        configure_cdc_line_state();
+                        log::info!("CDC device reconnected and reconfigured");
+                    } else {
+                        log::info!("CDC device reconnected (already configured by other thread)");
+                    }
+                    reconnect_attempts = 0; // Reset on successful reconnection
+                } else {
+                    log::warn!("CDC device verification failed after signal, retrying...");
+                    continue;
+                }
                 continue;
             }
         }
         .0;
+
+        // Reset reconnect counter on successful device access
+        reconnect_attempts = 0;
+
         match unsafe {
             usbh_cdc_acm_bulk_in_transfer(
                 cdc_acm_class,
@@ -214,7 +388,9 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
             )
         } {
             x if x < 0 => {
-                log::error!("Unable to receive the data");
+                log::error!("Unable to receive data (error code: {})", x);
+                // Small delay before retry to avoid tight error loop
+                std::thread::sleep(Duration::from_millis(10));
                 continue;
             }
             _ => {}
@@ -238,16 +414,57 @@ unsafe fn send_usb_data(
     receiver: Receiver<TSenderAndReceiver>,
     write_throttle_info: WriteThrottleInfo,
 ) {
+    let mut reconnect_attempts = 0;
+
     loop {
-        // Avoid logging on the write hot path
+        // Device should already be ready, but handle disconnection gracefully
         let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
             Some(wrapper) => wrapper,
             None => {
-                std::thread::sleep(Duration::from_millis(10));
+                reconnect_attempts += 1;
+                if reconnect_attempts == 1 {
+                    log::warn!("Send thread: CDC device not connected, waiting for device...");
+                }
+
+                // Wait for device with longer timeout to allow USB enumeration
+                // USB enumeration can take 3-5 seconds
+                let timeout = Duration::from_secs(10);
+
+                if !CDC_READY_SIGNAL.wait_ready(timeout) {
+                    if reconnect_attempts % 6 == 0 {
+                        // Log every minute (6 * 10 seconds)
+                        log::info!("Send thread: Still waiting for CDC device... ({} attempts)", reconnect_attempts);
+                    }
+                    continue;
+                }
+
+                log::info!("Send thread: CDC device signal received, verifying...");
+
+                // Small delay to let device settle
+                std::thread::sleep(Duration::from_millis(100));
+
+                // Device reconnected - use atomic to ensure only one thread configures
+                std::sync::atomic::fence(Ordering::Acquire);
+                if verify_cdc_device_ready() {
+                    // Atomically check and mark as configured
+                    if CDC_READY_SIGNAL.mark_configured() {
+                        configure_cdc_line_state();
+                        log::info!("CDC device reconnected and reconfigured");
+                    } else {
+                        log::info!("CDC device reconnected (already configured by other thread)");
+                    }
+                    reconnect_attempts = 0; // Reset on successful reconnection
+                } else {
+                    log::warn!("CDC device verification failed in send thread, retrying...");
+                    continue;
+                }
                 continue;
             }
         }
         .0;
+
+        // Reset reconnect counter on successful device access
+        reconnect_attempts = 0;
 
         let mut data = match receiver.recv() {
             Ok(data) => AlignedBuffer::from(data),
@@ -266,7 +483,9 @@ unsafe fn send_usb_data(
             )
         } {
             x if x < 0 => {
-                log::error!("Unable to send the data {:?}", x);
+                log::error!("Unable to send data (error code: {})", x);
+                // Small delay before retry to avoid tight error loop
+                std::thread::sleep(Duration::from_millis(10));
                 continue;
             }
             _ => {}

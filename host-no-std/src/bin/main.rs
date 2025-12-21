@@ -18,6 +18,11 @@ use esp_hal::{clock::CpuClock, otg_fs::Usb, timer::systimer::SystemTimer};
 use host_no_std::configs::initalize_logger;
 use protocol::DEFAULT_PACKET_SIZE;
 use protocol::devices::host::AsyncHostProcessor;
+use protocol::host::AsyncHostSender;
+use protocol::protocol::{
+    HostCommandConfigurePeripheral, HostCommandConfigureProfile, HostCommandConfigureService,
+    HostCommandStartAdvertisement,
+};
 
 // BLE no-std example: https://github.com/embassy-rs/trouble/blob/main/examples/apps/src/ble_bas_peripheral_sec.rs
 // USB device example: https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/embassy_usb_serial.rs
@@ -56,7 +61,7 @@ async fn main(_spawner: Spawner) {
     let to = Channel::<NoopRawMutex, _, 20>::new();
     let from = Channel::<NoopRawMutex, _, 20>::new();
 
-    let (processor_fn, _sender, _receiver) = device_host
+    let (processor_fn, sender, _receiver) = device_host
         .processors(
             (to.sender(), to.receiver()),
             (from.sender(), from.receiver()),
@@ -66,11 +71,50 @@ async fn main(_spawner: Spawner) {
     let check_conn_fn = async {
         loop {
             match connection_signal.wait().await {
-                true => log::info!("Connected"),
+                true => {
+                    log::info!("Connected");
+                    test_queue_setup_commands(&sender).await.ok();
+                }
                 false => log::info!("Disonnected"),
             }
         }
     };
 
     join(check_conn_fn, processor_fn).await;
+}
+
+/// Configures the plugin
+pub async fn test_queue_setup_commands<const CH_SIZE: usize>(
+    sender: &AsyncHostSender<'_, NoopRawMutex, DEFAULT_PACKET_SIZE, CH_SIZE>,
+) -> Result<(), ()> {
+    extern crate alloc;
+    use alloc::{string::String, vec::Vec};
+    sender
+        .borrow_send_async(&HostCommandConfigurePeripheral {
+            name: String::from_utf8(Vec::from(b"Bab's device")).unwrap(),
+            addr: Vec::from(&[1, 1, 1, 1, 1, 1]),
+        })
+        .await
+        .unwrap();
+
+    sender
+        .borrow_send_async(&HostCommandConfigureService { uuid: 0x1800 as _ })
+        .await
+        .unwrap();
+
+    sender
+        .borrow_send_async(&HostCommandConfigureProfile {
+            profile: protocol::protocol::BleProfile::Custom,
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    sender
+        .borrow_send_async(&HostCommandStartAdvertisement {
+            allow_multi_connect: true,
+        })
+        .await
+        .unwrap();
+    Ok(())
 }
