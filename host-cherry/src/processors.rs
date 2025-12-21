@@ -66,7 +66,7 @@ impl CdcReadySignal {
     }
 
     fn wait_ready(&self, timeout: Duration) -> bool {
-        let mut ready = self.ready.lock().unwrap();
+        let ready = self.ready.lock().unwrap();
 
         // If already ready, return immediately
         if *ready {
@@ -91,10 +91,6 @@ impl CdcReadySignal {
         self.configured
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_ok()
-    }
-
-    fn is_configured(&self) -> bool {
-        self.configured.load(Ordering::Acquire)
     }
 }
 
@@ -346,7 +342,10 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
                 if !CDC_READY_SIGNAL.wait_ready(timeout) {
                     if reconnect_attempts % 6 == 0 {
                         // Log every minute (6 * 10 seconds)
-                        log::info!("Still waiting for CDC device... ({} attempts)", reconnect_attempts);
+                        log::info!(
+                            "Still waiting for CDC device... ({} attempts)",
+                            reconnect_attempts
+                        );
                     }
                     continue;
                 }
@@ -433,7 +432,10 @@ unsafe fn send_usb_data(
                 if !CDC_READY_SIGNAL.wait_ready(timeout) {
                     if reconnect_attempts % 6 == 0 {
                         // Log every minute (6 * 10 seconds)
-                        log::info!("Send thread: Still waiting for CDC device... ({} attempts)", reconnect_attempts);
+                        log::info!(
+                            "Send thread: Still waiting for CDC device... ({} attempts)",
+                            reconnect_attempts
+                        );
                     }
                     continue;
                 }
