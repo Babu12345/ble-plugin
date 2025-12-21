@@ -47,14 +47,12 @@ fn main() -> Result<()> {
         .set_high()
         .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO21 high"))?;
 
-    std::thread::sleep(Duration::from_millis(500));
-
     std::thread::scope(|scope| {
         let processors = match input_pin.get_level().into() {
             USBTypeResolver::UsbHost => CdcAcmHostDevice::new()
                 .init(0, ESP_USBH_BASE)
                 .map_err(|_| PluginError::UsbInitError(USBTypeResolver::UsbHost))?
-                .sleep(Duration::from_secs(1))
+                .sleep(Duration::from_millis(500))
                 .processors(
                     scope,
                     300,

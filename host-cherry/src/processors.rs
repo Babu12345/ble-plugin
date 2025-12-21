@@ -36,6 +36,9 @@ use crate::utils::{TSenderAndReceiver, ThreadSafeCDCWrapper};
 
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
+// Wait for device with longer timeout to allow USB enumeration
+// USB enumeration can take 3-5 seconds
+static ENUMERATION_WAIT_TIMEOUT: Duration = Duration::from_secs(5);
 
 // Synchronization primitive for CDC device readiness
 struct CdcReadySignal {
@@ -335,13 +338,8 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
                     log::warn!("CDC device not connected, waiting for device...");
                 }
 
-                // Wait for device with longer timeout to allow USB enumeration
-                // USB enumeration can take 3-5 seconds
-                let timeout = Duration::from_secs(10);
-
-                if !CDC_READY_SIGNAL.wait_ready(timeout) {
-                    if reconnect_attempts % 6 == 0 {
-                        // Log every minute (6 * 10 seconds)
+                if !CDC_READY_SIGNAL.wait_ready(ENUMERATION_WAIT_TIMEOUT) {
+                    if reconnect_attempts % 10 == 0 {
                         log::info!(
                             "Still waiting for CDC device... ({} attempts)",
                             reconnect_attempts
@@ -425,13 +423,8 @@ unsafe fn send_usb_data(
                     log::warn!("Send thread: CDC device not connected, waiting for device...");
                 }
 
-                // Wait for device with longer timeout to allow USB enumeration
-                // USB enumeration can take 3-5 seconds
-                let timeout = Duration::from_secs(10);
-
-                if !CDC_READY_SIGNAL.wait_ready(timeout) {
-                    if reconnect_attempts % 6 == 0 {
-                        // Log every minute (6 * 10 seconds)
+                if !CDC_READY_SIGNAL.wait_ready(ENUMERATION_WAIT_TIMEOUT) {
+                    if reconnect_attempts % 10 == 0 {
                         log::info!(
                             "Send thread: Still waiting for CDC device... ({} attempts)",
                             reconnect_attempts
