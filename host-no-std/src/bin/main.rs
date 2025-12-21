@@ -1,17 +1,17 @@
 #![no_std]
-
 // Copyright 2025 Wanyeki Technologies LLC. All rights reserved.
 //
 // This source code is proprietary and confidential. Unauthorized copying,
 // modification, distribution, or use of this software is strictly prohibited.
-
 #![no_main]
 #![feature(never_type)]
 
 use device_embassy::processors::CdcAcmDeviceHost;
 use embassy_executor::Spawner;
+use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::channel::Channel;
+use embassy_sync::signal::Signal;
 use embassy_usb::class::cdc_acm::State;
 use esp_backtrace as _;
 use esp_hal::{clock::CpuClock, otg_fs::Usb, timer::systimer::SystemTimer};
@@ -40,6 +40,8 @@ async fn main(_spawner: Spawner) {
     let mut control_buf = [0; 64];
     let mut state = State::new();
 
+    let connection_signal = Signal::new();
+
     let device_host = CdcAcmDeviceHost::<'_, 20, DEFAULT_PACKET_SIZE, NoopRawMutex>::new(
         usb,
         &mut ep_out_buffer,
@@ -48,7 +50,8 @@ async fn main(_spawner: Spawner) {
         &mut control_buf,
         &mut state,
         true,
-    );
+    )
+    .add_connection_signal(&connection_signal);
 
     let to = Channel::<NoopRawMutex, _, 20>::new();
     let from = Channel::<NoopRawMutex, _, 20>::new();
@@ -60,5 +63,14 @@ async fn main(_spawner: Spawner) {
         )
         .unwrap();
 
-    processor_fn.await;
+    let check_conn_fn = async {
+        loop {
+            match connection_signal.wait().await {
+                true => log::info!("Connected"),
+                false => log::info!("Disonnected"),
+            }
+        }
+    };
+
+    join(check_conn_fn, processor_fn).await;
 }

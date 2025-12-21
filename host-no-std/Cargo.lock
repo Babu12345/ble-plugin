@@ -25,9 +25,9 @@ dependencies = [
 
 [[package]]
 name = "allocator-api2"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78200ac3468a57d333cd0ea5dd398e25111194dcacd49208afca95c629a6311d"
+checksum = "c583acf993cf4245c4acb0a2cc2ab1f9cc097de73411bb6d3647ff6af2b1013d"
 
 [[package]]
 name = "ansi_term"
@@ -664,7 +664,7 @@ dependencies = [
  "rand_core",
  "riscv",
  "serde",
- "strum",
+ "strum 0.26.3",
  "ufmt-write",
  "usb-device",
  "void",
@@ -720,7 +720,7 @@ dependencies = [
  "anyhow",
  "basic-toml",
  "serde",
- "strum",
+ "strum 0.26.3",
 ]
 
 [[package]]
@@ -941,7 +941,7 @@ dependencies = [
 [[package]]
 name = "lib_utils"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#7b82cfcce0e180f35d231488849baaab9e6c2126"
+source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#7bbbf6bcbb7448a29caac876941492de6324914a"
 
 [[package]]
 name = "libc"
@@ -1119,7 +1119,7 @@ dependencies = [
 [[package]]
 name = "protocol"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#7b82cfcce0e180f35d231488849baaab9e6c2126"
+source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#7bbbf6bcbb7448a29caac876941492de6324914a"
 dependencies = [
  "embassy-sync 0.6.2",
  "heapless",
@@ -1129,12 +1129,13 @@ dependencies = [
  "protocol_io",
  "quick-protobuf",
  "serde",
+ "strum 0.27.2",
 ]
 
 [[package]]
 name = "protocol_io"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#7b82cfcce0e180f35d231488849baaab9e6c2126"
+source = "git+ssh://git@github.com/Babu12345/ble-plugin.git#7bbbf6bcbb7448a29caac876941492de6324914a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1347,7 +1348,16 @@ version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.26.4",
+]
+
+[[package]]
+name = "strum"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+dependencies = [
+ "strum_macros 0.27.2",
 ]
 
 [[package]]
@@ -1360,6 +1370,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustversion",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
  "syn 2.0.106",
 ]
 
@@ -1660,7 +1682,7 @@ dependencies = [
  "minijinja",
  "r0",
  "serde",
- "strum",
+ "strum 0.26.3",
  "toml",
  "xtensa-lx",
  "xtensa-lx-rt-proc-macros",
