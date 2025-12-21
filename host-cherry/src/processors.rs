@@ -366,7 +366,6 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
                     reconnect_attempts = 0; // Reset on successful reconnection
                 } else {
                     log::warn!("CDC device verification failed after signal, retrying...");
-                    continue;
                 }
                 continue;
             }
