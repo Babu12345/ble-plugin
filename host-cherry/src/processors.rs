@@ -38,7 +38,7 @@ static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 // Wait for device with longer timeout to allow USB enumeration
 // USB enumeration can take 3-5 seconds
-static ENUMERATION_WAIT_TIMEOUT: Duration = Duration::from_secs(10);
+static ENUMERATION_WAIT_TIMEOUT: Duration = Duration::from_secs(5);
 
 // Synchronization primitive for CDC device readiness
 struct CdcReadySignal {
@@ -350,8 +350,8 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
 
                 log::info!("CDC device signal received, verifying...");
 
-                // Small delay to let device settle
-                std::thread::sleep(Duration::from_millis(100));
+                // PERFORMANCE: Reduced settling delay from 100ms to 50ms
+                std::thread::sleep(Duration::from_millis(50));
 
                 // Device reconnected - use atomic to ensure only one thread configures
                 std::sync::atomic::fence(Ordering::Acquire);
@@ -435,8 +435,8 @@ unsafe fn send_usb_data(
 
                 log::info!("Send thread: CDC device signal received, verifying...");
 
-                // Small delay to let device settle
-                std::thread::sleep(Duration::from_millis(100));
+                // PERFORMANCE: Reduced settling delay from 100ms to 50ms
+                std::thread::sleep(Duration::from_millis(50));
 
                 // Device reconnected - use atomic to ensure only one thread configures
                 std::sync::atomic::fence(Ordering::Acquire);
