@@ -14,7 +14,7 @@ use std::{
 
 use esp_idf_sys::cherry_host::{
     usbh_cdc_acm, usbh_cdc_acm_bulk_in_transfer, usbh_cdc_acm_bulk_out_transfer,
-    usbh_cdc_acm_set_line_state,
+    usbh_cdc_acm_set_line_state, usbh_deinitialize, usbh_initialize,
 };
 use lib_utils::types::AlignedBuffer;
 
@@ -25,7 +25,6 @@ use protocol::{
     plugin::plugin::{PluginReceiver, PluginSender},
 };
 
-use esp_idf_sys::cherry_host::usbh_initialize;
 use std::{
     marker::PhantomData,
     sync::{atomic::AtomicBool, mpsc::sync_channel},
@@ -34,10 +33,51 @@ use std::{
 
 use crate::utils::{TSenderAndReceiver, ThreadSafeCDCWrapper};
 
+// Threshold for triggering USB stack re-initialization
+// If we've been waiting this many attempts, reset the USB stack
+const REINIT_THRESHOLD: u32 = 10;
+
+// Store USB initialization parameters for re-initialization
+static USB_INIT_PARAMS: StdMutex<Option<(u8, u32)>> = StdMutex::new(None);
+
+/// Re-initialize the USB host stack
+/// This clears any stuck state in the USB controller
+fn reinitialize_usb_stack() -> bool {
+    log::warn!("Re-initializing USB stack to recover from stuck state...");
+
+    let params = USB_INIT_PARAMS.lock().ok().and_then(|p| *p);
+    let Some((busid, reg_base)) = params else {
+        log::error!("USB init parameters not available for re-initialization");
+        return false;
+    };
+
+    unsafe {
+        // Deinitialize the USB stack
+        let ret = usbh_deinitialize(busid);
+        if ret < 0 {
+            log::error!("USB deinitialize failed: {}", ret);
+            return false;
+        }
+
+        // Small delay to allow hardware to settle
+        std::thread::sleep(Duration::from_millis(100));
+
+        // Re-initialize the USB stack
+        let ret = usbh_initialize(busid, reg_base as usize);
+        if ret < 0 {
+            log::error!("USB re-initialize failed: {}", ret);
+            return false;
+        }
+
+        log::info!("USB stack re-initialized successfully");
+        true
+    }
+}
+
 static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 // Wait for device with longer timeout to allow USB enumeration
-// USB enumeration can take 3-5 seconds
+// USB enumeration can take 3-5 seconds, especially after rapid restarts
 static ENUMERATION_WAIT_TIMEOUT: Duration = Duration::from_millis(100);
 
 // Synchronization primitive for CDC device readiness
@@ -178,6 +218,11 @@ impl CdcAcmHost<PREINIT> {
             false => {}
         }
 
+        // Store parameters for potential re-initialization
+        if let Ok(mut params) = USB_INIT_PARAMS.lock() {
+            *params = Some((busid, reg_base));
+        }
+
         // Reset the ready signal in case of previous failed initialization
         CDC_READY_SIGNAL.reset();
 
@@ -260,6 +305,11 @@ impl CdcAcmHostDevice<PREINIT> {
                 return Err(());
             }
             false => {}
+        }
+
+        // Store parameters for potential re-initialization
+        if let Ok(mut params) = USB_INIT_PARAMS.lock() {
+            *params = Some((busid, reg_base));
         }
 
         // Reset the ready signal in case of previous failed initialization
@@ -375,6 +425,20 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
                         log::warn!("CDC device not connected, waiting for device...");
                     }
 
+                    // If we've been waiting too long, re-initialize the USB stack
+                    // This clears any stuck state in the USB controller
+                    if reconnect_attempts == REINIT_THRESHOLD {
+                        log::warn!(
+                            "Device not reconnecting after {} attempts, re-initializing USB stack",
+                            REINIT_THRESHOLD
+                        );
+                        if reinitialize_usb_stack() {
+                            reconnect_attempts = 0;
+                            // Give the new stack time to initialize
+                            std::thread::sleep(Duration::from_millis(200));
+                        }
+                    }
+
                     if !CDC_READY_SIGNAL.wait_ready(ENUMERATION_WAIT_TIMEOUT) {
                         if reconnect_attempts % 10 == 0 {
                             log::info!(
@@ -398,7 +462,9 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
                             configure_cdc_line_state();
                             log::info!("CDC device reconnected and reconfigured");
                         } else {
-                            log::info!("CDC device reconnected (already configured by other thread)");
+                            log::info!(
+                                "CDC device reconnected (already configured by other thread)"
+                            );
                         }
                         reconnect_attempts = 0; // Reset on successful reconnection
                     } else {
@@ -490,7 +556,9 @@ unsafe fn send_usb_data(
                             configure_cdc_line_state();
                             log::info!("CDC device reconnected and reconfigured");
                         } else {
-                            log::info!("CDC device reconnected (already configured by other thread)");
+                            log::info!(
+                                "CDC device reconnected (already configured by other thread)"
+                            );
                         }
                         reconnect_attempts = 0; // Reset on successful reconnection
                     } else {
