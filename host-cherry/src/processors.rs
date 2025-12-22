@@ -59,7 +59,10 @@ impl CdcReadySignal {
     }
 
     fn signal(&self) {
-        let mut ready = self.ready.lock().unwrap();
+        let Ok(mut ready) = self.ready.lock() else {
+            log::error!("Failed to acquire lock in signal()");
+            return;
+        };
         *ready = true;
         // Mark as not configured when device reconnects
         self.configured.store(false, Ordering::Release);
@@ -69,7 +72,10 @@ impl CdcReadySignal {
     }
 
     fn wait_ready(&self, timeout: Duration) -> bool {
-        let ready = self.ready.lock().unwrap();
+        let Ok(ready) = self.ready.lock() else {
+            log::error!("Failed to acquire lock in wait_ready()");
+            return false;
+        };
 
         // If already ready, return immediately
         if *ready {
@@ -77,12 +83,18 @@ impl CdcReadySignal {
         }
 
         // Otherwise wait for signal with timeout
-        let result = self.condvar.wait_timeout(ready, timeout).unwrap();
+        let Ok(result) = self.condvar.wait_timeout(ready, timeout) else {
+            log::error!("Condvar wait_timeout failed in wait_ready()");
+            return false;
+        };
         *result.0
     }
 
     fn reset(&self) {
-        let mut ready = self.ready.lock().unwrap();
+        let Ok(mut ready) = self.ready.lock() else {
+            log::error!("Failed to acquire lock in reset()");
+            return;
+        };
         *ready = false;
         self.configured.store(false, Ordering::Release);
         // Toggle generation on disconnect too
@@ -107,7 +119,12 @@ extern "C" fn usbh_cdc_acm_run(cdc_acm_class: *mut usbh_cdc_acm) {
     // is visible to all threads that subsequently Acquire the lock
     std::sync::atomic::fence(Ordering::Release);
 
-    *CDC_LOCKER.write().unwrap() = Some(ThreadSafeCDCWrapper(cdc_acm_class));
+    let Ok(mut locker) = CDC_LOCKER.write() else {
+        log::error!("Failed to acquire write lock in usbh_cdc_acm_run()");
+        return;
+    };
+    *locker = Some(ThreadSafeCDCWrapper(cdc_acm_class));
+    drop(locker);
 
     // Signal waiting threads that CDC device is available
     CDC_READY_SIGNAL.signal();
@@ -120,7 +137,12 @@ extern "C" fn usbh_cdc_acm_run(cdc_acm_class: *mut usbh_cdc_acm) {
 #[allow(unused_variables)]
 extern "C" fn usbh_cdc_acm_stop(cdc_acm_class: *mut usbh_cdc_acm) {
     log::info!("CDC ACM device disconnected");
-    *CDC_LOCKER.write().unwrap() = None;
+    let Ok(mut locker) = CDC_LOCKER.write() else {
+        log::error!("Failed to acquire write lock in usbh_cdc_acm_stop()");
+        return;
+    };
+    *locker = None;
+    drop(locker);
     CDC_READY_SIGNAL.reset();
 }
 
@@ -302,7 +324,11 @@ impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
 
 /// Verify that the CDC device is ready for communication
 fn verify_cdc_device_ready() -> bool {
-    match CDC_LOCKER.read().unwrap().as_ref() {
+    let Ok(locker) = CDC_LOCKER.read() else {
+        log::error!("Failed to acquire read lock in verify_cdc_device_ready()");
+        return false;
+    };
+    match locker.as_ref() {
         Some(_) => {
             log::info!("CDC device pointer verified");
             true
@@ -316,7 +342,11 @@ fn verify_cdc_device_ready() -> bool {
 
 /// Configure the CDC line state after device verification
 fn configure_cdc_line_state() {
-    if let Some(wrapper) = CDC_LOCKER.read().unwrap().as_ref() {
+    let Ok(locker) = CDC_LOCKER.read() else {
+        log::error!("Failed to acquire read lock in configure_cdc_line_state()");
+        return;
+    };
+    if let Some(wrapper) = locker.as_ref() {
         unsafe {
             usbh_cdc_acm_set_line_state(wrapper.0, true, false);
         }
@@ -330,47 +360,55 @@ unsafe fn receive_usb_data(sender: SyncSender<TSenderAndReceiver>) {
 
     loop {
         // Device should already be ready, but handle disconnection gracefully
-        let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
-            Some(wrapper) => wrapper,
-            None => {
-                reconnect_attempts += 1;
-                if reconnect_attempts == 1 {
-                    log::warn!("CDC device not connected, waiting for device...");
-                }
+        let cdc_acm_class: *mut usbh_cdc_acm = {
+            let Ok(locker) = CDC_LOCKER.read() else {
+                log::error!("Failed to acquire read lock in receive_usb_data()");
+                std::thread::sleep(Duration::from_millis(10));
+                continue;
+            };
+            match locker.as_ref() {
+                Some(wrapper) => wrapper,
+                None => {
+                    drop(locker);
+                    reconnect_attempts += 1;
+                    if reconnect_attempts == 1 {
+                        log::warn!("CDC device not connected, waiting for device...");
+                    }
 
-                if !CDC_READY_SIGNAL.wait_ready(ENUMERATION_WAIT_TIMEOUT) {
-                    if reconnect_attempts % 10 == 0 {
-                        log::info!(
-                            "Still waiting for CDC device... ({} attempts)",
-                            reconnect_attempts
-                        );
+                    if !CDC_READY_SIGNAL.wait_ready(ENUMERATION_WAIT_TIMEOUT) {
+                        if reconnect_attempts % 10 == 0 {
+                            log::info!(
+                                "Still waiting for CDC device... ({} attempts)",
+                                reconnect_attempts
+                            );
+                        }
+                        continue;
+                    }
+
+                    log::info!("CDC device signal received, verifying...");
+
+                    // PERFORMANCE: Reduced settling delay from 100ms to 50ms
+                    std::thread::sleep(Duration::from_millis(50));
+
+                    // Device reconnected - use atomic to ensure only one thread configures
+                    std::sync::atomic::fence(Ordering::Acquire);
+                    if verify_cdc_device_ready() {
+                        // Atomically check and mark as configured
+                        if CDC_READY_SIGNAL.mark_configured() {
+                            configure_cdc_line_state();
+                            log::info!("CDC device reconnected and reconfigured");
+                        } else {
+                            log::info!("CDC device reconnected (already configured by other thread)");
+                        }
+                        reconnect_attempts = 0; // Reset on successful reconnection
+                    } else {
+                        log::warn!("CDC device verification failed after signal, retrying...");
                     }
                     continue;
                 }
-
-                log::info!("CDC device signal received, verifying...");
-
-                // PERFORMANCE: Reduced settling delay from 100ms to 50ms
-                std::thread::sleep(Duration::from_millis(50));
-
-                // Device reconnected - use atomic to ensure only one thread configures
-                std::sync::atomic::fence(Ordering::Acquire);
-                if verify_cdc_device_ready() {
-                    // Atomically check and mark as configured
-                    if CDC_READY_SIGNAL.mark_configured() {
-                        configure_cdc_line_state();
-                        log::info!("CDC device reconnected and reconfigured");
-                    } else {
-                        log::info!("CDC device reconnected (already configured by other thread)");
-                    }
-                    reconnect_attempts = 0; // Reset on successful reconnection
-                } else {
-                    log::warn!("CDC device verification failed after signal, retrying...");
-                }
-                continue;
             }
-        }
-        .0;
+            .0
+        };
 
         // Reset reconnect counter on successful device access
         reconnect_attempts = 0;
@@ -414,47 +452,55 @@ unsafe fn send_usb_data(
 
     loop {
         // Device should already be ready, but handle disconnection gracefully
-        let cdc_acm_class: *mut usbh_cdc_acm = match CDC_LOCKER.read().unwrap().as_ref() {
-            Some(wrapper) => wrapper,
-            None => {
-                reconnect_attempts += 1;
-                if reconnect_attempts == 1 {
-                    log::warn!("Send thread: CDC device not connected, waiting for device...");
-                }
+        let cdc_acm_class: *mut usbh_cdc_acm = {
+            let Ok(locker) = CDC_LOCKER.read() else {
+                log::error!("Failed to acquire read lock in send_usb_data()");
+                std::thread::sleep(Duration::from_millis(10));
+                continue;
+            };
+            match locker.as_ref() {
+                Some(wrapper) => wrapper,
+                None => {
+                    drop(locker);
+                    reconnect_attempts += 1;
+                    if reconnect_attempts == 1 {
+                        log::warn!("Send thread: CDC device not connected, waiting for device...");
+                    }
 
-                if !CDC_READY_SIGNAL.wait_ready(ENUMERATION_WAIT_TIMEOUT) {
-                    if reconnect_attempts % 10 == 0 {
-                        log::info!(
-                            "Send thread: Still waiting for CDC device... ({} attempts)",
-                            reconnect_attempts
-                        );
+                    if !CDC_READY_SIGNAL.wait_ready(ENUMERATION_WAIT_TIMEOUT) {
+                        if reconnect_attempts % 10 == 0 {
+                            log::info!(
+                                "Send thread: Still waiting for CDC device... ({} attempts)",
+                                reconnect_attempts
+                            );
+                        }
+                        continue;
+                    }
+
+                    log::info!("Send thread: CDC device signal received, verifying...");
+
+                    // PERFORMANCE: Reduced settling delay from 100ms to 50ms
+                    std::thread::sleep(Duration::from_millis(50));
+
+                    // Device reconnected - use atomic to ensure only one thread configures
+                    std::sync::atomic::fence(Ordering::Acquire);
+                    if verify_cdc_device_ready() {
+                        // Atomically check and mark as configured
+                        if CDC_READY_SIGNAL.mark_configured() {
+                            configure_cdc_line_state();
+                            log::info!("CDC device reconnected and reconfigured");
+                        } else {
+                            log::info!("CDC device reconnected (already configured by other thread)");
+                        }
+                        reconnect_attempts = 0; // Reset on successful reconnection
+                    } else {
+                        log::warn!("CDC device verification failed in send thread, retrying...");
                     }
                     continue;
                 }
-
-                log::info!("Send thread: CDC device signal received, verifying...");
-
-                // PERFORMANCE: Reduced settling delay from 100ms to 50ms
-                std::thread::sleep(Duration::from_millis(50));
-
-                // Device reconnected - use atomic to ensure only one thread configures
-                std::sync::atomic::fence(Ordering::Acquire);
-                if verify_cdc_device_ready() {
-                    // Atomically check and mark as configured
-                    if CDC_READY_SIGNAL.mark_configured() {
-                        configure_cdc_line_state();
-                        log::info!("CDC device reconnected and reconfigured");
-                    } else {
-                        log::info!("CDC device reconnected (already configured by other thread)");
-                    }
-                    reconnect_attempts = 0; // Reset on successful reconnection
-                } else {
-                    log::warn!("CDC device verification failed in send thread, retrying...");
-                }
-                continue;
             }
-        }
-        .0;
+            .0
+        };
 
         // Reset reconnect counter on successful device access
         reconnect_attempts = 0;
