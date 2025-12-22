@@ -38,7 +38,7 @@ static CDC_LOCKER: RwLock<Option<ThreadSafeCDCWrapper>> = RwLock::new(None);
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 // Wait for device with longer timeout to allow USB enumeration
 // USB enumeration can take 3-5 seconds
-static ENUMERATION_WAIT_TIMEOUT: Duration = Duration::from_secs(2);
+static ENUMERATION_WAIT_TIMEOUT: Duration = Duration::from_millis(100);
 
 // Synchronization primitive for CDC device readiness
 struct CdcReadySignal {
