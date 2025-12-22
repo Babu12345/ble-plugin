@@ -85,7 +85,6 @@ struct CdcReadySignal {
     ready: StdMutex<bool>,
     condvar: Condvar,
     configured: AtomicBool,
-    generation: AtomicBool, // Toggle on each connect/disconnect to force new waits
 }
 
 impl CdcReadySignal {
@@ -94,7 +93,6 @@ impl CdcReadySignal {
             ready: StdMutex::new(false),
             condvar: Condvar::new(),
             configured: AtomicBool::new(false),
-            generation: AtomicBool::new(false),
         }
     }
 
@@ -106,8 +104,6 @@ impl CdcReadySignal {
         *ready = true;
         // Mark as not configured when device reconnects
         self.configured.store(false, Ordering::Release);
-        // Toggle generation to invalidate stale waits
-        self.generation.fetch_xor(true, Ordering::Release);
         self.condvar.notify_all();
     }
 
@@ -137,8 +133,6 @@ impl CdcReadySignal {
         };
         *ready = false;
         self.configured.store(false, Ordering::Release);
-        // Toggle generation on disconnect too
-        self.generation.fetch_xor(true, Ordering::Release);
     }
 
     fn mark_configured(&self) -> bool {
