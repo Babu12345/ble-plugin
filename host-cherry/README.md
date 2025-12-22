@@ -14,6 +14,8 @@ Host-Cherry implements a USB host controller that can enumerate and communicate 
 - **Channel-Based API**: Simple send/receive interface using Rust channels
 - **Protocol Integration**: Compatible with both host and plugin protocol variants
 - **Automatic Device Detection**: Handles USB device connection/disconnection events
+- **Robust Reconnection**: Automatic recovery from rapid device restarts and stuck states
+- **Self-Healing**: USB stack re-initialization on connection failures
 
 ## Architecture
 
@@ -205,6 +207,116 @@ The library provides simple but effective error handling:
 - Simple `Result<T, ()>` for most operations
 - Detailed error logging through the `log` crate
 - Automatic recovery for transient USB errors
+
+## Reliability and Reconnection Handling
+
+The library includes robust handling for device disconnection and reconnection scenarios, particularly important for rapid device restarts.
+
+### Automatic Reconnection
+
+When a USB device disconnects and reconnects, the library automatically:
+
+1. **Detects Disconnection**: The `usbh_cdc_acm_stop` callback is invoked by the USB stack
+2. **Clears Device State**: CDC device handle is set to `None` and ready signal is reset
+3. **Waits for Reconnection**: Both send and receive threads enter a wait loop
+4. **Detects Connection**: The `usbh_cdc_acm_run` callback signals device availability
+5. **Reconfigures Device**: CDC line state is configured (DTR=true, RTS=false)
+6. **Resumes Operations**: Normal data transfer operations continue
+
+### Self-Healing USB Stack
+
+To handle cases where the USB hardware controller gets stuck (e.g., during rapid device restarts), the library implements automatic USB stack re-initialization:
+
+#### Stuck State Detection
+- Monitors reconnection attempts in the receive thread
+- Triggers after `REINIT_THRESHOLD` (default: 10) failed attempts
+- Typically occurs after ~1 second of waiting (10 attempts × 100ms timeout)
+
+#### Re-initialization Process
+```rust
+const REINIT_THRESHOLD: u32 = 10;
+
+// When threshold is reached:
+1. Call usbh_deinitialize() to tear down the USB stack
+2. Wait 100ms for hardware to settle
+3. Call usbh_initialize() with original parameters
+4. Reset reconnection attempt counter
+5. Wait 200ms for stack to stabilize
+```
+
+#### Benefits
+- **Clears Hardware State**: Resets any stuck USB controller state
+- **Recovers from Missed Interrupts**: Handles cases where hardware doesn't generate connection events
+- **Automatic Recovery**: No manual intervention required
+- **Preserves Configuration**: Uses stored initialization parameters
+
+### Rapid Restart Handling
+
+The implementation specifically handles the challenging case of rapid device restarts:
+
+**Problem**: When a device restarts very quickly (< 1 second), the USB hardware controller may:
+- Miss the reconnection interrupt
+- Have stale state from the previous connection
+- Fail to re-enumerate the device
+
+**Solution**: Multi-layered approach:
+1. **Short Enumeration Wait**: 100ms timeout for checking USB enumeration status
+2. **Error-Based Detection**: USB transfer errors trigger immediate reconnection checks
+3. **Active Wait Loop**: Threads continuously check device status every 100ms
+4. **USB Stack Reset**: After 10 failed attempts (~1 second), completely reset the USB stack
+
+### Thread Synchronization
+
+Reconnection handling uses careful synchronization between threads:
+
+#### CdcReadySignal
+```rust
+struct CdcReadySignal {
+    ready: Mutex<bool>,          // Device availability flag
+    condvar: Condvar,            // Thread notification
+    configured: AtomicBool,      // Configuration guard
+}
+```
+
+- **Signal on Connect**: `usbh_cdc_acm_run` sets ready=true and notifies all waiting threads
+- **Reset on Disconnect**: `usbh_cdc_acm_stop` sets ready=false
+- **Atomic Configuration**: Only one thread configures the device using compare-exchange
+- **Wait with Timeout**: Threads wait up to 100ms before checking again
+
+### Diagnostic Logging
+
+The library provides detailed logging for debugging connection issues:
+
+```
+INFO  usbh_cdc_acm_run callback invoked (ptr: 0x3fca3c10)
+INFO  CDC ACM device enumerated and ready
+INFO  CDC device signal received, verifying...
+INFO  CDC device reconnected and reconfigured
+```
+
+On disconnect:
+```
+WARN  usbh_cdc_acm_stop callback invoked (ptr: 0x3fca3c10)
+INFO  CDC ACM device disconnected and signal reset
+WARN  CDC device not connected, waiting for device...
+```
+
+During stuck state recovery:
+```
+INFO  Still waiting for CDC device... (10 attempts)
+WARN  Device not reconnecting after 10 attempts, re-initializing USB stack
+WARN  Re-initializing USB stack to recover from stuck state...
+INFO  USB stack re-initialized successfully
+```
+
+### Best Practices
+
+For optimal reliability:
+
+1. **Allow Stabilization Time**: After device connect, the code waits 100ms before operations
+2. **Monitor Logs**: Watch for re-initialization events which may indicate hardware issues
+3. **Consider Timing**: Devices that restart very rapidly (< 100ms) may trigger re-initialization
+4. **Test Reconnection**: Verify your application handles the brief pause during re-initialization
 
 ## Performance Considerations
 
