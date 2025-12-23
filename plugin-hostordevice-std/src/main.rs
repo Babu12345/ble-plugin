@@ -4,7 +4,6 @@
 // modification, distribution, or use of this software is strictly prohibited.
 
 use std::{
-    panic,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -17,8 +16,11 @@ use esp_idf_svc::hal::{
 use esp_idf_sys::{cherry_device::ESP_USBD_BASE, cherry_host::ESP_USBH_BASE};
 use esp_nimble_plugin_config::{EspHardwareAccessories, EspNimblePluginConfig};
 use host_cherry::CdcAcmHostDevice;
-use plugin_hostordevice_std::errors::{PluginError, Result};
 use plugin_hostordevice_std::resolver::USBTypeResolver;
+use plugin_hostordevice_std::{
+    errors::{PluginError, Result},
+    setup_custom_panic,
+};
 use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
 use protocol::devices::{plugin::PluginProcessor, WriteThrottleInfo};
@@ -27,15 +29,7 @@ fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    // Set up a panic handler that logs the panic and restarts the device
-    panic::set_hook(Box::new(|panic_info| {
-        log::error!("PANIC: {}", panic_info);
-        // Give time for the log to be flushed
-        std::thread::sleep(Duration::from_millis(100));
-        unsafe {
-            esp_idf_svc::sys::esp_restart();
-        }
-    }));
+    setup_custom_panic();
 
     let nvs_default_partition = EspNvsDefaultPartition::take().unwrap();
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
