@@ -33,6 +33,8 @@ esp-idf-svc = { version = "0.51", features = [
     "embassy-time-driver",
     "embassy-sync",
 ], default-features = false }
+# Logging framework for debugging and monitoring
+log = "0.4"
 
 [build-dependencies]
 embuild = "0.33"

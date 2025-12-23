@@ -4,6 +4,7 @@
 // modification, distribution, or use of this software is strictly prohibited.
 
 use std::{
+    panic,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -25,6 +26,16 @@ use protocol::devices::{plugin::PluginProcessor, WriteThrottleInfo};
 fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
+
+    // Set up a panic handler that logs the panic and restarts the device
+    panic::set_hook(Box::new(|panic_info| {
+        log::error!("PANIC: {}", panic_info);
+        // Give time for the log to be flushed
+        std::thread::sleep(Duration::from_millis(100));
+        unsafe {
+            esp_idf_svc::sys::esp_restart();
+        }
+    }));
 
     let nvs_default_partition = EspNvsDefaultPartition::take().unwrap();
     let peripherals = Peripherals::take().map_err(|_| PluginError::PeripheralsUnavailable)?;
