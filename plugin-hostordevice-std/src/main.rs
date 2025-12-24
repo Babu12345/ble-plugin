@@ -23,7 +23,7 @@ use plugin_hostordevice_std::{
 };
 use plugin_nvs::EspNvsDefaultPartition;
 use plugin_state_machine_std::PluginStateMachine;
-use protocol::devices::{plugin::PluginProcessor, WriteThrottleInfo};
+use protocol::devices::{plugin::PluginProcessor, ReadThrottleInfo, WriteThrottleInfo};
 
 fn main() -> Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -61,8 +61,8 @@ fn main() -> Result<()> {
                 .processors(
                     scope,
                     300,
-                    Default::default(),
-                    WriteThrottleInfo::default().set_delay(Duration::from_micros(500)),
+                    ReadThrottleInfo::zero(),
+                    WriteThrottleInfo::zero(),
                 )
                 .map_err(|_| PluginError::ProcessorInitError(USBTypeResolver::UsbHost)),
             USBTypeResolver::UsbDevice => CdcAcmDevice::new()
@@ -84,7 +84,5 @@ fn main() -> Result<()> {
         );
 
         Ok(())
-    })?;
-
-    Ok(())
+    })
 }

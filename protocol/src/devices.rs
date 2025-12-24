@@ -25,6 +25,23 @@ impl WriteThrottleInfo {
         self.delay = delay;
         self
     }
+
+    /// Zero the throttle duration
+    pub fn zero() -> Self {
+        Self {
+            delay: core::time::Duration::from_millis(0),
+        }
+    }
+}
+
+impl ReadThrottleInfo {
+    /// Zero the throttle duration
+    pub fn zero() -> Self {
+        Self {
+            timeout: core::time::Duration::from_millis(0),
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for ReadThrottleInfo {

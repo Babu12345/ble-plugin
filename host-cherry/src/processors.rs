@@ -592,6 +592,8 @@ unsafe fn send_usb_data(
             _ => {}
         };
 
-        std::thread::sleep(write_throttle_info.delay);
+        if !write_throttle_info.delay.is_zero() {
+            std::thread::sleep(write_throttle_info.delay);
+        }
     }
 }
