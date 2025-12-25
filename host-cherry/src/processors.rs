@@ -12,8 +12,6 @@ use std::{
     time::Duration,
 };
 
-use esp_idf_svc::hal::cpu::Core;
-
 use esp_idf_sys::cherry_host::{
     usbh_cdc_acm, usbh_cdc_acm_bulk_in_transfer, usbh_cdc_acm_bulk_out_transfer,
     usbh_cdc_acm_set_line_state, usbh_deinitialize, usbh_initialize,
@@ -35,44 +33,12 @@ use std::{
 
 use crate::utils::{TSenderAndReceiver, ThreadSafeCDCWrapper};
 
-/// USB processing core - Core 1 to avoid interference with Core0
-const USB_PROCESSING_CORE: Core = Core::Core1;
-
-/// Stack size for USB processing threads
-const USB_THREAD_STACK_SIZE: usize = 8192;
-
 // Threshold for triggering USB stack re-initialization
 // If we've been waiting this many attempts, reset the USB stack
 const REINIT_THRESHOLD: u32 = 10;
 
 // Store USB initialization parameters for re-initialization
 static USB_INIT_PARAMS: StdMutex<Option<(u8, u32)>> = StdMutex::new(None);
-
-/// Spawns a thread pinned to the USB processing core (Core 1)
-fn spawn_on_usb_core<'a, 'b, F>(scope: &'a Scope<'a, 'b>, name: &str, f: F)
-where
-    F: FnOnce() + Send + 'a,
-{
-    let thread_name = name.to_string();
-    std::thread::Builder::new()
-        .name(thread_name.clone())
-        .stack_size(USB_THREAD_STACK_SIZE)
-        .spawn_scoped(scope, move || {
-            // Pin this thread to Core 1
-            esp_idf_svc::hal::task::thread::ThreadSpawnConfiguration {
-                name: None,
-                stack_size: USB_THREAD_STACK_SIZE,
-                priority: 10,
-                inherit: false,
-                pin_to_core: Some(USB_PROCESSING_CORE),
-                stack_alloc_caps: enumset::EnumSet::empty(),
-            }
-            .set()
-            .ok();
-            f()
-        })
-        .expect("Failed to spawn USB thread");
-}
 
 /// Re-initialize the USB host stack
 /// This clears any stuck state in the USB controller
@@ -304,12 +270,8 @@ impl HostProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHost<POSTINIT> {
         let to_usb = sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
-        spawn_on_usb_core(scope, "usb-tx", move || unsafe {
-            send_usb_data(to_usb.1, write_throttle_info)
-        });
-        spawn_on_usb_core(scope, "usb-rx", move || unsafe {
-            receive_usb_data(from_usb.0)
-        });
+        scope.spawn(move || unsafe { send_usb_data(to_usb.1, write_throttle_info) });
+        scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
 
         Ok((HostSender::new(to_usb.0), HostReceiver::new(from_usb.1)))
     }
@@ -397,12 +359,8 @@ impl PluginProcessor<DEFAULT_PACKET_SIZE, ()> for CdcAcmHostDevice<POSTINIT> {
         let to_usb = sync_channel(channel_buffer_size);
         let from_usb = sync_channel(channel_buffer_size);
 
-        spawn_on_usb_core(scope, "usb-tx", move || unsafe {
-            send_usb_data(to_usb.1, write_throttle_info)
-        });
-        spawn_on_usb_core(scope, "usb-rx", move || unsafe {
-            receive_usb_data(from_usb.0)
-        });
+        scope.spawn(move || unsafe { send_usb_data(to_usb.1, write_throttle_info) });
+        scope.spawn(move || unsafe { receive_usb_data(from_usb.0) });
 
         Ok((PluginSender::new(to_usb.0), PluginReceiver::new(from_usb.1)))
     }
