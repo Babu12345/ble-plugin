@@ -48,7 +48,7 @@ fn main() -> Result<()> {
 
     indicator
         .lock()
-        .map_err(|_| PluginError::GpioOperationError("Failed to lock GPIO21"))?
+        .map_err(|_| PluginError::GpioOperationError("Failed to aquire the lock for GPIO21"))?
         .set_high()
         .map_err(|_| PluginError::GpioOperationError("Failed to set GPIO21 high"))?;
 
